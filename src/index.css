@@ -1,0 +1,203 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Odoo-inspired palette: deep navy + warm accents */
+    --background: 210 20% 98%;
+    --foreground: 220 25% 14%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 14%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 14%;
+
+    /* Primary: Deep professional navy */
+    --primary: 220 70% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Cool slate */
+    --secondary: 215 20% 95%;
+    --secondary-foreground: 220 25% 14%;
+
+    --muted: 215 20% 95%;
+    --muted-foreground: 215 15% 50%;
+
+    /* Accent: Warm amber-orange for CTAs */
+    --accent: 28 90% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 25% 90%;
+    --input: 214 25% 90%;
+    --ring: 220 70% 45%;
+
+    --radius: 0.375rem;
+
+    /* Sidebar: Odoo-style dark sidebar */
+    --sidebar-background: 222 30% 18%;
+    --sidebar-foreground: 215 20% 80%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 222 30% 18%;
+    --sidebar-accent: 222 25% 24%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 222 20% 25%;
+    --sidebar-ring: 220 70% 55%;
+    --sidebar-muted: 215 15% 55%;
+
+    /* Extended tokens */
+    --success: 152 60% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 200 80% 50%;
+    --info-foreground: 0 0% 100%;
+
+    /* KPI card variants */
+    --kpi-blue: 220 70% 45%;
+    --kpi-green: 152 60% 42%;
+    --kpi-amber: 38 92% 50%;
+    --kpi-rose: 350 70% 55%;
+
+    /* Kanban columns */
+    --kanban-new: 200 80% 95%;
+    --kanban-progress: 38 90% 95%;
+    --kanban-done: 152 50% 93%;
+    --kanban-closed: 215 20% 95%;
+
+    /* Smart button */
+    --smart-button-bg: 215 20% 97%;
+    --smart-button-border: 214 25% 90%;
+    --smart-button-hover: 220 70% 96%;
+
+    /* Chatter */
+    --chatter-bg: 210 20% 98%;
+    --chatter-border: 214 25% 92%;
+
+    /* Topbar */
+    --topbar-bg: 0 0% 100%;
+    --topbar-border: 214 25% 92%;
+    --topbar-shadow: 0 1px 3px 0 hsl(220 25% 14% / 0.06);
+  }
+
+  .dark {
+    --background: 222 30% 10%;
+    --foreground: 210 20% 92%;
+    --card: 222 25% 14%;
+    --card-foreground: 210 20% 92%;
+    --popover: 222 25% 14%;
+    --popover-foreground: 210 20% 92%;
+    --primary: 220 70% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 20% 20%;
+    --secondary-foreground: 210 20% 92%;
+    --muted: 222 20% 20%;
+    --muted-foreground: 215 15% 55%;
+    --accent: 28 90% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 222 20% 22%;
+    --input: 222 20% 22%;
+    --ring: 220 70% 55%;
+    --sidebar-background: 222 35% 12%;
+    --sidebar-foreground: 215 20% 75%;
+    --sidebar-primary: 220 70% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 25% 18%;
+    --sidebar-accent-foreground: 210 20% 92%;
+    --sidebar-border: 222 20% 18%;
+    --sidebar-ring: 220 70% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  /* Odoo-style smart button */
+  .smart-button {
+    @apply flex flex-col items-center gap-0.5 px-4 py-2 border rounded-md cursor-pointer transition-colors;
+    background: hsl(var(--smart-button-bg));
+    border-color: hsl(var(--smart-button-border));
+  }
+  .smart-button:hover {
+    background: hsl(var(--smart-button-hover));
+    border-color: hsl(var(--primary));
+  }
+  .smart-button-value {
+    @apply text-lg font-bold;
+    color: hsl(var(--primary));
+  }
+  .smart-button-label {
+    @apply text-xs;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Odoo-style kanban card */
+  .kanban-card {
+    @apply bg-card rounded-md border p-3 shadow-sm cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md;
+  }
+
+  /* KPI card */
+  .kpi-card {
+    @apply bg-card rounded-lg border p-5 relative overflow-hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    @apply absolute top-0 left-0 w-1 h-full;
+  }
+  .kpi-card-blue::before { background: hsl(var(--kpi-blue)); }
+  .kpi-card-green::before { background: hsl(var(--kpi-green)); }
+  .kpi-card-amber::before { background: hsl(var(--kpi-amber)); }
+  .kpi-card-rose::before { background: hsl(var(--kpi-rose)); }
+
+  /* Chatter block */
+  .chatter-block {
+    @apply rounded-lg p-4;
+    background: hsl(var(--chatter-bg));
+    border: 1px solid hsl(var(--chatter-border));
+  }
+
+  /* Odoo topbar breadcrumb */
+  .odoo-breadcrumb {
+    @apply flex items-center gap-1 text-sm;
+    color: hsl(var(--muted-foreground));
+  }
+  .odoo-breadcrumb a {
+    color: hsl(var(--primary));
+    @apply hover:underline;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply rounded-full; background: hsl(var(--border)); }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+  /* Hide scrollbar utility */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
