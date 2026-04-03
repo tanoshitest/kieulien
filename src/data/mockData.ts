@@ -672,3 +672,75 @@ export const salesData: SalesStats[] = [
   }
 ];
 
+// ---- Pronunciation Exercises (Nộp kết quả phát âm) ----
+export interface PronunciationAttempt {
+  id: string;
+  studentId: string;
+  studentName: string;
+  audioUrl: string;
+  submittedAt: string;
+  score: number;
+  feedback: string;
+}
+
+export interface PronunciationAssignment {
+  id: string;
+  classId: string;
+  word: string;
+  phonetic: string;
+  audioExample: string;
+  deadline: string;
+  status: "pending" | "completed" | "late";
+  attempts: PronunciationAttempt[];
+}
+
+export const mockPronunciations: PronunciationAssignment[] = [
+  {
+    id: "PRON001",
+    classId: "CLS001",
+    word: "Beautiful",
+    phonetic: "/ˈbjuːtɪfl/",
+    audioExample: "https://dictionary.cambridge.org/media/english/us_pron/b/bea/beaut/beautiful.mp3",
+    deadline: "2025-04-05",
+    status: "completed",
+    attempts: [
+      { id: "ATT001", studentId: "STU001", studentName: "Đăng Khoa Bing", audioUrl: "#", submittedAt: "01/04/2025 10:00", score: 75, feedback: "Phát âm âm 't' hơi cứng, cần mềm mại hơn ở âm cuối." },
+      { id: "ATT002", studentId: "STU001", studentName: "Đăng Khoa Bing", audioUrl: "#", submittedAt: "02/04/2025 14:30", score: 92, feedback: "Rất tốt! Âm 'eau' và 'ti' đã chuẩn hơn nhiều. Cố gắng phát huy nhé." },
+      { id: "ATT003", studentId: "STU002", studentName: "Bảo Thư Mimi", audioUrl: "#", submittedAt: "02/04/2025 15:00", score: 85, feedback: "Tốt, nhưng cần chú ý trọng âm." }
+    ]
+  },
+  {
+    id: "PRON002",
+    classId: "CLS001",
+    word: "Environment",
+    phonetic: "/ɪnˈvaɪrənmənt/",
+    audioExample: "https://dictionary.cambridge.org/media/english/us_pron/e/env/envir/environment.mp3",
+    deadline: "2025-04-07",
+    status: "pending",
+    attempts: [
+      { id: "ATT004", studentId: "STU001", studentName: "Đăng Khoa Bing", audioUrl: "#", submittedAt: "03/04/2025 09:00", score: 65, feedback: "Chú ý nhấn trọng âm rơi vào âm tiết thứ hai 'vi'. Em đọc hơi bị đều." },
+      { id: "ATT005", studentId: "STU003", studentName: "Thành Vinh Brian", audioUrl: "#", submittedAt: "03/04/2025 11:30", score: 0, feedback: "" } // Pending grade
+    ]
+  },
+  {
+    id: "PRON003",
+    classId: "CLS002",
+    word: "Schedule",
+    phonetic: "/ˈʃedjuːl/",
+    audioExample: "https://dictionary.cambridge.org/media/english/us_pron/s/sch/sched/schedule.mp3",
+    deadline: "2025-04-10",
+    status: "pending",
+    attempts: []
+  },
+  {
+    id: "PRON004",
+    classId: "CLS001",
+    word: "Success",
+    phonetic: "/səkˈses/",
+    audioExample: "https://dictionary.cambridge.org/media/english/us_pron/s/suc/succe/success.mp3",
+    deadline: "2025-03-30",
+    status: "late",
+    attempts: []
+  }
+];
+

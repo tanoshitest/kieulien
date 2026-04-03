@@ -22,6 +22,7 @@ import SchedulePage from "@/pages/SchedulePage";
 import TimekeepingPage from "@/pages/TimekeepingPage";
 import MyClassesPage from "@/pages/MyClassesPage";
 import ParentDashboard from "@/pages/ParentDashboard";
+import PronunciationManagementPage from "@/pages/PronunciationManagementPage";
 import ReportsPage from "@/pages/ReportsPage";
 import AdminReportsPage from "@/pages/AdminReportsPage";
 import InventoryPage from "@/pages/InventoryPage";
@@ -62,6 +63,7 @@ const AppContent = () => {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/parent-portal" element={<ParentDashboard />} />
           <Route path="/my-classes" element={<MyClassesPage />} />
+          <Route path="/pronunciation-management" element={<PronunciationManagementPage />} />
           <Route path="/admin-reports" element={<AdminReportsPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="*" element={<NotFound />} />

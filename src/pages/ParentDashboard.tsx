@@ -1,12 +1,11 @@
 import React, { useState } from "react";
 import { useRole } from "@/contexts/RoleContext";
-import { mockGrades, timekeepingRecords, students, mockHomeworks, mockTuitions } from "@/data/mockData";
 import { ClassDetailContent } from "./ClassDetailPage";
 import { useSearchParams } from "react-router-dom";
-import { 
-  GraduationCap, BookOpen, Clock, MessageCircle, 
-  UploadCloud, CheckCircle, AlertCircle, Send, CheckSquare, FileText, ChevronRight, Wallet, Bell, Calendar, ClipboardList, FilePlus, Printer, MessageSquare
+import { GraduationCap, BookOpen, Clock, MessageCircle, 
+  UploadCloud, CheckCircle, AlertCircle, Send, CheckSquare, FileText, ChevronRight, Wallet, Bell, Calendar, ClipboardList, FilePlus, Printer, MessageSquare, Mic, Volume2, PlayCircle, History, Trophy
 } from "lucide-react";
+import { mockGrades, timekeepingRecords, students, mockHomeworks, mockTuitions, mockPronunciations } from "@/data/mockData";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -18,6 +17,8 @@ const ParentDashboard = () => {
   const [selectedReport, setSelectedReport] = useState<any>(null); 
   const [message, setMessage] = useState("");
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [selectedWord, setSelectedWord] = useState<any>(null);
+  const [isRecording, setIsRecording] = useState(false);
 
   const child = students[0]; 
 
@@ -48,6 +49,7 @@ const ParentDashboard = () => {
   const tabs = [
     { id: "info", label: "Thông tin học viên", icon: GraduationCap },
     { id: "grades", label: "Lớp học & Kết quả", icon: BookOpen },
+    { id: "pronunciation", label: "Nộp kết quả phát âm", icon: Mic },
     { id: "finance", label: "Học phí & Lịch sử", icon: Wallet },
     { id: "reports", label: "Báo cáo định kỳ", icon: ClipboardList },
     { id: "contact", label: "Liên hệ Trung tâm", icon: MessageCircle }
@@ -104,10 +106,184 @@ const ParentDashboard = () => {
               </div>
             )}
 
-            {/* CONTENT: GRADES & CLASS DETAIL */}
+            {/* CONTENT: GRADES (Lớp học & Kết quả) */}
             {activeTab === "grades" && (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-300 h-full flex flex-col">
-                <ClassDetailContent id={child.classIds && child.classIds[0] ? child.classIds[0] : "CLS001"} backButton={false} />
+              <div className="p-0 animate-in fade-in slide-in-from-right-4 duration-300 h-full overflow-hidden">
+                <ClassDetailContent id="CLS001" />
+              </div>
+            )}
+
+            {/* CONTENT: PRONUNCIATION (Phát âm) */}
+            {activeTab === "pronunciation" && (
+              <div className="p-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="flex items-center justify-between mb-8 border-b pb-3">
+                  <h2 className="font-bold text-xl flex items-center gap-2">
+                    <Mic className="w-6 h-6 text-primary" /> Luyện tập & Nộp bài phát âm
+                  </h2>
+                  <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
+                    <Trophy className="w-4 h-4 text-amber-500" />
+                    <span className="text-[10px] font-black text-amber-700 uppercase tracking-tighter">Hạng TS: 1.250 điểm</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Left Column: Word List */}
+                  <div className="lg:col-span-1 space-y-4">
+                    <h3 className="text-xs font-black uppercase text-muted-foreground flex items-center gap-2 mb-4">
+                      <ClipboardList className="w-4 h-4" /> Danh sách từ vựng
+                    </h3>
+                    <div className="space-y-3">
+                      {mockPronunciations.map((item) => (
+                        <div 
+                          key={item.id}
+                          onClick={() => setSelectedWord(item)}
+                          className={`p-4 border rounded-xl cursor-pointer transition-all hover:shadow-md relative overflow-hidden group ${selectedWord?.id === item.id ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'bg-card'}`}
+                        >
+                          {item.status === "completed" && (
+                            <div className="absolute top-2 right-2">
+                              <CheckCircle className="w-4 h-4 text-success" />
+                            </div>
+                          )}
+                          {item.status === "late" && (
+                            <div className="absolute top-2 right-2">
+                              <AlertCircle className="w-4 h-4 text-destructive" />
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <span className="text-lg font-black group-hover:text-primary transition-colors">{item.word}</span>
+                            <span className="text-xs text-muted-foreground font-medium italic">{item.phonetic}</span>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between">
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                              item.status === "completed" ? 'bg-success/10 text-success' : 
+                              item.status === "late" ? 'bg-destructive/10 text-destructive' : 'bg-secondary text-muted-foreground'
+                            }`}>
+                              {item.status === "completed" ? 'Hoàn thành' : item.status === "late" ? 'Quá hạn' : 'Chưa nộp'}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground">Hạn: {item.deadline}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Detail & Submissions */}
+                  <div className="lg:col-span-2">
+                    {selectedWord ? (
+                      <div className="space-y-6">
+                        {/* Word Detail Card */}
+                        <div className="p-8 bg-white border border-primary/10 rounded-2xl shadow-sm relative overflow-hidden">
+                          <div className="absolute top-0 right-0 p-6 opacity-5">
+                             <Mic className="w-32 h-32 text-primary" />
+                          </div>
+                          <div className="relative z-10">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h1 className="text-4xl font-black text-primary mb-2 tracking-tight">{selectedWord.word}</h1>
+                                <p className="text-xl text-muted-foreground font-medium italic mb-6">{selectedWord.phonetic}</p>
+                              </div>
+                              <button 
+                                onClick={() => {
+                                  const audio = new Audio(selectedWord.audioExample);
+                                  audio.play();
+                                  toast.info("Đang phát mẫu âm thanh chuẩn...");
+                                }}
+                                className="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-white shadow-lg hover:scale-110 active:scale-95 transition-all"
+                              >
+                                <Volume2 className="w-7 h-7" />
+                              </button>
+                            </div>
+
+                            <div className="mt-8 flex flex-col md:flex-row items-center gap-4">
+                              <button 
+                                onClick={() => {
+                                  setIsRecording(true);
+                                  toast("Đang lắng nghe...", { description: "Phụ huynh vui lòng nói vào mic." });
+                                  setTimeout(() => {
+                                    setIsRecording(false);
+                                    toast.success("Đã ghi âm thành công! Đang tải lên...");
+                                  }, 3000);
+                                }}
+                                className={`flex-1 w-full md:w-auto h-14 rounded-xl flex items-center justify-center gap-3 font-black text-sm uppercase tracking-tight transition-all ${
+                                  isRecording ? 'bg-rose-500 text-white animate-pulse' : 'bg-secondary hover:bg-secondary/80 text-foreground'
+                                }`}
+                              >
+                                <Mic className="w-5 h-5" /> {isRecording ? 'Đang ghi âm...' : 'Bấm để ghi âm ngay'}
+                              </button>
+                              <button className="flex-1 w-full md:w-auto h-14 rounded-xl border-2 border-dashed border-primary/30 flex items-center justify-center gap-3 font-black text-[11px] text-primary hover:bg-primary/5 transition-all uppercase">
+                                <UploadCloud className="w-5 h-5" /> Tải lên tệp âm thanh
+                              </button>
+                            </div>
+                            <p className="mt-4 text-center text-[10px] text-muted-foreground italic">
+                              * Bạn có thể nộp lại nhiều lần. Giáo viên sẽ nghe và nhận xét cho từng bản ghi.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Submission History */}
+                        <div className="space-y-4">
+                          <h3 className="text-xs font-black uppercase text-muted-foreground flex items-center gap-2">
+                            <History className="w-4 h-4" /> Lịch sử nộp bài & Nhận xét của giáo viên
+                          </h3>
+                          
+                          {selectedWord.attempts.length > 0 ? (
+                            <div className="space-y-4">
+                              {selectedWord.attempts.map((attempt: any, idx: number) => (
+                                <div key={attempt.id} className="bg-card border rounded-2xl overflow-hidden group hover:border-primary/30 transition-all shadow-sm">
+                                  <div className="p-5 flex flex-col md:flex-row gap-6">
+                                    <div className="flex flex-col items-center justify-center gap-2 shrink-0 border-r border-dashed pr-6">
+                                      <span className="text-[10px] font-black text-muted-foreground uppercase">Lần {idx + 1}</span>
+                                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-sm border-2 ${
+                                        attempt.score >= 80 ? 'bg-success/10 border-success/30 text-success' : 'bg-amber-50 border-amber-300 text-amber-600'
+                                      }`}>
+                                        {attempt.score}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex-1 space-y-4">
+                                      <div className="flex items-center justify-between">
+                                        <button className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all">
+                                          <PlayCircle className="w-4 h-4" />
+                                          <span className="text-[10px] font-black uppercase tracking-tight">Nghe lại bản ghi</span>
+                                        </button>
+                                        <span className="text-[10px] text-muted-foreground italic whitespace-nowrap">{attempt.submittedAt}</span>
+                                      </div>
+                                      
+                                      <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 relative">
+                                        <div className="absolute -top-2 left-4 px-2 bg-white text-[8px] font-black text-primary uppercase border rounded tracking-widest">
+                                          Nhận xét từ GV
+                                        </div>
+                                        <p className="text-xs text-muted-foreground leading-relaxed italic">
+                                          "{attempt.feedback}"
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-12 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center bg-slate-50/50">
+                              <Mic className="w-12 h-12 text-muted-foreground/30 mb-4" />
+                              <p className="text-sm font-medium text-muted-foreground">Chưa có bản ghi nào được nộp cho từ này.</p>
+                              <p className="text-[10px] text-muted-foreground/60 mt-1">Hãy bấm ghi âm để bắt đầu luyện tập!</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-2xl text-center bg-slate-50/20">
+                         <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                            <Volume2 className="w-10 h-10 text-primary" />
+                         </div>
+                         <h3 className="font-bold text-lg mb-2">Chọn một từ để bắt đầu luyện tập</h3>
+                         <p className="text-sm text-muted-foreground max-w-sm">
+                            Hệ thống sẽ hiển thị lịch sử nộp bài và nhận xét chi tiết của giáo viên sau khi bạn thực hiện ghi âm.
+                         </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 

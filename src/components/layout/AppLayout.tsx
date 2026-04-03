@@ -9,7 +9,7 @@ import {
   Fingerprint, Wallet, MessageCircle, ClipboardCheck, History,
   PieChart, MessageSquareX, BarChart3, Repeat, GraduationCap as StudentIcon,
   CircleDollarSign, Layers, CalendarClock, TrendingUp, HandCoins, Building2,
-  Users2, Clock, BellRing, UserMinus, ShieldAlert, LineChart, LogOut
+  Users2, Clock, BellRing, UserMinus, ShieldAlert, LineChart, LogOut, Mic
 } from "lucide-react";
 import { notifications } from "@/data/mockData";
 import {
@@ -41,12 +41,14 @@ const navItems: NavItem[] = [
   { label: "Quản lý tài liệu", path: "/documents", icon: FileText, adminOnly: true },
   { label: "Quản lý hàng hoá", path: "/inventory", icon: Layers, adminOnly: true },
   { label: "Phân công công việc", path: "/tasks", icon: ClipboardList },
+  { label: "Quản lý phát âm", path: "/pronunciation-management", icon: Mic, teacherOnly: true },
   { label: "Ghi chú chấm công", path: "/timekeeping", icon: Fingerprint, teacherOnly: true },
   { label: "Báo cáo", path: "/admin-reports", icon: BarChart3, adminOnly: true },
   { label: "Cấu hình", path: "/settings", icon: Settings, adminOnly: true },
   // Parent Items
   { label: "Thông tin học viên", path: "/parent-portal", icon: GraduationCap, parentOnly: true },
   { label: "Lớp học & Kết quả", path: "/parent-portal?tab=grades", icon: BookOpen, parentOnly: true },
+  { label: "Nộp kết quả phát âm", path: "/parent-portal?tab=pronunciation", icon: Mic, parentOnly: true },
   { label: "Học phí & Lịch sử", path: "/parent-portal?tab=finance", icon: Wallet, parentOnly: true },
   { label: "Báo cáo học tập", path: "/parent-portal?tab=reports", icon: ClipboardList, parentOnly: true },
   { label: "Liên hệ Trung tâm", path: "/parent-portal?tab=contact", icon: MessageCircle, parentOnly: true },
