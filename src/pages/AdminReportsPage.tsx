@@ -1188,9 +1188,11 @@ const AdminReportsPage = () => {
         {activeTab === "survey" && (
           <motion.div 
             key="survey" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            className="h-full flex flex-col max-w-7xl mx-auto"
+            className="flex-1 overflow-y-auto p-4 md:p-6 w-full"
           >
-            <AdminSurveyDashboard />
+            <div className="max-w-7xl mx-auto w-full">
+              <AdminSurveyDashboard />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
