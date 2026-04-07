@@ -1,13 +1,25 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { mockSurveySubmissions } from "@/data/mockData";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
   PieChart, Pie, Legend
 } from "recharts";
-import { Star, MessageSquare, AlertTriangle, CheckCircle2, TrendingUp, Users, HeartHandshake } from "lucide-react";
+import { Star, MessageSquare, AlertTriangle, CheckCircle2, TrendingUp, Users, HeartHandshake, Search, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export const AdminSurveyDashboard = () => {
+
+  const [filterSegment, setFilterSegment] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  const filteredAllSubmissions = useMemo(() => {
+    return mockSurveySubmissions.filter(sub => {
+      if (filterSegment !== "all" && sub.segment !== filterSegment) return false;
+      if (searchQuery && !sub.studentName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    });
+  }, [filterSegment, searchQuery]);
 
   const totalSubmissions = mockSurveySubmissions.length;
   const avgScore = totalSubmissions > 0 
@@ -204,6 +216,89 @@ export const AdminSurveyDashboard = () => {
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-slate-400 text-sm font-medium">
                     Không có cảnh báo nào trong thời gian này.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 4. All Feedbacks Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mt-6">
+        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
+          <div>
+             <h3 className="text-sm font-black text-slate-800 tracking-tight uppercase flex items-center gap-2">
+               <List className="w-5 h-5 text-primary" /> Tất cả ý kiến khảo sát
+             </h3>
+             <p className="text-[11px] text-slate-500 font-medium mt-1">Danh sách chi tiết phản hồi đánh giá của phụ huynh.</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+             <div className="relative">
+               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+               <Input 
+                 placeholder="Tìm tên học sinh..."
+                 value={searchQuery}
+                 onChange={(e) => setSearchQuery(e.target.value)}
+                 className="pl-9 h-9 w-[200px] text-xs bg-white rounded-lg"
+               />
+             </div>
+             <select
+               value={filterSegment}
+               onChange={(e) => setFilterSegment(e.target.value)}
+               className="h-9 px-3 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+             >
+               <option value="all">Tất cả phân khúc</option>
+               <option value="Cấp 1">Cấp 1</option>
+               <option value="IELTS">IELTS</option>
+               <option value="Giao tiếp">Giao tiếp</option>
+             </select>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-[#f8fafc] text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">
+              <tr>
+                <th className="px-6 py-4 w-[20%]">Học viên / Lớp</th>
+                <th className="px-6 py-4 w-[15%]">Phân khúc</th>
+                <th className="px-6 py-4 text-center w-[15%]">Điểm số</th>
+                <th className="px-6 py-4 w-[50%]">Chi tiết ý kiến</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filteredAllSubmissions.map((sub) => (
+                <tr key={sub.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <p className="text-xs font-bold text-slate-800">{sub.studentName}</p>
+                    <p className="text-[10px] font-medium text-slate-500 mt-0.5">{sub.className}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                     <span className="text-[10px] font-black text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full uppercase">{sub.segment}</span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className={`inline-flex items-center gap-1 text-xs font-black ${
+                      sub.totalScore >= 4.0 ? 'text-emerald-600' : sub.totalScore >= 3.0 ? 'text-amber-600' : 'text-rose-600'
+                    }`}>
+                      {sub.totalScore.toFixed(1)} <Star className="w-3.5 h-3.5 fill-current -mt-0.5" />
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {sub.feedback ? (
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {sub.feedback}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">Không có góp ý thêm.</p>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {filteredAllSubmissions.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-slate-400 text-sm font-medium">
+                    Không tìm thấy ý kiến nào phù hợp.
                   </td>
                 </tr>
               )}
