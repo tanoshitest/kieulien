@@ -744,3 +744,75 @@ export const mockPronunciations: PronunciationAssignment[] = [
   }
 ];
 
+// ---- Survey Module Data ----
+export interface SurveyQuestion {
+  id: string;
+  content: string;
+  type: "rating" | "text";
+  weight?: number; // percent
+}
+
+export interface SurveyTemplate {
+  id: string;
+  name: string;
+  questions: SurveyQuestion[];
+}
+
+export interface SurveySubmission {
+  id: string;
+  templateId: string;
+  studentId: string;
+  studentName: string;
+  className?: string;
+  segment: string; // "Cấp 1", "IELTS", "Giao tiếp"
+  totalScore: number;
+  feedback: string;
+  submittedAt: string;
+  answers: { questionId: string; rating?: number; textAnswer?: string }[];
+}
+
+export const mockSurveyTemplates: SurveyTemplate[] = [
+  {
+    id: "TPL_CAP1",
+    name: "Khảo sát chất lượng đào tạo - Tiếng Anh Cấp 1",
+    questions: [
+      { id: "q1", content: "Mức độ hài lòng của Phụ huynh về sự tiến bộ của con?", type: "rating", weight: 30 },
+      { id: "q2", content: "Mức độ hài lòng với phương pháp giảng dạy của giáo viên?", type: "rating", weight: 30 },
+      { id: "q3", content: "Cơ sở vật chất của phòng học có đáp ứng tốt không?", type: "rating", weight: 20 },
+      { id: "q4", content: "Tần suất liên lạc của bộ phận CSKH có phù hợp không?", type: "rating", weight: 20 },
+      { id: "q5", content: "Phụ huynh có góp ý thêm để cải thiện chất lượng giảng dạy?", type: "text" }
+    ]
+  },
+  {
+    id: "TPL_IELTS",
+    name: "Khảo sát chất lượng đào tạo - Luyện thi IELTS",
+    questions: [
+      { id: "q6", content: "Giáo trình và bài tập về nhà có bám sát mục tiêu band điểm?", type: "rating", weight: 40 },
+      { id: "q7", content: "Giáo viên chữa bài Writing/Speaking có chi tiết không?", type: "rating", weight: 40 },
+      { id: "q8", content: "Cơ sở vật chất và môi trường học tập thế nào?", type: "rating", weight: 20 },
+      { id: "q9", content: "Bạn có góp ý gì để cải thiện khóa học IELTS không?", type: "text" }
+    ]
+  },
+  {
+    id: "TPL_GIAOTIEP",
+    name: "Khảo sát chất lượng đào tạo - Tiếng Anh Giao tiếp",
+    questions: [
+      { id: "q10", content: "Mức độ tự tin khi giao tiếp bằng Tiếng Anh sau khóa học?", type: "rating", weight: 50 },
+      { id: "q11", content: "Giáo viên có thường xuyên tạo không khí học tập sôi nổi?", type: "rating", weight: 50 },
+      { id: "q12", content: "Góp ý khác của bạn:", type: "text" }
+    ]
+  }
+];
+
+export const mockSurveySubmissions: SurveySubmission[] = [
+  { id: "SUB01", templateId: "TPL_CAP1", studentId: "STU001", studentName: "Đăng Khoa Bing", className: "4CLC 2", segment: "Cấp 1", totalScore: 4.8, feedback: "Giáo viên nhiệt tình, con học rất thích. Tôi rất hài lòng về phương pháp giảng dạy.", submittedAt: "01/04/2026", answers: [] },
+  { id: "SUB02", templateId: "TPL_CAP1", studentId: "STU002", studentName: "Bảo Thư Mimi", className: "4CLC 2", segment: "Cấp 1", totalScore: 5.0, feedback: "Mọi thứ rất tốt, bé tiến bộ rõ. Mong trung tâm tiếp tục phát huy.", submittedAt: "02/04/2026", answers: [] },
+  { id: "SUB03", templateId: "TPL_CAP1", studentId: "STU003", studentName: "Thành Vinh Brian", className: "4CLC 2", segment: "Cấp 1", totalScore: 2.5, feedback: "Lớp hơi đông, bé ít được tương tác bằng tiếng Anh. Giáo viên ít quan tâm bé.", submittedAt: "03/04/2026", answers: [] },
+  { id: "SUB04", templateId: "TPL_IELTS", studentId: "STU004", studentName: "Trần Minh Quân", className: "IELTS B1", segment: "IELTS", totalScore: 4.5, feedback: "Giáo trình bám sát đề thi thật. Mình đã thi đạt mục tiêu đề ra.", submittedAt: "01/04/2026", answers: [] },
+  { id: "SUB05", templateId: "TPL_IELTS", studentId: "STU005", studentName: "Nguyễn Bảo Hân", className: "IELTS B2", segment: "IELTS", totalScore: 2.8, feedback: "Chấm bài Writing chậm, không có nhiều góp ý sâu. Cơ sở vật chất ổn nhưng phòng hơi tối.", submittedAt: "05/04/2026", answers: [] },
+  { id: "SUB06", templateId: "TPL_CAP1", studentId: "STU006", studentName: "Hà Anh Kuromi", className: "4CLC 2", segment: "Cấp 1", totalScore: 3.5, feedback: "Phòng học hơi nóng vào buổi chiều. Máy lạnh thường kêu to.", submittedAt: "02/04/2026", answers: [] },
+  { id: "SUB07", templateId: "TPL_CAP1", studentId: "STU007", studentName: "Tấn Kiệt", className: "4CLC 2", segment: "Cấp 1", totalScore: 4.2, feedback: "Tốt", submittedAt: "04/04/2026", answers: [] },
+  { id: "SUB08", templateId: "TPL_IELTS", studentId: "STU008", studentName: "Lê Minh Châu", className: "IELTS B2", segment: "IELTS", totalScore: 3.8, feedback: "Cần cập nhật đề Cambridge mới hơn để luyện tập sát thực tế.", submittedAt: "06/04/2026", answers: [] },
+  { id: "SUB09", templateId: "TPL_GIAOTIEP", studentId: "STU009", studentName: "Vũ Quang Minh", className: "Giao tiếp T1", segment: "Giao tiếp", totalScore: 4.6, feedback: "Thầy Tây dạy rất hay, tạo động lực tốt cho học viên.", submittedAt: "07/04/2026", answers: [] },
+  { id: "SUB10", templateId: "TPL_GIAOTIEP", studentId: "STU010", studentName: "Lý Thu Hà", className: "Giao tiếp T1", segment: "Giao tiếp", totalScore: 2.0, feedback: "Trung tâm hay đổi lịch học đột xuất không báo trước, ảnh hưởng đến kế hoạch của mình.", submittedAt: "08/04/2026", answers: [] }
+];

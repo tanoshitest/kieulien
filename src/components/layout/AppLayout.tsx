@@ -51,6 +51,7 @@ const navItems: NavItem[] = [
   { label: "Nộp kết quả phát âm", path: "/parent-portal?tab=pronunciation", icon: Mic, parentOnly: true },
   { label: "Học phí & Lịch sử", path: "/parent-portal?tab=finance", icon: Wallet, parentOnly: true },
   { label: "Báo cáo học tập", path: "/parent-portal?tab=reports", icon: ClipboardList, parentOnly: true },
+  { label: "Khảo sát", path: "/parent-portal?tab=survey", icon: ClipboardCheck, parentOnly: true },
   { label: "Liên hệ Trung tâm", path: "/parent-portal?tab=contact", icon: MessageCircle, parentOnly: true },
 ];
 

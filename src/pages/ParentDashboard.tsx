@@ -3,12 +3,13 @@ import { useRole } from "@/contexts/RoleContext";
 import { ClassDetailContent } from "./ClassDetailPage";
 import { useSearchParams } from "react-router-dom";
 import { GraduationCap, BookOpen, Clock, MessageCircle, 
-  UploadCloud, CheckCircle, AlertCircle, Send, CheckSquare, FileText, ChevronRight, Wallet, Bell, Calendar, ClipboardList, FilePlus, Printer, MessageSquare, Mic, Volume2, PlayCircle, History, Trophy
+  UploadCloud, CheckCircle, AlertCircle, Send, CheckSquare, FileText, ChevronRight, Wallet, Bell, Calendar, ClipboardList, FilePlus, Printer, MessageSquare, Mic, Volume2, PlayCircle, History, Trophy, ClipboardCheck
 } from "lucide-react";
 import { mockGrades, timekeepingRecords, students, mockHomeworks, mockTuitions, mockPronunciations } from "@/data/mockData";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { ParentSurveyForm } from "@/components/survey/ParentSurveyForm";
 
 const ParentDashboard = () => {
   const { isParent } = useRole();
@@ -52,6 +53,7 @@ const ParentDashboard = () => {
     { id: "pronunciation", label: "Nộp kết quả phát âm", icon: Mic },
     { id: "finance", label: "Học phí & Lịch sử", icon: Wallet },
     { id: "reports", label: "Báo cáo định kỳ", icon: ClipboardList },
+    { id: "survey", label: "Khảo sát", icon: ClipboardCheck },
     { id: "contact", label: "Liên hệ Trung tâm", icon: MessageCircle }
   ];
 
@@ -452,6 +454,13 @@ const ParentDashboard = () => {
                         </div>
                     ))}
                 </div>
+              </div>
+            )}
+
+            {/* CONTENT: SURVEY (Khảo sát) */}
+            {activeTab === "survey" && (
+              <div className="p-0 md:p-4 animate-in fade-in slide-in-from-right-4 duration-300 focus:outline-none">
+                <ParentSurveyForm />
               </div>
             )}
 

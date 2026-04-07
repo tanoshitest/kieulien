@@ -24,13 +24,14 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AdminSurveyDashboard } from "@/components/survey/AdminSurveyDashboard";
 
 const formatVND = (n: number) =>
   new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(n) + "đ";
 
 const AdminReportsPage = () => {
   const { isAdmin } = useRole();
-  const [activeTab, setActiveTab] = useState<"tuition" | "attendance" | "payroll" | "training" | "attendance_report">("tuition");
+  const [activeTab, setActiveTab] = useState<"tuition" | "attendance" | "payroll" | "training" | "attendance_report" | "survey">("tuition");
 
   // ---- TUITION STATES ----
   const [tuitionSearch, setTuitionSearch] = useState("");
@@ -146,6 +147,15 @@ const AdminReportsPage = () => {
           >
             <GraduationCap className="w-3.5 h-3.5" />
             Kết quả đào tạo
+          </button>
+          <button 
+            onClick={() => setActiveTab("survey")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all ${
+              activeTab === "survey" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <ClipboardCheck className="w-3.5 h-3.5" />
+            Khảo sát
           </button>
         </div>
 
@@ -1173,6 +1183,15 @@ const AdminReportsPage = () => {
                 </div>
              </motion.div>
           </div>
+        )}
+
+        {activeTab === "survey" && (
+          <motion.div 
+            key="survey" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            className="h-full flex flex-col max-w-7xl mx-auto"
+          >
+            <AdminSurveyDashboard />
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
