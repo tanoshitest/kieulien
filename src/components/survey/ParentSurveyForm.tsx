@@ -76,30 +76,38 @@ export const ParentSurveyForm = () => {
               </label>
 
               {q.type === "rating" ? (
-                <div className="flex items-center gap-2 md:gap-4 pl-6">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => handleRating(q.id, star)}
-                      className="group relative transition-all"
-                    >
-                      <Star
-                        className={`w-8 h-8 md:w-10 md:h-10 transition-colors ${
-                          (ratings[q.id] || 0) >= star
-                            ? "fill-amber-400 text-amber-400 drop-shadow-sm"
-                            : "fill-slate-100 text-slate-300 group-hover:fill-amber-100 group-hover:text-amber-200"
-                        }`}
-                      />
-                    </button>
-                  ))}
-                  <span className="ml-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:inline-block">
-                    {ratings[q.id] === 5 ? "Rất hài lòng" :
-                     ratings[q.id] === 4 ? "Hài lòng" :
-                     ratings[q.id] === 3 ? "Bình thường" :
-                     ratings[q.id] === 2 ? "Không hài lòng" :
-                     ratings[q.id] === 1 ? "Rất tệ" : "Chưa chọn"}
-                  </span>
+                <div className="space-y-3 pl-6">
+                  <div className="flex items-center gap-2 md:gap-4">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => handleRating(q.id, star)}
+                        className="group relative transition-all"
+                      >
+                        <Star
+                          className={`w-8 h-8 md:w-10 md:h-10 transition-colors ${
+                            (ratings[q.id] || 0) >= star
+                              ? "fill-amber-400 text-amber-400 drop-shadow-sm"
+                              : "fill-slate-100 text-slate-300 group-hover:fill-amber-100 group-hover:text-amber-200"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                    <span className="ml-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:inline-block">
+                      {ratings[q.id] === 5 ? "Rất hài lòng" :
+                       ratings[q.id] === 4 ? "Hài lòng" :
+                       ratings[q.id] === 3 ? "Bình thường" :
+                       ratings[q.id] === 2 ? "Không hài lòng" :
+                       ratings[q.id] === 1 ? "Rất tệ" : "Chưa chọn"}
+                    </span>
+                  </div>
+                  <textarea
+                    value={feedbacks[q.id] || ""}
+                    onChange={(e) => handleFeedback(q.id, e.target.value)}
+                    placeholder="Góp ý thêm cho mục này (không bắt buộc)..."
+                    className="w-full text-sm p-3 rounded-xl border border-slate-200 bg-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all min-h-[80px] resize-y"
+                  />
                 </div>
               ) : (
                 <div className="pl-6">
