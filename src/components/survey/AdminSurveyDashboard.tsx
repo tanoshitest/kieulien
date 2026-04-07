@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
   PieChart, Pie, Legend
 } from "recharts";
-import { Star, MessageSquare, AlertTriangle, CheckCircle2, TrendingUp, Users, HeartHandshake, Search, List } from "lucide-react";
+import { Star, MessageSquare, AlertTriangle, CheckCircle2, TrendingUp, Users, HeartHandshake, Search, List, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -12,6 +12,7 @@ export const AdminSurveyDashboard = () => {
 
   const [filterSegment, setFilterSegment] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"charts" | "lists">("charts");
 
   const filteredAllSubmissions = useMemo(() => {
     return mockSurveySubmissions.filter(sub => {
@@ -72,8 +73,33 @@ export const AdminSurveyDashboard = () => {
 
   return (
     <div className="space-y-6">
-      
-      {/* 1. Summary Cards */}
+      {/* Tab Navigation */}
+      <div className="flex bg-slate-100/80 p-1 rounded-xl w-max shadow-inner border border-slate-200 mt-2 mb-6">
+        <button
+          onClick={() => setViewMode("charts")}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+            viewMode === "charts" 
+              ? "bg-white text-primary shadow-sm border-b-2 border-primary" 
+              : "text-slate-500 hover:bg-slate-200/50"
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" /> Tổng quan biểu đồ
+        </button>
+        <button
+          onClick={() => setViewMode("lists")}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+            viewMode === "lists" 
+              ? "bg-white text-primary shadow-sm border-b-2 border-primary" 
+              : "text-slate-500 hover:bg-slate-200/50"
+          }`}
+        >
+          <List className="w-4 h-4" /> Chi tiết danh sách
+        </button>
+      </div>
+
+      {viewMode === "charts" && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* 1. Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 xl:gap-8">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between group hover:border-primary/50 transition-colors">
           <div>
@@ -156,19 +182,23 @@ export const AdminSurveyDashboard = () => {
           </div>
         </div>
       </div>
+      </div>
+      )}
 
-      {/* 3. Alert Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-rose-50/30">
-          <div>
-            <h3 className="text-sm font-black text-rose-600 tracking-tight uppercase flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5" /> Danh sách cần xử lý
-            </h3>
-            <p className="text-[11px] text-slate-500 font-medium mt-1">Các khảo sát có điểm {'<'} 3.0 hoặc chứa từ khóa nhạy cảm.</p>
-          </div>
-          <div className="px-3 py-1 bg-white border rounded-full text-xs font-bold shadow-sm">
-            {alertSubmissions.length} cảnh báo
-          </div>
+      {viewMode === "lists" && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* 3. Alert Table */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-rose-50/30">
+              <div>
+                <h3 className="text-sm font-black text-rose-600 tracking-tight uppercase flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5" /> Danh sách cần xử lý
+                </h3>
+                <p className="text-[11px] text-slate-500 font-medium mt-1">Các khảo sát có điểm {'<'} 3.0 hoặc chứa từ khóa nhạy cảm.</p>
+              </div>
+              <div className="px-3 py-1 bg-white border rounded-full text-xs font-bold shadow-sm">
+                {alertSubmissions.length} cảnh báo
+              </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -305,7 +335,9 @@ export const AdminSurveyDashboard = () => {
             </tbody>
           </table>
         </div>
-      </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
