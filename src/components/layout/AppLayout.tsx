@@ -41,7 +41,6 @@ const navItems: NavItem[] = [
   { label: "Quản lý tài liệu", path: "/documents", icon: FileText, adminOnly: true },
   { label: "Quản lý hàng hoá", path: "/inventory", icon: Layers, adminOnly: true },
   { label: "Phân công công việc", path: "/tasks", icon: ClipboardList },
-  { label: "Quản lý phát âm", path: "/pronunciation-management", icon: Mic, teacherOnly: true },
   { label: "Ghi chú chấm công", path: "/timekeeping", icon: Fingerprint, teacherOnly: true },
   { label: "Báo cáo", path: "/admin-reports", icon: BarChart3, adminOnly: true },
   { label: "Cấu hình", path: "/settings", icon: Settings, adminOnly: true },

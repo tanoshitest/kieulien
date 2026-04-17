@@ -323,20 +323,184 @@ export interface Task {
   id: string;
   title: string;
   assignee: string;
-  stage: "todo" | "in_progress" | "done";
+  stage: "todo" | "in_progress" | "done" | "overdue" | "pending";
   priority: "low" | "medium" | "high";
   dueDate: string;
+  createdAt: string;
+  dept: string;
+  // Các trường cho Order giáo cụ
+  type?: "task" | "order";
+  useDate?: string;
+  classId?: string;
+  className?: string;
+  branch?: string;
+  orderType?: string;
+  orderContent?: string;
+  printSpecs?: string;
+  quantity?: number;
+  lesson?: string;
+  resourceLink?: string;
+  createdBy?: string;
 }
 
 export const tasks: Task[] = [
-  { id: "TSK001", title: "Chuẩn bị đề thi cuối kỳ B1", assignee: "Lê Hoàng Nam", stage: "in_progress", priority: "high", dueDate: "2025-03-28" },
-  { id: "TSK002", title: "Sắp xếp lại phòng học A2", assignee: "Admin", stage: "todo", priority: "medium", dueDate: "2025-03-25" },
-  { id: "TSK003", title: "Gửi báo cáo tháng 2 cho BGĐ", assignee: "Admin", stage: "done", priority: "high", dueDate: "2025-03-10" },
-  { id: "TSK004", title: "Họp review chương trình IELTS", assignee: "Nguyễn Thị Phượng", stage: "todo", priority: "medium", dueDate: "2025-03-30" },
-  { id: "TSK005", title: "Cập nhật tài liệu Speaking Part 2", assignee: "Sarah Johnson", stage: "in_progress", priority: "low", dueDate: "2025-04-01" },
-  { id: "TSK006", title: "Chấm điểm bài tập viết Unit 4", assignee: "Sarah Johnson", stage: "todo", priority: "high", dueDate: "2025-03-27" },
-  { id: "TSK007", title: "Gửi thông báo họp phụ huynh CLS002", assignee: "Sarah Johnson", stage: "todo", priority: "medium", dueDate: "2025-03-29" },
-  { id: "TSK008", title: "Hoàn thành nhận xét tháng 3", assignee: "Sarah Johnson", stage: "done", priority: "high", dueDate: "2025-03-24" },
+  { 
+    id: "TSK001", 
+    title: "Chuẩn bị đề thi cuối kỳ B1", 
+    assignee: "Lê Hoàng Nam", 
+    stage: "in_progress", 
+    priority: "high", 
+    dueDate: "2025-03-28",
+    createdAt: "2025-03-20",
+    dept: "Đào tạo",
+    type: "task"
+  },
+  { 
+    id: "ORD001", 
+    title: "Order Flashcard - Lớp Kindy 4", 
+    assignee: "Admin", 
+    stage: "overdue", 
+    priority: "medium", 
+    dueDate: "2025-04-01",
+    createdAt: "2025-03-15",
+    dept: "Vận hành",
+    type: "order",
+    useDate: "2025-04-02",
+    className: "KINDY 4",
+    branch: "Đội Cấn",
+    orderType: "Order đạo cụ lớp học",
+    orderContent: "Flashcard",
+    quantity: 1,
+    lesson: "doctor, policeman, farmer, postman, zookeeper",
+    createdBy: "Ms. Hà"
+  },
+  { 
+    id: "TSK002", 
+    title: "Sắp xếp lại phòng học A2", 
+    assignee: "Admin", 
+    stage: "todo", 
+    priority: "medium", 
+    dueDate: "2025-03-25",
+    createdAt: "2025-03-20",
+    dept: "Vận hành",
+    type: "task"
+  },
+  { 
+    id: "ORD002", 
+    title: "In Worksheet Past Simple - 4CLC1", 
+    assignee: "Phạm Hồng Nhung", 
+    stage: "in_progress", 
+    priority: "high", 
+    dueDate: "2025-04-03",
+    createdAt: "2025-03-28",
+    dept: "Vận hành",
+    type: "order",
+    useDate: "2025-04-04",
+    className: "4CLC1",
+    branch: "HHT",
+    orderType: "Order in ấn",
+    orderContent: "Worksheet",
+    printSpecs: "In màu",
+    quantity: 10,
+    lesson: "PAST SIMPLE TENSE",
+    resourceLink: "https://drive.google.com/file/d/1...",
+    createdBy: "Trần Thu Hà"
+  },
+  { id: "TSK003", title: "Gửi báo cáo tháng 2 cho BGĐ", assignee: "Admin", stage: "done", priority: "high", dueDate: "2025-03-10", createdAt: "2025-03-01", dept: "Kế toán", type: "task" },
+  { id: "TSK004", title: "Họp review chương trình IELTS", assignee: "Nguyễn Thị Phượng", stage: "todo", priority: "medium", dueDate: "2025-03-30", createdAt: "2025-03-25", dept: "Đào tạo", type: "task" },
+  { id: "TSK005", title: "Cập nhật tài liệu Speaking Part 2", assignee: "Sarah Johnson", stage: "in_progress", priority: "low", dueDate: "2025-04-01", createdAt: "2025-03-20", dept: "Đào tạo", type: "task" },
+  { id: "TSK006", title: "Chấm điểm bài tập viết Unit 4", assignee: "Sarah Johnson", stage: "overdue", priority: "high", dueDate: "2025-03-27", createdAt: "2025-03-20", dept: "Đào tạo", type: "task" },
+  { id: "TSK007", title: "Gửi thông báo họp phụ huynh CLS002", assignee: "Sarah Johnson", stage: "todo", priority: "medium", dueDate: "2025-03-29", createdAt: "2025-03-25", dept: "Tuyển sinh", type: "task" },
+  { id: "TSK008", title: "Hoàn thành nhận xét tháng 3", assignee: "Sarah Johnson", stage: "done", priority: "high", dueDate: "2025-03-24", createdAt: "2025-03-15", dept: "Đào tạo", type: "task" },
+  { 
+    id: "ORD003", 
+    title: "Order Sticker thưởng tháng 4", 
+    assignee: "Nguyễn Văn A", 
+    stage: "pending", 
+    priority: "medium", 
+    dueDate: "2025-04-05", 
+    createdAt: "2025-03-30", 
+    dept: "Hành chính", 
+    type: "order", 
+    branch: "Quận 1",
+    className: "KINDY 2",
+    createdBy: "Sarah Johnson"
+  },
+  { 
+    id: "TSK009", 
+    title: "Kiểm tra cơ sở vật chất tầng 3", 
+    assignee: "Lê Hoàng Nam", 
+    stage: "todo", 
+    priority: "low", 
+    dueDate: "2025-04-02", 
+    createdAt: "2025-03-31", 
+    dept: "Vận hành", 
+    type: "task",
+    branch: "Đội Cấn"
+  },
+  { 
+    id: "TSK010", 
+    title: "Thanh toán tiền điện tháng 3", 
+    assignee: "Admin", 
+    stage: "in_progress", 
+    priority: "high", 
+    dueDate: "2025-04-05", 
+    createdAt: "2025-04-01", 
+    dept: "Kế toán", 
+    type: "task",
+    branch: "HHT"
+  },
+  { 
+    id: "ORD004", 
+    title: "In đề thi Mini Test Unit 5", 
+    assignee: "Phạm Hồng Nhung", 
+    stage: "todo", 
+    priority: "high", 
+    dueDate: "2025-04-10", 
+    createdAt: "2025-04-02", 
+    dept: "Vận hành", 
+    type: "order",
+    branch: "HHT",
+    className: "IELTS 1",
+    createdBy: "Nguyễn Thị Phượng"
+  },
+  { 
+    id: "TSK011", 
+    title: "Gọi điện tư vấn data mới T4", 
+    assignee: "Trần Thu Hà", 
+    stage: "todo", 
+    priority: "medium", 
+    dueDate: "2025-04-07", 
+    createdAt: "2025-04-02", 
+    dept: "Tuyển sinh", 
+    type: "task",
+    branch: "Đội Cấn"
+  },
+  { 
+    id: "TSK012", 
+    title: "Phỏng vấn giáo viên Part-time", 
+    assignee: "Nguyễn Thị Phượng", 
+    stage: "in_progress", 
+    priority: "high", 
+    dueDate: "2025-04-08", 
+    createdAt: "2025-04-02", 
+    dept: "Nhân sự", 
+    type: "task"
+  },
+  { 
+    id: "ORD005", 
+    title: "Chuẩn bị bánh kẹo liên hoan lớp KINDY 1", 
+    assignee: "Admin", 
+    stage: "todo", 
+    priority: "low", 
+    dueDate: "2025-04-12", 
+    createdAt: "2025-04-05", 
+    dept: "Vận hành", 
+    type: "order",
+    branch: "Cầu Giấy",
+    className: "KINDY 1",
+    createdBy: "Sarah Johnson"
+  },
 ];
 
 // ---- Documents ----

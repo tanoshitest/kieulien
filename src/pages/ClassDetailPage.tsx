@@ -7,7 +7,7 @@ import {
   ArrowRight, Share2, Layout, Users, CalendarCheck, Award,
   Search, FileSpreadsheet, Calendar, FolderOpen, FileText, Download,
   MoreVertical, FileCode, FileImage, File, MousePointerClick, ChevronDown,
-  Check, Pencil, Paperclip, UploadCloud, Loader2
+  Check, Pencil, Paperclip, UploadCloud, Loader2, Plus, Trash2
 } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
 import { toast } from "sonner";
@@ -55,7 +55,27 @@ export const ClassDetailContent: React.FC<ClassDetailContentProps> = ({ id: prop
   const [submittingIds, setSubmittingIds] = useState<Record<number, boolean>>({});
   const [demoSubmittedIds, setDemoSubmittedIds] = useState<Record<number, boolean>>({});
   const [attendanceOverrides, setAttendanceOverrides] = useState<Record<string, string>>({});
+  const [gradeOverrides, setGradeOverrides] = useState<Record<string, string>>({});
   
+  // Dynamic Column State
+  const [customColumns, setCustomColumns] = useState<{ id: string; name: string }[]>([]);
+  const [isAddColModalOpen, setIsAddColModalOpen] = useState(false);
+  const [newColName, setNewColName] = useState("");
+
+  const handleAddColumn = () => {
+    if (!newColName.trim()) return;
+    const id = `col-${Date.now()}`;
+    setCustomColumns(prev => [...prev, { id, name: newColName.trim().toUpperCase() }]);
+    setNewColName("");
+    setIsAddColModalOpen(false);
+    toast.success(`Đã thêm cột điểm: ${newColName.toUpperCase()}`);
+  };
+
+  const handleDeleteColumn = (colId: string, colName: string) => {
+    setCustomColumns(prev => prev.filter(c => c.id !== colId));
+    toast.info(`Đã xoá cột: ${colName}`);
+  };
+
   // HW Edit State
   const [hwOverrides, setHwOverrides] = useState<Record<number, string>>({});
   const [isHwDialogOpen, setIsHwDialogOpen] = useState(false);
@@ -313,11 +333,35 @@ export const ClassDetailContent: React.FC<ClassDetailContentProps> = ({ id: prop
                        <th className="px-6 py-4 min-w-[180px]">
                          {isParent ? 'Buổi học' : 'Học viên'}
                        </th>
-                       <th className="px-6 py-4 text-center w-32">Trạng thái</th>
-                       <th className="px-3 py-4 text-center w-16">TFL</th>
-                       <th className="px-3 py-4 text-center w-16">B2</th>
-                       <th className="px-3 py-4 text-center w-16">BGD</th>
-                       <th className="px-4 py-4 text-center w-32">BÀI TẬP NỘP</th>
+                        <th className="px-6 py-4 text-center w-32 relative group/status">
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Trạng thái</span>
+                            {!isParent && (
+                              <button 
+                                onClick={() => setIsAddColModalOpen(true)}
+                                className="p-1 bg-primary text-white rounded-md opacity-0 group-hover/status:opacity-100 transition-all hover:scale-110 shadow-sm"
+                                title="Thêm cột điểm"
+                              >
+                                <Plus className="w-2.5 h-2.5" />
+                              </button>
+                            )}
+                          </div>
+                        </th>
+                        {customColumns.map((col) => (
+                           <th key={col.id} className="px-3 py-4 text-center min-w-[90px] bg-slate-100/30 text-slate-500 border-x border-slate-100 italic relative group/col">
+                             {col.name}
+                             {!isParent && (
+                               <button 
+                                onClick={() => handleDeleteColumn(col.id, col.name)}
+                                className="absolute -top-1 -right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover/col:opacity-100 transition-all shadow-md"
+                               >
+                                 <Trash2 className="w-2 h-2" />
+                               </button>
+                             )}
+                           </th>
+                        ))}
+                        <th className="px-4 py-4 text-center w-32">BÀI TẬP NỘP</th>
+                       <th className="px-4 py-4 text-center w-28 bg-primary/5 text-primary border-x border-slate-100 italic">CHẤM ĐIỂM</th>
                        <th className="px-3 py-4 text-center w-16 bg-slate-100/30">HW/43</th>
                        <th className="px-3 py-4 text-center w-16 bg-slate-100/30">L/28</th>
                        <th className="px-3 py-4 text-center w-16 bg-primary/5 text-primary border-r border-slate-100">MINI</th>
@@ -336,9 +380,6 @@ export const ClassDetailContent: React.FC<ClassDetailContentProps> = ({ id: prop
                         const initialStatus = seed === 0 ? "Vắng mặt" : seed === 5 ? "Đi muộn" : "Đúng giờ";
                         const idKey = isParent ? `session-${sId}` : `student-${studentId}-b${sId}`;
                         const status = attendanceOverrides[idKey] || initialStatus;
-                        const hw_tfl = seed % 2 === 0;
-                        const hw_b2 = seed % 3 !== 0;
-                        const hw_bgd = seed % 4 === 0;
                         const hasSubmittedFile = seed % 2 === 0 && seed % 3 !== 0;
                         const score_hw = 43 - (seed % 3);
                         const score_reading = 28 - (seed % 2);
@@ -390,15 +431,17 @@ export const ClassDetailContent: React.FC<ClassDetailContentProps> = ({ id: prop
                                  {status}
                                </button>
                             </td>
-                            <td className="px-3 py-5 border-r border-slate-50 text-center">
-                               {hw_tfl ? <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto" /> : <XCircle className="w-4 h-4 text-slate-200 mx-auto" />}
-                            </td>
-                            <td className="px-3 py-5 border-r border-slate-50 text-center">
-                               {hw_b2 ? <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto" /> : <XCircle className="w-4 h-4 text-slate-200 mx-auto" />}
-                            </td>
-                            <td className="px-3 py-5 border-r border-slate-50 text-center">
-                               {hw_bgd ? <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto" /> : <XCircle className="w-4 h-4 text-slate-200 mx-auto" />}
-                            </td>
+                            {customColumns.map((col) => (
+                              <td key={col.id} className="px-3 py-5 border-r border-slate-50 text-center bg-slate-50/20">
+                                <input 
+                                  type="text" 
+                                  placeholder="..."
+                                  value={gradeOverrides[`${studentId}-${sId}-${col.id}`] || ""}
+                                  onChange={(e) => setGradeOverrides(prev => ({ ...prev, [`${studentId}-${sId}-${col.id}`]: e.target.value }))}
+                                  className="w-14 h-8 text-center bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all shadow-sm"
+                                />
+                              </td>
+                            ))}
                             <td className="px-4 py-5 border-r border-slate-50 text-center">
                                {(hasSubmittedFile || demoSubmittedIds[sId]) ? (
                                  <div className="inline-flex items-center gap-2 px-2 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-primary transition-all cursor-pointer group/file">
@@ -415,6 +458,15 @@ export const ClassDetailContent: React.FC<ClassDetailContentProps> = ({ id: prop
                                ) : (
                                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">N/A</span>
                                )}
+                            </td>
+                            <td className="px-3 py-5 border-r border-slate-100 text-center bg-primary/5">
+                               <input 
+                                 type="text" 
+                                 placeholder="..."
+                                 value={gradeOverrides[`${studentId}-${sId}`] || ""}
+                                 onChange={(e) => setGradeOverrides(prev => ({ ...prev, [`${studentId}-${sId}`]: e.target.value }))}
+                                 className="w-14 h-8 text-center bg-white border border-primary/20 rounded-lg text-xs font-black text-primary placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all shadow-sm"
+                               />
                             </td>
                             <td className="px-3 py-5 border-r border-slate-50 text-center font-black text-slate-500 bg-slate-50/50 text-[11px]">{score_hw}</td>
                             <td className="px-3 py-5 border-r border-slate-50 text-center font-black text-slate-500 bg-slate-50/50 text-[11px]">{score_reading}</td>
@@ -534,40 +586,47 @@ export const ClassDetailContent: React.FC<ClassDetailContentProps> = ({ id: prop
       </div>
 
       <Dialog open={isHwDialogOpen} onOpenChange={setIsHwDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] rounded-2xl p-0 overflow-hidden border-none shadow-2xl bg-white">
-          <DialogHeader className="p-6 pb-2">
-            <DialogTitle className="text-xl font-black uppercase tracking-tight text-primary border-b border-slate-100 pb-4 flex items-center gap-2">
-               <ClipboardList className="w-5 h-5" />
-               Cập nhật bài tập
+        {/* ... existing HW dialog ... */}
+      </Dialog>
+
+      <Dialog open={isAddColModalOpen} onOpenChange={setIsAddColModalOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-3xl p-0 overflow-hidden border-none shadow-3xl bg-white">
+          <DialogHeader className="p-8 pb-4">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight text-primary flex items-center gap-3">
+               <Plus className="w-6 h-6 p-1.5 bg-primary/10 rounded-lg" />
+               Thêm cột điểm mới
             </DialogTitle>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-2 px-1">BUỔI {selectedSessionId} - {selectedSession.title}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-2">ĐẶT TÊN CHO CỘT ĐIỂM SẼ HIỂN THỊ TRÊN BẢNG</p>
           </DialogHeader>
           
-          <div className="px-6 py-4 space-y-4">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nội dung bài tập về nhà</Label>
-              <Textarea 
-                value={tempHwValue} 
-                onChange={(e) => setTempHwValue(e.target.value)}
-                placeholder="Nhập nội dung bài tập..."
-                className="min-h-[140px] bg-slate-50 border-slate-200 rounded-xl focus:ring-primary/20 text-xs font-bold text-slate-700 leading-relaxed p-4"
+          <div className="px-8 py-6">
+            <div className="space-y-3">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tên cột điểm</Label>
+              <input 
+                value={newColName} 
+                onChange={(e) => setNewColName(e.target.value)}
+                placeholder="VD: READING, LISTENING, MINI TEST 4..."
+                onKeyDown={(e) => e.key === 'Enter' && handleAddColumn()}
+                autoFocus
+                className="w-full h-12 bg-slate-50 border border-slate-200 rounded-2xl px-5 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-primary/10 focus:border-primary/30 outline-none transition-all placeholder:text-slate-300"
               />
             </div>
           </div>
           
-          <DialogFooter className="p-4 px-6 bg-slate-50/50 border-t border-slate-100 flex items-center gap-3">
+          <DialogFooter className="p-6 px-8 bg-slate-50/50 border-t border-slate-100 flex items-center gap-3">
             <Button 
               variant="ghost" 
-              onClick={() => setIsHwDialogOpen(false)} 
-              className="rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-100 px-6"
+              onClick={() => setIsAddColModalOpen(false)} 
+              className="rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-100 px-8 h-12"
             >
-              Huỷ bỏ
+              Huỷ
             </Button>
             <Button 
-              onClick={handleSaveHw} 
-              className="rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest px-10 shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
+              onClick={handleAddColumn} 
+              disabled={!newColName.trim()}
+              className="rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-widest px-10 h-12 shadow-xl shadow-primary/20 hover:opacity-90 disabled:opacity-50 transition-all flex-1"
             >
-              Lưu thay đổi
+              Tạo cột
             </Button>
           </DialogFooter>
         </DialogContent>

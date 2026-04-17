@@ -47,6 +47,81 @@ const AdminReportsPage = () => {
   // ---- PAYROLL STATES ----
   const [selectedStaffForPayroll, setSelectedStaffForPayroll] = useState<any>(null);
   const [selectedMonthPayroll, setSelectedMonthPayroll] = useState<any>(null);
+  const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+  const [isPayslipModalOpen, setIsPayslipModalOpen] = useState(false);
+  const [selectedStaffForAction, setSelectedStaffForAction] = useState<any>(null);
+
+  // Dynamic payroll data storage
+  const [payrollList, setPayrollList] = useState([
+    { 
+      id: "P1", 
+      name: "Lê Anh Tuấn", 
+      role: "FULL_TIME", 
+      base: 15000000, 
+      e: 2500000, 
+      m: 500000, 
+      net: 17000000, 
+      details: {
+        baseSalary: 15000000,
+        stdDays: 26,
+        actDays: 26,
+        policyBase: 15000000,
+        policyStdDays: 26,
+        policyActDays: 1,
+        parking: 100000,
+        phone: 300000,
+        stationery: 100000,
+        revenuePercent: 4,
+        newStudentsCount: 18,
+        testRevenue: 45000000,
+        salesBonus: 1800000,
+        kpiPool: 1500000,
+        kpiScore: 82,
+        manualKpi: 1230000,
+        penalty: 50000,
+        otherDeduction: 0,
+        socialInsurance: 1150000
+      } 
+    },
+    { 
+      id: "P2", 
+      name: "Nguyễn Thu Trang", 
+      role: "PART_TIME_TEACHER", 
+      base: 12000000, 
+      e: 1800000, 
+      m: 200000, 
+      net: 13600000, 
+      details: {
+        mainSessions: 32,
+        mainRate: 250000,
+        intlSessions: 8,
+        intlRate: 350000,
+        totalClasses: 4,
+        reEnrollCount: 12,
+        reEnrollRewardRate: 150000,
+        otherSupport: 500000,
+        parking: 100000,
+        penalty: 50000
+      } 
+    },
+    { 
+      id: "P7", 
+      name: "Trịnh Quang Sáng", 
+      role: "ASSISTANT", 
+      base: 8000000, 
+      e: 1500000, 
+      m: 0, 
+      net: 9500000, 
+      details: {
+        taWorkDays: 22,
+        totalHours: 195.5,
+        hourlyRate: 45000,
+        taTransport: 702500,
+        taCommitment: 0,
+        taOther: 0
+      } 
+    },
+  ]);
 
   // ---- TRAINING RESULTS STATES ----
   const [trainingClassFilter, setTrainingClassFilter] = useState<string>("all");
@@ -661,50 +736,78 @@ const AdminReportsPage = () => {
                         <div className="px-6 py-5 flex items-center justify-between border-b border-slate-50">
                            <div>
                               <h3 className="text-sm font-black text-slate-800 tracking-tight italic uppercase">Bảng lương toàn hệ thống</h3>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Dữ liệu thanh toán kỳ tháng 03/2026</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Dữ liệu thanh toán kỳ tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</p>
                            </div>
                            <Button className="bg-primary rounded-lg font-black text-[10px] px-4 h-9 shadow-md shadow-primary/20 uppercase tracking-wider">
                               <Download className="w-3.5 h-3.5 mr-2" /> Xuất báo cáo tổng
                            </Button>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
+                        <div className="overflow-x-auto pb-4">
+                            <table className="w-full text-left border-separate border-spacing-0">
                                 <thead className="bg-[#f1f3f5] text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">
                                     <tr>
-                                        <th className="px-6 py-3.5">Họ tên nhân viên</th>
-                                        <th className="px-6 py-3.5 text-center">Lương cơ bản</th>
-                                        <th className="px-6 py-3.5 text-center">Phụ cấp / Thưởng</th>
-                                        <th className="px-6 py-3.5 text-center italic">Khấu trừ</th>
-                                        <th className="px-6 py-3.5 text-right text-primary">Thực nhận (NET)</th>
+                                        <th className="px-6 py-4">Họ và tên</th>
+                                        <th className="px-4 py-4 text-center">Chức vụ</th>
+                                        <th className="px-6 py-4 text-right text-primary">Lương thực nhận</th>
+                                        <th className="px-6 py-4 text-right">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {[
-                                      { name: "Lê Anh Tuấn", base: 15000000, e: 2500000, m: 500000, net: 17000000 },
-                                      { name: "Nguyễn Thu Trang", base: 12000000, e: 1800000, m: 200000, net: 13600000 },
-                                      { name: "Phạm Minh Hoàng", base: 18000000, e: 4500000, m: 1200000, net: 21300000 },
-                                      { name: "Trần Bảo Ngọc", base: 10500000, e: 1000000, m: 0, net: 11500000 },
-                                      { name: "Vũ Hải Đăng", base: 14000000, e: 2000000, m: 300000, net: 15700000 },
-                                      { name: "Đỗ Thùy Linh", base: 12500000, e: 1500000, m: 100000, net: 13900000 },
-                                    ].map((p, idx) => (
-                                       <tr 
-                                          key={idx} 
-                                          onClick={() => setSelectedStaffForPayroll(p)}
-                                          className="hover:bg-slate-50/80 transition-all group cursor-pointer"
-                                       >
-                                           <td className="px-6 py-4">
-                                              <div className="flex items-center gap-3">
-                                                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-black text-[10px] text-slate-500 uppercase">{p.name.charAt(0)}</div>
-                                          <p className="text-xs font-bold text-slate-700 group-hover:text-primary transition-colors italic">{p.name}</p>
-                                              </div>
-                                           </td>
-                                           <td className="px-6 py-4 text-center text-xs font-bold text-slate-500 opacity-80">{formatVND(p.base)}</td>
-                                           <td className="px-6 py-4 text-center text-xs font-bold text-emerald-500">+{formatVND(p.e)}</td>
-                                           <td className="px-6 py-4 text-center text-xs font-bold text-rose-500 italic">-{formatVND(p.m)}</td>
-                                           <td className="px-6 py-4 text-right font-black text-primary text-sm tracking-tight">{formatVND(p.net)}</td>
-                                       </tr>
-                                    ))}
+                                    {payrollList.map((p) => {
+                                       const isTeacher = p.role === "PART_TIME_TEACHER";
+
+                                       return (
+                                          <tr 
+                                             key={p.id} 
+                                             className="hover:bg-slate-50/80 transition-all group"
+                                          >
+                                              <td className="px-6 py-5" onClick={() => setSelectedStaffForPayroll(p)}>
+                                                 <div className="flex items-center gap-3 cursor-pointer">
+                                                     <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary uppercase">{p.name.charAt(0)}</div>
+                                                     <div>
+                                                         <p className="text-xs font-black text-slate-700 group-hover:text-primary transition-colors uppercase tracking-tight">{p.name}</p>
+                                                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{p.id}</p>
+                                                     </div>
+                                                 </div>
+                                              </td>
+                                              <td className="px-4 py-5 text-center">
+                                                 <span className={`text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider ${isTeacher ? 'bg-orange-50 text-orange-600' : p.role === 'ASSISTANT' ? 'bg-indigo-50 text-indigo-600' : 'bg-blue-50 text-blue-600'}`}>
+                                                    {isTeacher ? "Giáo viên" : p.role === "ASSISTANT" ? "Trợ giảng" : "Học vụ"}
+                                                 </span>
+                                              </td>
+                                              <td className="px-6 py-5 text-right font-black text-primary text-sm tracking-tight">
+                                                 {formatVND(p.net)}
+                                              </td>
+                                              <td className="px-6 py-5 text-right">
+                                                 <div className="flex items-center justify-end gap-2">
+                                                     <button 
+                                                       onClick={(e) => {
+                                                           e.stopPropagation();
+                                                           setSelectedStaffForAction(p);
+                                                           setIsEntryModalOpen(true);
+                                                       }}
+                                                       className="w-8 h-8 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-primary hover:border-primary transition-all shadow-sm flex items-center justify-center"
+                                                       title="Nhập liệu"
+                                                     >
+                                                         <Pencil className="w-3.5 h-3.5" />
+                                                     </button>
+                                                     <button 
+                                                       onClick={(e) => {
+                                                           e.stopPropagation();
+                                                           setSelectedStaffForAction(p);
+                                                           setIsPayslipModalOpen(true);
+                                                       }}
+                                                       className="w-8 h-8 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-emerald-500 hover:border-emerald-500 transition-all shadow-sm flex items-center justify-center"
+                                                       title="Phiếu lương"
+                                                     >
+                                                         <FileText className="w-3.5 h-3.5" />
+                                                     </button>
+                                                 </div>
+                                              </td>
+                                          </tr>
+                                       );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -1185,14 +1288,717 @@ const AdminReportsPage = () => {
           </div>
         )}
 
-        {activeTab === "survey" && (
-          <motion.div 
-            key="survey" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            className="space-y-8 max-w-7xl mx-auto w-full"
-          >
-            <AdminSurveyDashboard />
-          </motion.div>
-        )}
+        {/* Payroll Entry Modal (Dynamic Form) */}
+        <AnimatePresence>
+          {isEntryModalOpen && selectedStaffForAction && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setIsEntryModalOpen(false)}
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative bg-white w-full max-w-7xl rounded-2xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col my-4"
+              >
+                <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      <Pencil className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-800 uppercase italic">Cập nhật chỉ số lương</h4>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{selectedStaffForAction.name} - {selectedStaffForAction.role === "FULL_TIME" ? "Học vụ" : selectedStaffForAction.role === "ASSISTANT" ? "Trợ giảng" : "Giáo viên"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="bg-primary/5 text-primary px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-primary/10">
+                      Kỳ lương: Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}
+                    </div>
+                    <button onClick={() => setIsEntryModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors relative z-10 w-8 h-8 flex items-center justify-center">
+                      <X className="w-4 h-4 text-slate-400" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-5">
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    const data: any = {};
+                    formData.forEach((value, key) => { data[key] = typeof value === 'string' ? Number(String(value).replace(/\./g, '')) : Number(value); });
+
+                    let netValue = 0;
+                    let extraValue = 0;
+                    let minusValue = 0;
+
+                    if (selectedStaffForAction.role === "PART_TIME_TEACHER") {
+                      const teachingPay = (data.mainSessions * data.mainRate) + (data.intlSessions * data.intlRate);
+                      const reEnrollReward = (data.reEnrollCount || 0) * (data.reEnrollRewardRate || 0);
+                      const totalAdditions = data.parking + data.otherSupport + reEnrollReward;
+                      
+                      netValue = teachingPay + totalAdditions - data.penalty;
+                      extraValue = totalAdditions;
+                      minusValue = data.penalty;
+                      
+                      setPayrollList(prev => prev.map(p => p.id === selectedStaffForAction.id ? { 
+                        ...p, 
+                        base: teachingPay, 
+                        e: extraValue, 
+                        m: minusValue, 
+                        net: netValue,
+                        details: data
+                      } : p));
+                    } else if (selectedStaffForAction.role === "ASSISTANT") {
+                      /* Teaching Assistant (TA) Logic */
+                      const hourlyPay = (data.totalHours || 0) * (data.hourlyRate || 0);
+                      const transport = data.taTransport || 0;
+                      const commitment = data.taCommitment || 0;
+                      const other = data.taOther || 0;
+                      netValue = hourlyPay + transport - commitment - other;
+                      extraValue = transport;
+                      minusValue = commitment + other;
+                      setPayrollList(prev => prev.map(p => p.id === selectedStaffForAction.id ? {
+                        ...p,
+                        base: hourlyPay,
+                        e: extraValue,
+                        m: minusValue,
+                        net: netValue,
+                        details: data
+                      } : p));
+                    } else {
+                      /* Full-time Staff Logic */
+                      // 1. Fixed Salary Logic
+                      const baseDailyRate = (data.baseSalary || 0) / (data.stdDays || 26);
+                      const baseTaskSalary = baseDailyRate * (data.actDays || 0);
+                      const policyDailyRate = (data.policyBase || data.baseSalary || 0) / (data.policyStdDays || data.stdDays || 26);
+                      const holidayPay = policyDailyRate * (data.policyActDays || 0);
+                      const fixedAllowances = (data.parking || 0) + (data.phone || 0) + (data.stationery || 0);
+                      const fixedTotal = baseTaskSalary + holidayPay + fixedAllowances;
+
+                      // 2. KPI Bonus Logic
+                      let kpiBonus = 0;
+                      const kpiScore = data.kpiScore || 0;
+                      const kpiPool = data.kpiPool || 0;
+                      if (data.manualKpi > 0) {
+                        kpiBonus = data.manualKpi;
+                      } else {
+                        if (kpiScore >= 95) kpiBonus = kpiPool + 300000;
+                        else if (kpiScore >= 86) kpiBonus = kpiPool;
+                        else if (kpiScore >= 81) kpiBonus = kpiPool * 0.9;
+                        else if (kpiScore >= 75) kpiBonus = kpiPool * 0.85;
+                        else if (kpiScore >= 65) kpiBonus = kpiPool * 0.8;
+                        else kpiBonus = kpiPool * 0.6;
+                      }
+
+                      // 3. Sales Commission Logic
+                      let commission = 0;
+                      const salesCount = data.newStudentsCount || 0;
+                      const salesRev = data.testRevenue || 0;
+                      if (data.salesBonus > 0) {
+                        commission = data.salesBonus;
+                      } else {
+                        if (salesCount >= 26) commission = salesRev * 0.05;
+                        else if (salesCount >= 16) commission = salesRev * 0.04;
+                        else if (salesCount >= 1) commission = salesRev * 0.03;
+                      }
+
+                      // Final Calculation
+                      extraValue = kpiBonus + commission;
+                      minusValue = (data.penalty || 0) + (data.otherDeduction || 0) + (data.socialInsurance || 0);
+                      netValue = fixedTotal + extraValue - minusValue;
+
+                      setPayrollList(prev => prev.map(p => p.id === selectedStaffForAction.id ? { 
+                        ...p, 
+                        base: fixedTotal, 
+                        e: extraValue, 
+                        m: minusValue, 
+                        net: netValue,
+                        details: data
+                      } : p));
+                    }
+
+                    toast.success("Cập nhật dữ liệu lương thành công!");
+                    setIsEntryModalOpen(false);
+                  }}>
+                    <div className="grid grid-cols-3 gap-6 mb-8">
+                      {selectedStaffForAction.role === "PART_TIME_TEACHER" ? (
+                        /* Teacher (Giáo viên) Payroll Form - Rectangular 3-Column Layout */
+                        <div className="col-span-3 grid grid-cols-3 gap-5">
+                          {/* Row 1: Merged Công & Lớp dạy */}
+                          <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col gap-3">
+                            <div className="text-[10px] font-black text-slate-800 uppercase tracking-widest border-b border-slate-100 pb-1">Dòng 1: Công & Lớp dạy</div>
+                            <div className="grid grid-cols-4 gap-4">
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Số ca không có GVNN</label>
+                                <Input name="mainSessions" type="number" defaultValue={selectedStaffForAction.details?.mainSessions || 0} className="h-9 px-2 rounded-lg border-slate-200 text-xs" onChange={(e) => { const f=e.target.form; if(f && f.elements.namedItem('displayTotalSessions')){ (f.elements.namedItem('displayTotalSessions') as HTMLInputElement).value = String(Number(e.target.value||0) + Number((f.elements.namedItem('intlSessions') as HTMLInputElement).value||0)); } }} />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Số ca có GVNN</label>
+                                <Input name="intlSessions" type="number" defaultValue={selectedStaffForAction.details?.intlSessions || 0} className="h-9 px-2 rounded-lg border-slate-200 text-xs" onChange={(e) => { const f=e.target.form; if(f && f.elements.namedItem('displayTotalSessions')){ (f.elements.namedItem('displayTotalSessions') as HTMLInputElement).value = String(Number((f.elements.namedItem('mainSessions') as HTMLInputElement).value||0) + Number(e.target.value||0)); } }} />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-black text-primary uppercase tracking-tighter ml-1">Tổng số ca dạy</label>
+                                <Input name="displayTotalSessions" readOnly type="number" defaultValue={(selectedStaffForAction.details?.mainSessions || 0) + (selectedStaffForAction.details?.intlSessions || 0)} className="h-9 px-2 rounded-lg border-primary/20 bg-primary/5 text-primary font-black text-xs cursor-not-allowed outline-none" tabIndex={-1} />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Tổng số lớp dạy</label>
+                                <Input name="totalClasses" type="number" defaultValue={selectedStaffForAction.details?.totalClasses || 0} className="h-9 px-2 rounded-lg border-slate-200 text-xs" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Row 2: Rates & Allowances */}
+                          <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 flex flex-col gap-3">
+                            <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest border-b border-emerald-100 pb-1">Dòng 2: Lương & Phụ cấp</div>
+                            <div className="grid grid-cols-4 gap-4">
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter ml-1">Đơn giá dạy chính</label>
+                                <Input name="mainRate" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.mainRate || 250000)} className="h-9 px-2 rounded-lg border-emerald-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter ml-1">Đơn giá có GNVN</label>
+                                <Input name="intlRate" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.intlRate || 350000)} className="h-9 px-2 rounded-lg border-emerald-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter ml-1">Hỗ trợ khác</label>
+                                <Input name="otherSupport" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.otherSupport || 0)} className="h-9 px-2 rounded-lg border-emerald-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter ml-1">Phụ cấp gửi xe</label>
+                                <Input name="parking" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.parking || 100000)} className="h-9 px-2 rounded-lg border-emerald-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Row 3: Merged Thưởng & Phạt */}
+                          <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex flex-col gap-3">
+                            <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest border-b border-blue-100 pb-1">Dòng 3: Thưởng & Phạt</div>
+                            <div className="grid grid-cols-4 gap-4">
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-black text-blue-600 uppercase tracking-tighter ml-1">HS tái nhập học</label>
+                                <Input name="reEnrollCount" type="number" defaultValue={selectedStaffForAction.details?.reEnrollCount || 0} className="h-9 px-2 rounded-lg border-blue-200 text-xs" onChange={(e) => { const f=e.target.form; if(f && f.elements.namedItem('displayReEnrollTotal')){ const count = Number(e.target.value||0); const rate = Number((f.elements.namedItem('reEnrollRewardRate') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('displayReEnrollTotal') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(count * rate); } }} />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-black text-blue-600 uppercase tracking-tighter ml-1">Mức Thưởng</label>
+                                <Input name="reEnrollRewardRate" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.reEnrollRewardRate || 50000)} className="h-9 px-2 rounded-lg border-blue-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; const f=e.currentTarget.form; if(f && f.elements.namedItem('displayReEnrollTotal')){ const count = Number((f.elements.namedItem('reEnrollCount') as HTMLInputElement).value||0); (f.elements.namedItem('displayReEnrollTotal') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(count * Number(v)); } }} />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-black text-blue-600 uppercase tracking-tighter ml-1">T.Tiền thưởng</label>
+                                <Input name="displayReEnrollTotal" readOnly type="text" defaultValue={new Intl.NumberFormat("vi-VN").format((selectedStaffForAction.details?.reEnrollCount || 0) * (selectedStaffForAction.details?.reEnrollRewardRate || 50000))} className="h-9 px-2 rounded-lg border-blue-200 bg-blue-100/50 font-black text-blue-700 text-xs cursor-not-allowed outline-none" tabIndex={-1} />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="text-[8px] font-black text-rose-600 uppercase tracking-tighter ml-1">Khoản phạt</label>
+                                <Input name="penalty" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.penalty || 0)} className="h-9 px-2 rounded-lg border-rose-200 font-bold text-rose-600 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : selectedStaffForAction.role === "ASSISTANT" ? (
+                        /* Teaching Assistant (TA) Payroll Form */
+                        <div className="col-span-3 flex flex-col gap-4">
+                          <div className="grid grid-cols-3 gap-5">
+                            {/* Block 1: Working Hours */}
+                            <div className="space-y-3 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                                <div className="text-[10px] font-black text-indigo-600 uppercase tracking-widest border-b border-indigo-100 pb-1">1. Công & Giờ dạy</div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Tổng số ngày làm</label>
+                                  <Input name="taWorkDays" type="number" defaultValue={selectedStaffForAction.details?.taWorkDays || 0} className="h-9 px-2 rounded-lg border-slate-200 text-xs" />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-indigo-600 uppercase tracking-tighter ml-1">Tổng giờ dạy</label>
+                                  <Input name="totalHours" type="number" step="0.1" defaultValue={selectedStaffForAction.details?.totalHours || 0} placeholder="VD: 23.5" className="h-9 px-2 rounded-lg border-indigo-200 text-indigo-700 font-bold text-xs" onChange={(e) => { const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number(e.target.value||0); const r=Number((f.elements.namedItem('hourlyRate') as HTMLInputElement).value.replace(/\./g,'')||0); const t=Number((f.elements.namedItem('taTransport') as HTMLInputElement).value.replace(/\./g,'')||0); const c=Number((f.elements.namedItem('taCommitment') as HTMLInputElement).value.replace(/\./g,'')||0); const o=Number((f.elements.namedItem('taOther') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*r+t-c-o)); } }} />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-indigo-600 uppercase tracking-tighter ml-1">Đơn giá / giờ</label>
+                                  <Input name="hourlyRate" type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.details?.hourlyRate || 30000)} className="h-9 px-2 rounded-lg border-indigo-200 text-indigo-700 font-bold text-xs" onChange={(e) => { const raw=e.target.value.replace(/\./g,''); e.target.value=raw?new Intl.NumberFormat('vi-VN').format(Number(raw)):''; const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number((f.elements.namedItem('totalHours') as HTMLInputElement).value||0); const t=Number((f.elements.namedItem('taTransport') as HTMLInputElement).value.replace(/\./g,'')||0); const c=Number((f.elements.namedItem('taCommitment') as HTMLInputElement).value.replace(/\./g,'')||0); const o=Number((f.elements.namedItem('taOther') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*Number(raw||0)+t-c-o)); } }} />
+                                </div>
+                            </div>
+
+                            {/* Block 2: Allowances */}
+                            <div className="space-y-3 bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                                <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest border-b border-emerald-100 pb-1">2. Hỗ trợ & Phụ cấp</div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Hỗ trợ đi lại</label>
+                                  <Input name="taTransport" type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.details?.taTransport || 0)} className="h-9 px-2 rounded-lg border-emerald-200 text-emerald-700 font-bold text-xs" onChange={(e) => { const raw=e.target.value.replace(/\./g,''); e.target.value=raw?new Intl.NumberFormat('vi-VN').format(Number(raw)):''; const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number((f.elements.namedItem('totalHours') as HTMLInputElement).value||0); const r=Number((f.elements.namedItem('hourlyRate') as HTMLInputElement).value.replace(/\./g,'')||0); const c=Number((f.elements.namedItem('taCommitment') as HTMLInputElement).value.replace(/\./g,'')||0); const o=Number((f.elements.namedItem('taOther') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*r+Number(raw||0)-c-o)); } }} />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Lương theo giờ chuẩn</label>
+                                  <div className="h-9 flex items-center px-2 bg-emerald-50 rounded-lg border border-emerald-200 text-[9px] font-black text-emerald-700 tracking-tighter uppercase">Theo giờ × Đơn giá</div>
+                                </div>
+                            </div>
+
+                            {/* Block 3: Deductions */}
+                            <div className="space-y-3 bg-rose-50/50 p-4 rounded-xl border border-rose-100">
+                                <div className="text-[10px] font-black text-rose-600 uppercase tracking-widest border-b border-rose-100 pb-1">3. Giảm trừ</div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-rose-500 uppercase tracking-tighter ml-1">Cam kết làm việc</label>
+                                  <Input name="taCommitment" type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.details?.taCommitment || 0)} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw=e.target.value.replace(/\./g,''); e.target.value=raw?new Intl.NumberFormat('vi-VN').format(Number(raw)):''; const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number((f.elements.namedItem('totalHours') as HTMLInputElement).value||0); const r=Number((f.elements.namedItem('hourlyRate') as HTMLInputElement).value.replace(/\./g,'')||0); const t=Number((f.elements.namedItem('taTransport') as HTMLInputElement).value.replace(/\./g,'')||0); const o=Number((f.elements.namedItem('taOther') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*r+t-Number(raw||0)-o)); } }} />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-rose-500 uppercase tracking-tighter ml-1">Khác</label>
+                                  <Input name="taOther" type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.details?.taOther || 0)} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw=e.target.value.replace(/\./g,''); e.target.value=raw?new Intl.NumberFormat('vi-VN').format(Number(raw)):''; const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number((f.elements.namedItem('totalHours') as HTMLInputElement).value||0); const r=Number((f.elements.namedItem('hourlyRate') as HTMLInputElement).value.replace(/\./g,'')||0); const t=Number((f.elements.namedItem('taTransport') as HTMLInputElement).value.replace(/\./g,'')||0); const c=Number((f.elements.namedItem('taCommitment') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*r+t-c-Number(raw||0))); } }} />
+                                </div>
+                                <div className="pt-2 border-t border-rose-100">
+                                  <label className="text-[8px] font-black text-rose-400 uppercase tracking-tighter ml-1">Tổng giảm trừ</label>
+                                  <Input name="taTotalDeduction" readOnly type="text" defaultValue={new Intl.NumberFormat('vi-VN').format((selectedStaffForAction.details?.taCommitment || 0) + (selectedStaffForAction.details?.taOther || 0))} className="h-9 px-2 rounded-lg border-rose-100 bg-rose-50/80 text-rose-600 text-xs font-black cursor-not-allowed mt-1 outline-none" tabIndex={-1} />
+                                </div>
+                            </div>
+                          </div>
+
+                          {/* Net Summary */}
+                          <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 flex items-center gap-4">
+                            <div className="flex-1">
+                              <div className="text-[8px] font-black text-indigo-500 uppercase tracking-widest mb-1">Công thức</div>
+                              <div className="text-[10px] text-slate-500 font-bold italic">Thực nhận = Tổng giờ × Đơn giá/giờ + Hỗ trợ gửi xe − Cam kết − Khác</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-[8px] font-black text-indigo-500 uppercase tracking-widest mb-1">Thực nhận</div>
+                              <Input name="taNetDisplay" readOnly type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(Math.round((selectedStaffForAction.details?.totalHours || 0) * (selectedStaffForAction.details?.hourlyRate || 30000) + (selectedStaffForAction.details?.taTransport || 0) - (selectedStaffForAction.details?.taCommitment || 0) - (selectedStaffForAction.details?.taOther || 0)))} className="h-10 px-3 rounded-xl border-indigo-200 bg-white font-black text-indigo-600 text-sm cursor-not-allowed text-right w-44" tabIndex={-1} />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="col-span-3 grid grid-cols-3 gap-8 items-start">
+                          {/* Column 1: Administrative Salary & Allowances */}
+                          <div className="space-y-3">
+                            <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em] border-b border-primary/10 pb-1 mb-2">1. Lương hành chính & Phụ cấp</div>
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1 truncate">Lương HĐ</label>
+                                  <Input name="baseSalary" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.baseSalary || 15000000)} className="h-9 px-2 rounded-lg border-slate-200 focus:ring-primary/20 text-xs" required  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1 truncate">Công chuẩn</label>
+                                  <Input name="stdDays" type="number" defaultValue={selectedStaffForAction.details?.stdDays || 26} className="h-9 px-2 rounded-lg border-slate-200 focus:ring-primary/20 text-xs" required />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1 truncate">Công thực</label>
+                                  <Input name="actDays" type="number" defaultValue={selectedStaffForAction.details?.actDays || 26} className="h-9 px-2 rounded-lg border-slate-200 focus:ring-primary/20 text-xs" required />
+                                </div>
+                              </div>
+                              
+                              <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 grid grid-cols-3 gap-2">
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1 italic text-primary/60 truncate">Lương lễ</label>
+                                  <Input name="policyBase" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.policyBase || 15000000)} className="h-9 px-2 rounded-lg border-slate-200 focus:ring-primary/20 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1 italic text-primary/60 truncate">Chuẩn lễ</label>
+                                  <Input name="policyStdDays" type="number" defaultValue={selectedStaffForAction.details?.policyStdDays || 26} className="h-9 px-2 rounded-lg border-slate-200 focus:ring-primary/20 text-xs" />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1 italic text-primary/60 truncate">Thực lễ</label>
+                                  <Input name="policyActDays" type="number" defaultValue={selectedStaffForAction.details?.policyActDays || 1} className="h-9 px-2 rounded-lg border-slate-200 focus:ring-primary/20 text-xs" />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2 pt-1">
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Gửi xe</label>
+                                  <Input name="parking" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.parking || 100000)} className="h-9 px-2 rounded-lg border-slate-200 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Điện thoại</label>
+                                  <Input name="phone" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.phone || 300000)} className="h-9 px-2 rounded-lg border-slate-200 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">VPP</label>
+                                  <Input name="stationery" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.stationery || 100000)} className="h-9 px-2 rounded-lg border-slate-200 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Column 2: Revenue & KPI Rewards */}
+                          <div className="space-y-3">
+                            <div className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] border-b border-emerald-100 pb-1 mb-2">2. Thưởng Doanh Thu & KPI</div>
+                            
+                            <div className="space-y-3 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/50">
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter ml-1">Doanh Thu (%)</label>
+                                  <Input name="revenuePercent" type="number" defaultValue={selectedStaffForAction.details?.revenuePercent || 4} placeholder="VD: 4" className="h-9 px-2 rounded-lg border-emerald-200 text-emerald-700 font-bold text-xs" />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Số HS Test</label>
+                                  <Input name="newStudentsCount" type="number" defaultValue={selectedStaffForAction.details?.newStudentsCount || 18} className="h-9 px-2 rounded-lg border-slate-200 text-xs" />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Tổng DT</label>
+                                  <Input name="testRevenue" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.testRevenue || 45000000)} className="h-9 px-2 rounded-lg border-slate-200 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Thành tiền</label>
+                                  <Input name="salesBonus" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.salesBonus || 1800000)} className="h-9 px-2 rounded-lg border-slate-200 bg-white font-bold text-emerald-600 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                </div>
+                              </div>
+                              <div className="flex justify-between gap-1 text-[8px] font-bold text-emerald-600/70 italic px-2 py-1 bg-white/50 rounded-lg">
+                                <span>1-15hs: 3%</span>
+                                <span>16-25hs: 4%</span>
+                                <span>26+hs: 5%</span>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3 bg-blue-50/50 p-3 rounded-xl border border-blue-100/50">
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-blue-600 uppercase tracking-tighter ml-1 truncate">Lương HS chuẩn</label>
+                                  <Input name="kpiPool" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.kpiPool || 1500000)} className="h-9 px-2 rounded-lg border-slate-200 text-xs" onChange={(e) => { const raw = e.target.value.replace(/\./g, ''); const formatted = raw ? new Intl.NumberFormat('vi-VN').format(Number(raw)) : ''; e.target.value = formatted; const f=e.target.form; if(f && f.elements.namedItem('manualKpi')){ (f.elements.namedItem('manualKpi') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(Number(raw||0) * Number((f.elements.namedItem('kpiScore') as HTMLInputElement).value || 0) / 100)); } }} />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">% đạt</label>
+                                  <Input name="kpiScore" type="number" defaultValue={selectedStaffForAction.details?.kpiScore || 82} className="h-9 px-2 rounded-lg border-slate-200 text-xs" onChange={(e)=>{ const f=e.target.form; if(f && f.elements.namedItem('manualKpi')){ (f.elements.namedItem('manualKpi') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(Number((f.elements.namedItem('kpiPool') as HTMLInputElement).value.replace(/\./g, '') || 0) * Number(e.target.value.replace(/\./g, '')||0) / 100)); } }} />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Tiền KPI</label>
+                                  <Input name="manualKpi" readOnly type="text" defaultValue={new Intl.NumberFormat("vi-VN").format((selectedStaffForAction.details?.kpiPool || 1500000) * (selectedStaffForAction.details?.kpiScore || 82) / 100)} className="h-9 px-2 rounded-lg border-blue-100 bg-blue-50/80 font-black text-blue-600 text-xs cursor-not-allowed outline-none" tabIndex={-1}  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                </div>
+                              </div>
+                              <div className="text-[8px] font-bold text-blue-600/70 italic p-2 bg-white/50 rounded-lg leading-tight uppercase text-center">
+                                * Công thức: Tiền KPI = Lương HS chuẩn × % Đạt
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Column 3: Reductions & Social Insurance */}
+                          <div className="space-y-3">
+                            <div className="text-[10px] font-black text-rose-600 uppercase tracking-[0.2em] border-b border-rose-100 pb-1 mb-2">3. Các khoản giảm trừ</div>
+                            <div className="space-y-3 bg-rose-50/50 p-4 rounded-xl border border-rose-100/50">
+                              <div className="grid grid-cols-[1fr,1.2fr] items-center gap-2">
+                                <label className="text-[8px] font-black text-rose-500 uppercase tracking-tighter ml-1">Phạt vi phạm</label>
+                                <Input name="penalty" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.penalty || 50000)} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw = e.target.value.replace(/\./g, ''); e.target.value = raw ? new Intl.NumberFormat('vi-VN').format(Number(raw)) : ''; const f=e.target.form; if(f && f.elements.namedItem('displayDeduction')){ (f.elements.namedItem('displayDeduction') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Number(raw||0) + Number((f.elements.namedItem('otherDeduction') as HTMLInputElement).value.replace(/\./g,'') || 0) + Number((f.elements.namedItem('socialInsurance') as HTMLInputElement).value.replace(/\./g,'') || 0)); } }} />
+                              </div>
+                              <div className="grid grid-cols-[1fr,1.2fr] items-center gap-2">
+                                <label className="text-[8px] font-black text-rose-500 uppercase tracking-tighter ml-1">Khấu trừ khác</label>
+                                <Input name="otherDeduction" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.otherDeduction || 0)} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw = e.target.value.replace(/\./g, ''); e.target.value = raw ? new Intl.NumberFormat('vi-VN').format(Number(raw)) : ''; const f=e.target.form; if(f && f.elements.namedItem('displayDeduction')){ (f.elements.namedItem('displayDeduction') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Number((f.elements.namedItem('penalty') as HTMLInputElement).value.replace(/\./g,'') || 0) + Number(raw||0) + Number((f.elements.namedItem('socialInsurance') as HTMLInputElement).value.replace(/\./g,'') || 0)); } }} />
+                              </div>
+                              <div className="grid grid-cols-[1fr,1.2fr] items-center gap-2">
+                                <label className="text-[8px] font-black text-rose-500 uppercase tracking-tighter ml-1">BHXH NLĐ</label>
+                                <Input name="socialInsurance" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.socialInsurance || 1150000)} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw = e.target.value.replace(/\./g, ''); e.target.value = raw ? new Intl.NumberFormat('vi-VN').format(Number(raw)) : ''; const f=e.target.form; if(f && f.elements.namedItem('displayDeduction')){ (f.elements.namedItem('displayDeduction') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Number((f.elements.namedItem('penalty') as HTMLInputElement).value.replace(/\./g,'') || 0) + Number((f.elements.namedItem('otherDeduction') as HTMLInputElement).value.replace(/\./g,'') || 0) + Number(raw||0)); } }} />
+                              </div>
+                              <div className="pt-3 border-t border-rose-100 mt-2 grid grid-cols-[1.2fr,1fr] items-center gap-2">
+                                <label className="text-[8px] font-black text-rose-400 uppercase tracking-tighter ml-1">Tổng khấu trừ</label>
+                                <Input name="displayDeduction" readOnly type="text" defaultValue={new Intl.NumberFormat("vi-VN").format((selectedStaffForAction.details?.penalty || 50000) + (selectedStaffForAction.details?.otherDeduction || 0) + (selectedStaffForAction.details?.socialInsurance || 1150000))} className="h-9 px-2 rounded-lg border-rose-100 bg-rose-50/80 text-rose-600 text-xs font-black cursor-not-allowed outline-none" tabIndex={-1}  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mb-6 flex flex-col gap-1 w-full relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                      <div className="flex items-baseline gap-3 relative z-10">
+                        <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Tổng Lương:</span>
+                        <span className="text-xl font-black text-primary">
+                          {new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.net || 0)} <span className="text-sm">VNĐ</span>
+                        </span>
+                      </div>
+                      <span className="text-[9px] font-bold text-slate-500 italic relative z-10">
+                        * Ghi chú: Tổng lương = Lương hành chính + Lương doanh thu - Các khoản giảm trừ
+                      </span>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <Button type="submit" className="flex-1 bg-primary h-12 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-primary/30">
+                        Xác nhận & Lưu dữ liệu
+                      </Button>
+                      <Button type="button" onClick={() => setIsEntryModalOpen(false)} variant="outline" className="flex-1 h-12 rounded-xl font-black text-xs uppercase tracking-wider border-slate-200">
+                        Hủy bỏ
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Detailed Payslip Modal (Odoo ERP Style) */}
+        <AnimatePresence>
+          {isPayslipModalOpen && selectedStaffForAction && (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 overflow-y-auto">
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setIsPayslipModalOpen(false)}
+                className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
+              />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="relative bg-[#f8fafc] w-full max-w-5xl rounded-lg shadow-2xl overflow-hidden border border-slate-200 flex flex-col my-4"
+              >
+                {/* Payslip Header */}
+                <div className="bg-white p-10 border-b border-slate-200 flex justify-between items-start">
+                  <div>
+                    <div className="flex items-center gap-2 mb-6">
+                      <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-black text-xl">M</div>
+                      <span className="text-xl font-black text-slate-800 tracking-tighter">MENGLISH EDUCATION</span>
+                    </div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase mb-1">Phiếu lương nhân viên</h2>
+                    <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] italic">Thanh toán kỳ: Tháng 03 / 2026</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="inline-block px-4 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">
+                      Trạng thái: Đã phê duyệt
+                    </div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Mã nhân viên</p>
+                    <p className="text-lg font-black text-slate-800">#{selectedStaffForAction.id}</p>
+                  </div>
+                </div>
+
+                {/* Staff Info Card */}
+                <div className="px-10 py-8 grid grid-cols-2 gap-12 bg-white">
+                  <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 border-b border-slate-100 pb-2">Thông tin nhân sự</h4>
+                    <div className="space-y-2 text-sm font-bold">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Họ và tên:</span>
+                        <span className="text-slate-800 uppercase">{selectedStaffForAction.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Chức vụ:</span>
+                        <span className="text-slate-800">{selectedStaffForAction.role === "FULL_TIME" ? "Quản lý Học vụ / Admin" : "Giảng viên Part-time"}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 border-b border-slate-100 pb-2">Phương thức trả lương</h4>
+                    <div className="space-y-2 text-sm font-bold">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Ngân hàng:</span>
+                        <span className="text-slate-800">Techcombank</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Số tài khoản:</span>
+                        <span className="text-slate-800">1903 **** **** 888</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Calculation Breakdown Table */}
+                <div className="px-10 py-6">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b-2 border-slate-200">
+                        <th className="py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nội dung diễn giải</th>
+                        <th className="py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Số lượng</th>
+                        <th className="py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Đơn giá</th>
+                        <th className="py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Thành tiền</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {selectedStaffForAction.role === "PART_TIME_TEACHER" ? (
+                        <>
+                          <tr>
+                            <td className="py-5">
+                              <p className="text-sm font-bold text-slate-800">Lương ca dạy chính</p>
+                              <p className="text-[10px] text-slate-400 font-medium italic">Theo lịch dạy cố định</p>
+                            </td>
+                            <td className="py-5 text-center text-sm font-black text-slate-600">{selectedStaffForAction.details?.mainSessions || 0} ca</td>
+                            <td className="py-5 text-center text-sm font-black text-slate-500">{formatVND(selectedStaffForAction.details?.mainRate || 250000)}</td>
+                            <td className="py-5 text-right text-sm font-black text-slate-800">{formatVND((selectedStaffForAction.details?.mainSessions || 0) * (selectedStaffForAction.details?.mainRate || 250000))}</td>
+                          </tr>
+                          <tr>
+                            <td className="py-5">
+                              <p className="text-sm font-bold text-slate-800">Lương ca đan xen GVNN</p>
+                              <p className="text-[10px] text-slate-400 font-medium italic">Hỗ trợ giảng dạy chuyên sâu</p>
+                            </td>
+                            <td className="py-5 text-center text-sm font-black text-slate-600">{selectedStaffForAction.details?.intlSessions || 0} ca</td>
+                            <td className="py-5 text-center text-sm font-black text-slate-500">{formatVND(selectedStaffForAction.details?.intlRate || 350000)}</td>
+                            <td className="py-5 text-right text-sm font-black text-slate-800">{formatVND((selectedStaffForAction.details?.intlSessions || 0) * (selectedStaffForAction.details?.intlRate || 350000))}</td>
+                          </tr>
+                          <tr>
+                            <td className="py-5">
+                              <p className="text-sm font-bold text-slate-800">Tổng số lớp giảng dạy</p>
+                              <p className="text-[10px] text-slate-400 font-medium italic">Ghi nhận hiệu suất đứng lớp</p>
+                            </td>
+                            <td className="py-5 text-center text-sm font-black text-slate-600">{selectedStaffForAction.details?.totalClasses || 0} lớp</td>
+                            <td className="py-5 text-center">---</td>
+                            <td className="py-5 text-right text-sm font-black text-slate-400">---</td>
+                          </tr>
+                          <tr>
+                            <td className="py-5">
+                              <p className="text-sm font-bold text-emerald-600">Thưởng KPI Giữ học viên</p>
+                              <p className="text-[10px] text-slate-400 font-medium italic">Thưởng dựa trên sĩ số thực tế</p>
+                            </td>
+                            <td className="py-5 text-center text-sm font-black text-slate-600">{selectedStaffForAction.details?.kpiStudents || 0} HS</td>
+                            <td className="py-5 text-center text-sm font-black text-slate-500">{formatVND(15000)}</td>
+                            <td className="py-5 text-right text-sm font-black text-emerald-600">+{formatVND((selectedStaffForAction.details?.kpiStudents || 0) * 15000)}</td>
+                          </tr>
+                          <tr>
+                            <td className="py-5">
+                              <p className="text-sm font-bold text-slate-800">Phụ cấp gửi xe</p>
+                            </td>
+                            <td className="py-5 text-center">---</td>
+                            <td className="py-5 text-center">---</td>
+                            <td className="py-5 text-right text-sm font-black text-slate-800">{formatVND(selectedStaffForAction.details?.parking || 100000)}</td>
+                          </tr>
+                          {selectedStaffForAction.details?.otherSupport > 0 && (
+                            <tr>
+                              <td className="py-5">
+                                <p className="text-sm font-bold text-slate-800">Hỗ trợ khác</p>
+                              </td>
+                              <td className="py-5 text-center">---</td>
+                              <td className="py-5 text-center">---</td>
+                              <td className="py-5 text-right text-sm font-black text-slate-800">{formatVND(selectedStaffForAction.details?.otherSupport)}</td>
+                            </tr>
+                          )}
+                          {selectedStaffForAction.details?.penalty > 0 && (
+                            <tr>
+                              <td className="py-5 text-rose-500">
+                                <p className="text-sm font-black uppercase italic">Dự tính Phạt / Khấu trừ</p>
+                              </td>
+                              <td className="py-5 text-center">---</td>
+                              <td className="py-5 text-center">---</td>
+                              <td className="py-5 text-right text-sm font-black text-rose-500">-{formatVND(selectedStaffForAction.details?.penalty)}</td>
+                            </tr>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <tr>
+                            <td className="py-5">
+                              <p className="text-sm font-bold text-slate-800">Lương hành chính (Theo công)</p>
+                              <p className="text-[10px] text-slate-400 font-medium italic">Công thực: {selectedStaffForAction.details?.actDays || 26}/{selectedStaffForAction.details?.stdDays || 26} ngày</p>
+                            </td>
+                            <td className="py-5 text-center text-sm font-black text-slate-600">
+                                {(((selectedStaffForAction.details?.actDays || 26) / (selectedStaffForAction.details?.stdDays || 26)) * 100).toFixed(0)}%
+                            </td>
+                            <td className="py-5 text-center text-sm font-black text-slate-500">{formatVND(selectedStaffForAction.details?.baseSalary || selectedStaffForAction.base)}</td>
+                            <td className="py-5 text-right text-sm font-black text-slate-800">
+                                {formatVND(((selectedStaffForAction.details?.baseSalary || selectedStaffForAction.base || 0) / (selectedStaffForAction.details?.stdDays || 26)) * (selectedStaffForAction.details?.actDays || 26))}
+                            </td>
+                          </tr>
+                          {selectedStaffForAction.details?.holidayPay > 0 && (
+                            <tr>
+                              <td className="py-5">
+                                <p className="text-sm font-bold text-slate-800">Lương ngày lễ</p>
+                                <p className="text-[10px] text-slate-400 font-medium italic">Thanh toán cộng thêm cho ngày lễ</p>
+                              </td>
+                              <td className="py-5 text-center text-sm font-black text-slate-600">---</td>
+                              <td className="py-5 text-center text-sm font-black text-slate-500">---</td>
+                              <td className="py-5 text-right text-sm font-black text-emerald-600">
+                                  +{formatVND(selectedStaffForAction.details?.holidayPay || 0)}
+                              </td>
+                            </tr>
+                          )}
+                          <tr>
+                            <td className="py-5">
+                              <p className="text-sm font-bold text-slate-800">Tổng phụ cấp cố định</p>
+                              <p className="text-[10px] text-slate-400 font-medium italic">Gửi xe, Điện thoại, Văn phòng phẩm</p>
+                            </td>
+                            <td className="py-5 text-center">---</td>
+                            <td className="py-5 text-center">---</td>
+                            <td className="py-5 text-right text-sm font-black text-emerald-600">
+                                +{formatVND((selectedStaffForAction.details?.parking || 0) + (selectedStaffForAction.details?.phone || 0) + (selectedStaffForAction.details?.stationery || 0))}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="py-5">
+                              <p className="text-sm font-bold text-emerald-600">Lương hiệu suất (KPI)</p>
+                              <p className="text-[10px] text-slate-400 font-medium italic">Đạt {selectedStaffForAction.details?.kpiScore || 0}% điểm KPI</p>
+                            </td>
+                            <td className="py-5 text-center">---</td>
+                            <td className="py-5 text-center">---</td>
+                            <td className="py-5 text-right text-sm font-black text-emerald-600">
+                                {(() => {
+                                   let kpiBonus = 0;
+                                   const kpiScore = selectedStaffForAction.details?.kpiScore || 0;
+                                   const kpiPool = selectedStaffForAction.details?.kpiPool || 0;
+                                   const manualKpi = selectedStaffForAction.details?.manualKpi || 0;
+
+                                   if (manualKpi > 0) kpiBonus = manualKpi;
+                                   else {
+                                      if (kpiScore >= 95) kpiBonus = kpiPool + 300000;
+                                      else if (kpiScore >= 86) kpiBonus = kpiPool;
+                                      else if (kpiScore >= 81) kpiBonus = kpiPool * 0.9;
+                                      else if (kpiScore >= 75) kpiBonus = kpiPool * 0.85;
+                                      else if (kpiScore >= 65) kpiBonus = kpiPool * 0.8;
+                                      else kpiBonus = kpiPool * 0.6;
+                                   }
+                                   return `+${formatVND(kpiBonus)}`;
+                                })()}
+                            </td>
+                          </tr>
+                          {selectedStaffForAction.details?.newStudentsCount > 0 && (
+                            <tr>
+                              <td className="py-5">
+                                <p className="text-sm font-bold text-emerald-600">Thưởng KPI HS test thành công</p>
+                                <p className="text-[10px] text-slate-400 font-medium italic">{selectedStaffForAction.details?.newStudentsCount} học viên test thành công</p>
+                              </td>
+                              <td className="py-5 text-center">---</td>
+                              <td className="py-5 text-center">---</td>
+                              <td className="py-5 text-right text-sm font-black text-emerald-600">
+                                 {(() => {
+                                    let commission = 0;
+                                    const salesCount = selectedStaffForAction.details?.newStudentsCount || 0;
+                                    const salesRev = selectedStaffForAction.details?.testRevenue || 0;
+                                    if (salesCount >= 26) commission = salesRev * 0.05;
+                                    else if (salesCount >= 16) commission = salesRev * 0.04;
+                                    else if (salesCount >= 1) commission = salesRev * 0.03;
+                                    return `+${formatVND(commission)}`;
+                                 })()}
+                              </td>
+                            </tr>
+                          )}
+                          {(selectedStaffForAction.details?.penalty > 0 || selectedStaffForAction.details?.otherDeduction > 0 || selectedStaffForAction.details?.socialInsurance > 0) && (
+                            <tr>
+                              <td className="py-5 text-rose-500">
+                                <p className="text-sm font-black uppercase italic">Deduction / Penalty</p>
+                                <p className="text-[10px] text-slate-400 font-medium italic">Phạt, Khấu trừ khác & BHXH</p>
+                              </td>
+                              <td className="py-5 text-center">---</td>
+                              <td className="py-5 text-center">---</td>
+                              <td className="py-5 text-right text-sm font-black text-rose-500">
+                                -{formatVND((selectedStaffForAction.details?.penalty || 0) + (selectedStaffForAction.details?.otherDeduction || 0) + (selectedStaffForAction.details?.socialInsurance || 0))}
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Payslip Footer */}
+                <div className="mt-auto bg-white p-10 border-t border-slate-200">
+                  <div className="flex justify-between items-center mb-8">
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Lời nhắn từ BGD</p>
+                      <p className="text-xs font-bold text-slate-500 italic max-w-xs">Cảm ơn bạn đã đồng hành và đóng góp vào sự phát triển của MENGLISH trong tháng qua.</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-2 italic">TỔNG THỰC NHẬN (NET)</p>
+                      <p className="text-4xl font-black text-primary tracking-tighter shadow-primary/5">{formatVND(selectedStaffForAction.net)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => window.print()}
+                      className="flex-1 bg-slate-900 h-14 rounded-xl text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
+                    >
+                      <Download className="w-4 h-4" /> In phiếu lương / Xuất PDF
+                    </button>
+                    <button 
+                      onClick={() => setIsPayslipModalOpen(false)}
+                      className="w-1/4 h-14 border-2 border-slate-200 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all text-slate-500"
+                    >
+                      Đóng
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </AnimatePresence>
     </div>
   );
