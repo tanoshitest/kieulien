@@ -25,6 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AdminSurveyDashboard } from "@/components/survey/AdminSurveyDashboard";
+import { admissionsStore, useEnrollments } from "@/lib/admissionsStore";
 
 const formatVND = (n: number) =>
   new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(n) + "đ";
@@ -75,13 +76,21 @@ const AdminReportsPage = () => {
         newStudentsCount: 18,
         testRevenue: 45000000,
         salesBonus: 1800000,
+        // ---- Lương Doanh thu theo lớp tái tục (NEW) ----
+        renewalClasses: [
+          { id: "rc1", className: "Cam 10", studentCount: 18, droppedCount: 0, tuitionRevenue: 38913000, materialRevenue: 0, includeTuition: true, includeMaterial: false },
+          { id: "rc2", className: "Cam 25", studentCount: 16, droppedCount: 1, tuitionRevenue: 28530000, materialRevenue: 0, includeTuition: true, includeMaterial: false },
+          { id: "rc3", className: "Cam 33", studentCount: 17, droppedCount: 0, tuitionRevenue: 25370000, materialRevenue: 0, includeTuition: true, includeMaterial: false },
+          { id: "rc4", className: "Cam 21", studentCount: 15, droppedCount: 2, tuitionRevenue: 21840000, materialRevenue: 0, includeTuition: true, includeMaterial: false },
+          { id: "rc5", className: "Cam 34", studentCount: 19, droppedCount: 0, tuitionRevenue: 32400000, materialRevenue: 0, includeTuition: true, includeMaterial: false },
+        ],
         kpiPool: 1500000,
         kpiScore: 82,
         manualKpi: 1230000,
         penalty: 50000,
         otherDeduction: 0,
         socialInsurance: 1150000
-      } 
+      }
     },
     { 
       id: "P2", 
@@ -134,6 +143,65 @@ const AdminReportsPage = () => {
   const [attendanceReportTeacherFilter, setAttendanceReportTeacherFilter] = useState<string>("all");
   const [selectedClassForAttendanceReport, setSelectedClassForAttendanceReport] = useState<string | null>(null);
   const [selectedAttendanceSession, setSelectedAttendanceSession] = useState<number>(1);
+
+  // ---- LƯƠNG DOANH THU - LỚP TÁI TỤC (NEW) ----
+  type RenewalClass = {
+    id: string;
+    className: string;
+    studentCount: number;     // Sĩ số → quyết định bậc % (3/4/5%)
+    droppedCount: number;     // Số HS nghỉ → quyết định bonus tái tục
+    tuitionRevenue: number;   // Doanh thu học phí
+    materialRevenue: number;  // Doanh thu học liệu
+    includeTuition: boolean;
+    includeMaterial: boolean;
+  };
+  const [renewalClassesEntry, setRenewalClassesEntry] = useState<RenewalClass[]>([]);
+
+  // Bridge từ CRM: lắng nghe enrollment events
+  const allEnrollments = useEnrollments();
+  // Tháng hiện tại để filter (YYYY-MM)
+  const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  // Đề xuất doanh số cho học vụ đang mở modal
+  const suggestedFromCRM = React.useMemo(() => {
+    if (!selectedStaffForAction || selectedStaffForAction.role !== "FULL_TIME") return [];
+    return admissionsStore.aggregateByStaff(selectedStaffForAction.name, currentMonthKey);
+  }, [selectedStaffForAction, currentMonthKey, allEnrollments]);
+
+  // Sync khi mở modal cho FULL_TIME
+  useEffect(() => {
+    if (isEntryModalOpen && selectedStaffForAction?.role === "FULL_TIME") {
+      const existing = selectedStaffForAction.details?.renewalClasses;
+      if (Array.isArray(existing) && existing.length > 0) {
+        setRenewalClassesEntry(existing.map((c: RenewalClass) => ({ ...c })));
+      } else {
+        setRenewalClassesEntry([]);
+      }
+    }
+  }, [isEntryModalOpen, selectedStaffForAction]);
+
+  // Helpers tính lương doanh thu
+  const getBaseRate = (count: number) => {
+    if (count >= 26) return 0.05;
+    if (count >= 16) return 0.04;
+    if (count >= 1) return 0.03;
+    return 0;
+  };
+  const getRenewalBonus = (dropped: number) => {
+    // 0 nghỉ → +1% ; 1 nghỉ → +0.7% ; 2 nghỉ → +0.5% ; ≥3 → 0
+    if (dropped === 0) return 0.01;
+    if (dropped === 1) return 0.007;
+    if (dropped === 2) return 0.005;
+    return 0;
+  };
+  const isKpiPenalized = (dropped: number) => dropped > 4;
+  const calcClassCommission = (c: RenewalClass) => {
+    const rev = (c.includeTuition ? c.tuitionRevenue : 0) + (c.includeMaterial ? c.materialRevenue : 0);
+    const rate = getBaseRate(c.studentCount) + getRenewalBonus(c.droppedCount);
+    return Math.round(rev * rate);
+  };
+  const calcTotalRenewalCommission = (list: RenewalClass[]) =>
+    list.reduce((sum, c) => sum + calcClassCommission(c), 0);
+  const hasAnyKpiPenalty = (list: RenewalClass[]) => list.some(c => isKpiPenalized(c.droppedCount));
 
   if (!isAdmin) {
     return (
@@ -749,6 +817,9 @@ const AdminReportsPage = () => {
                                     <tr>
                                         <th className="px-6 py-4">Họ và tên</th>
                                         <th className="px-4 py-4 text-center">Chức vụ</th>
+                                        <th className="px-4 py-4 text-center">Lớp tái tục</th>
+                                        <th className="px-4 py-4 text-right">Doanh thu tính HH</th>
+                                        <th className="px-4 py-4 text-right text-emerald-600">Hoa hồng</th>
                                         <th className="px-6 py-4 text-right text-primary">Lương thực nhận</th>
                                         <th className="px-6 py-4 text-right">Thao tác</th>
                                     </tr>
@@ -756,10 +827,14 @@ const AdminReportsPage = () => {
                                 <tbody className="divide-y divide-slate-50">
                                     {payrollList.map((p) => {
                                        const isTeacher = p.role === "PART_TIME_TEACHER";
+                                       const renewalList: RenewalClass[] = Array.isArray((p as any).details?.renewalClasses) ? (p as any).details.renewalClasses : [];
+                                       const renewalCount = renewalList.length;
+                                       const renewalIncludedRevenue = renewalList.reduce((sum, c) => sum + (c.includeTuition ? c.tuitionRevenue : 0) + (c.includeMaterial ? c.materialRevenue : 0), 0);
+                                       const renewalCommission = calcTotalRenewalCommission(renewalList);
 
                                        return (
-                                          <tr 
-                                             key={p.id} 
+                                          <tr
+                                             key={p.id}
                                              className="hover:bg-slate-50/80 transition-all group"
                                           >
                                               <td className="px-6 py-5" onClick={() => setSelectedStaffForPayroll(p)}>
@@ -775,6 +850,25 @@ const AdminReportsPage = () => {
                                                  <span className={`text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider ${isTeacher ? 'bg-orange-50 text-orange-600' : p.role === 'ASSISTANT' ? 'bg-indigo-50 text-indigo-600' : 'bg-blue-50 text-blue-600'}`}>
                                                     {isTeacher ? "Giáo viên" : p.role === "ASSISTANT" ? "Trợ giảng" : "Học vụ"}
                                                  </span>
+                                              </td>
+                                              <td className="px-4 py-5 text-center">
+                                                 {p.role === "FULL_TIME" ? (
+                                                    renewalCount > 0 ? (
+                                                       <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-md uppercase tracking-wider">
+                                                          {renewalCount} lớp
+                                                       </span>
+                                                    ) : (
+                                                       <span className="text-[10px] font-black text-slate-300">—</span>
+                                                    )
+                                                 ) : (
+                                                    <span className="text-[10px] font-black text-slate-300">—</span>
+                                                 )}
+                                              </td>
+                                              <td className="px-4 py-5 text-right text-xs font-bold text-slate-500">
+                                                 {p.role === "FULL_TIME" && renewalCount > 0 ? formatVND(renewalIncludedRevenue) : <span className="text-slate-300">—</span>}
+                                              </td>
+                                              <td className="px-4 py-5 text-right text-xs font-black text-emerald-600">
+                                                 {p.role === "FULL_TIME" && renewalCount > 0 ? `+${formatVND(renewalCommission)}` : <span className="text-slate-300">—</span>}
                                               </td>
                                               <td className="px-6 py-5 text-right font-black text-primary text-sm tracking-tight">
                                                  {formatVND(p.net)}
@@ -1393,20 +1487,19 @@ const AdminReportsPage = () => {
                         else kpiBonus = kpiPool * 0.6;
                       }
 
-                      // 3. Sales Commission Logic
-                      let commission = 0;
-                      const salesCount = data.newStudentsCount || 0;
-                      const salesRev = data.testRevenue || 0;
-                      if (data.salesBonus > 0) {
-                        commission = data.salesBonus;
-                      } else {
-                        if (salesCount >= 26) commission = salesRev * 0.05;
-                        else if (salesCount >= 16) commission = salesRev * 0.04;
-                        else if (salesCount >= 1) commission = salesRev * 0.03;
-                      }
+                      // 3. Sales Commission Logic — NEW: from renewalClasses array
+                      const commission = calcTotalRenewalCommission(renewalClassesEntry);
+                      const kpiPenalized = hasAnyKpiPenalty(renewalClassesEntry);
+                      // If any class has dropped > 4, the KPI bonus is voided as a penalty
+                      const effectiveKpiBonus = kpiPenalized ? 0 : kpiBonus;
+
+                      // Persist the renewal classes back into details
+                      data.renewalClasses = renewalClassesEntry;
+                      data.commissionTotal = commission;
+                      data.kpiPenalized = kpiPenalized;
 
                       // Final Calculation
-                      extraValue = kpiBonus + commission;
+                      extraValue = effectiveKpiBonus + commission;
                       minusValue = (data.penalty || 0) + (data.otherDeduction || 0) + (data.socialInsurance || 0);
                       netValue = fixedTotal + extraValue - minusValue;
 
@@ -1615,31 +1708,242 @@ const AdminReportsPage = () => {
 
                           {/* Column 2: Revenue & KPI Rewards */}
                           <div className="space-y-3">
-                            <div className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] border-b border-emerald-100 pb-1 mb-2">2. Thưởng Doanh Thu & KPI</div>
-                            
-                            <div className="space-y-3 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/50">
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col gap-1">
-                                  <label className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter ml-1">Doanh Thu (%)</label>
-                                  <Input name="revenuePercent" type="number" defaultValue={selectedStaffForAction.details?.revenuePercent || 4} placeholder="VD: 4" className="h-9 px-2 rounded-lg border-emerald-200 text-emerald-700 font-bold text-xs" />
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Số HS Test</label>
-                                  <Input name="newStudentsCount" type="number" defaultValue={selectedStaffForAction.details?.newStudentsCount || 18} className="h-9 px-2 rounded-lg border-slate-200 text-xs" />
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Tổng DT</label>
-                                  <Input name="testRevenue" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.testRevenue || 45000000)} className="h-9 px-2 rounded-lg border-slate-200 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Thành tiền</label>
-                                  <Input name="salesBonus" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.salesBonus || 1800000)} className="h-9 px-2 rounded-lg border-slate-200 bg-white font-bold text-emerald-600 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                            <div className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] border-b border-emerald-100 pb-1 mb-2">2. Lương Doanh Thu (Lớp Tái Tục) & KPI</div>
+
+                            <div className="space-y-2 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/50">
+                              {/* Header table */}
+                              <div className="flex items-center justify-between">
+                                <div className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Danh sách lớp tái tục</div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRenewalClassesEntry(prev => [...prev, {
+                                      id: `rc-${Date.now()}`,
+                                      className: `Lớp mới ${prev.length + 1}`,
+                                      studentCount: 0,
+                                      droppedCount: 0,
+                                      tuitionRevenue: 0,
+                                      materialRevenue: 0,
+                                      includeTuition: true,
+                                      includeMaterial: false,
+                                    }]);
+                                  }}
+                                  className="px-2 py-1 rounded-md bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wider hover:bg-emerald-700 transition-colors"
+                                >
+                                  + Thêm lớp
+                                </button>
+                              </div>
+
+                              <div className="max-h-[280px] overflow-y-auto pr-1 space-y-2">
+                                {suggestedFromCRM.length > 0 && (
+                                  <div className="p-2 rounded-lg border border-dashed border-sky-300 bg-sky-50/70 space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[10px] font-black text-sky-700 uppercase tracking-wider flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
+                                        Đề xuất từ CRM ({suggestedFromCRM.length} lớp · {currentMonthKey})
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          // Merge: với mỗi lớp từ CRM, nếu đã có trong entry (theo className) thì cộng doanh số; nếu chưa thì thêm mới
+                                          setRenewalClassesEntry(prev => {
+                                            const next = [...prev];
+                                            for (const s of suggestedFromCRM) {
+                                              const existingIdx = next.findIndex(c => c.className === s.className);
+                                              if (existingIdx >= 0) {
+                                                const ex = next[existingIdx];
+                                                next[existingIdx] = {
+                                                  ...ex,
+                                                  studentCount: Math.max(ex.studentCount, s.studentCount),
+                                                  tuitionRevenue: ex.tuitionRevenue + s.tuitionRevenue,
+                                                  materialRevenue: ex.materialRevenue + s.materialRevenue,
+                                                  includeTuition: ex.includeTuition || s.includeTuition,
+                                                  includeMaterial: ex.includeMaterial || s.includeMaterial,
+                                                };
+                                              } else {
+                                                next.push({
+                                                  id: `rc-crm-${s.classId}-${Date.now()}`,
+                                                  className: s.className,
+                                                  studentCount: s.studentCount,
+                                                  droppedCount: 0,
+                                                  tuitionRevenue: s.tuitionRevenue,
+                                                  materialRevenue: s.materialRevenue,
+                                                  includeTuition: s.includeTuition,
+                                                  includeMaterial: s.includeMaterial,
+                                                });
+                                              }
+                                            }
+                                            return next;
+                                          });
+                                          toast.success(`Đã gộp ${suggestedFromCRM.length} lớp từ CRM vào lương doanh thu`);
+                                        }}
+                                        className="px-2 py-0.5 rounded-md bg-sky-600 text-white text-[9px] font-black uppercase tracking-wider hover:bg-sky-700 transition-colors"
+                                      >
+                                        Gộp tất cả
+                                      </button>
+                                    </div>
+                                    <div className="space-y-1">
+                                      {suggestedFromCRM.map(s => (
+                                        <div key={s.classId} className="flex items-center justify-between text-[10px] bg-white/60 rounded px-2 py-1 border border-sky-100">
+                                          <div className="flex items-center gap-1.5">
+                                            <span className="font-black text-sky-800">{s.className}</span>
+                                            <span className="text-slate-500">· {s.studentCount} HS</span>
+                                          </div>
+                                          <span className="font-bold text-emerald-600">
+                                            +{new Intl.NumberFormat('vi-VN').format(s.tuitionRevenue + s.materialRevenue)} đ
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {renewalClassesEntry.length === 0 && (
+                                  <div className="text-center text-[10px] text-slate-400 italic py-4 border border-dashed border-emerald-200 rounded-lg bg-white/40">
+                                    Chưa có lớp tái tục — Bấm "Thêm lớp" để bắt đầu
+                                  </div>
+                                )}
+                                {renewalClassesEntry.map((rc, idx) => {
+                                  const commission = calcClassCommission(rc);
+                                  const baseRate = getBaseRate(rc.studentCount);
+                                  const bonusRate = getRenewalBonus(rc.droppedCount);
+                                  const penalty = isKpiPenalized(rc.droppedCount);
+                                  return (
+                                    <div key={rc.id} className={`p-2 rounded-lg border bg-white/70 ${penalty ? 'border-rose-300' : 'border-emerald-200'} space-y-1.5`}>
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="text"
+                                          value={rc.className}
+                                          onChange={(e) => {
+                                            const v = e.target.value;
+                                            setRenewalClassesEntry(prev => prev.map((c, i) => i === idx ? { ...c, className: v } : c));
+                                          }}
+                                          className="flex-1 h-7 px-2 rounded border border-emerald-200 text-[11px] font-black text-emerald-700 outline-none focus:ring-1 focus:ring-emerald-400"
+                                          placeholder="Tên lớp"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => setRenewalClassesEntry(prev => prev.filter((_, i) => i !== idx))}
+                                          className="w-7 h-7 rounded-md bg-rose-50 border border-rose-200 text-rose-500 text-[10px] font-black hover:bg-rose-100 transition-colors"
+                                          title="Xóa lớp"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 gap-1.5">
+                                        <div className="flex flex-col gap-0.5">
+                                          <label className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">Sĩ số</label>
+                                          <input
+                                            type="number"
+                                            value={rc.studentCount}
+                                            onChange={(e) => {
+                                              const v = Number(e.target.value) || 0;
+                                              setRenewalClassesEntry(prev => prev.map((c, i) => i === idx ? { ...c, studentCount: v } : c));
+                                            }}
+                                            className="h-7 px-1.5 rounded border border-slate-200 text-[10px] font-bold outline-none focus:ring-1 focus:ring-emerald-400"
+                                          />
+                                        </div>
+                                        <div className="flex flex-col gap-0.5">
+                                          <label className={`text-[8px] font-black uppercase tracking-tighter ${penalty ? 'text-rose-600' : 'text-slate-500'}`}>HS nghỉ</label>
+                                          <input
+                                            type="number"
+                                            value={rc.droppedCount}
+                                            onChange={(e) => {
+                                              const v = Number(e.target.value) || 0;
+                                              setRenewalClassesEntry(prev => prev.map((c, i) => i === idx ? { ...c, droppedCount: v } : c));
+                                            }}
+                                            className={`h-7 px-1.5 rounded border text-[10px] font-bold outline-none focus:ring-1 ${penalty ? 'border-rose-300 text-rose-600 focus:ring-rose-400 bg-rose-50/50' : 'border-slate-200 focus:ring-emerald-400'}`}
+                                          />
+                                        </div>
+                                      </div>
+
+                                      <div className="grid grid-cols-[auto,1fr] items-center gap-1.5">
+                                        <label className="flex items-center gap-1 cursor-pointer select-none">
+                                          <input
+                                            type="checkbox"
+                                            checked={rc.includeTuition}
+                                            onChange={(e) => {
+                                              const v = e.target.checked;
+                                              setRenewalClassesEntry(prev => prev.map((c, i) => i === idx ? { ...c, includeTuition: v } : c));
+                                            }}
+                                            className="w-3 h-3 accent-emerald-600"
+                                          />
+                                          <span className="text-[9px] font-black text-slate-600 uppercase tracking-tighter">Học phí</span>
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={new Intl.NumberFormat('vi-VN').format(rc.tuitionRevenue)}
+                                          onChange={(e) => {
+                                            const raw = Number(e.target.value.replace(/\D/g, '')) || 0;
+                                            setRenewalClassesEntry(prev => prev.map((c, i) => i === idx ? { ...c, tuitionRevenue: raw } : c));
+                                          }}
+                                          className={`h-7 px-2 rounded border border-slate-200 text-[10px] font-bold outline-none focus:ring-1 focus:ring-emerald-400 text-right ${rc.includeTuition ? 'bg-white' : 'bg-slate-50 text-slate-400'}`}
+                                          disabled={!rc.includeTuition}
+                                        />
+                                      </div>
+
+                                      <div className="grid grid-cols-[auto,1fr] items-center gap-1.5">
+                                        <label className="flex items-center gap-1 cursor-pointer select-none">
+                                          <input
+                                            type="checkbox"
+                                            checked={rc.includeMaterial}
+                                            onChange={(e) => {
+                                              const v = e.target.checked;
+                                              setRenewalClassesEntry(prev => prev.map((c, i) => i === idx ? { ...c, includeMaterial: v } : c));
+                                            }}
+                                            className="w-3 h-3 accent-emerald-600"
+                                          />
+                                          <span className="text-[9px] font-black text-slate-600 uppercase tracking-tighter">Học liệu</span>
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={new Intl.NumberFormat('vi-VN').format(rc.materialRevenue)}
+                                          onChange={(e) => {
+                                            const raw = Number(e.target.value.replace(/\D/g, '')) || 0;
+                                            setRenewalClassesEntry(prev => prev.map((c, i) => i === idx ? { ...c, materialRevenue: raw } : c));
+                                          }}
+                                          className={`h-7 px-2 rounded border border-slate-200 text-[10px] font-bold outline-none focus:ring-1 focus:ring-emerald-400 text-right ${rc.includeMaterial ? 'bg-white' : 'bg-slate-50 text-slate-400'}`}
+                                          disabled={!rc.includeMaterial}
+                                        />
+                                      </div>
+
+                                      <div className="flex items-center justify-between pt-1 border-t border-emerald-100">
+                                        <span className="text-[9px] font-black text-slate-500 italic">
+                                          {(baseRate * 100).toFixed(0)}% + {(bonusRate * 100).toFixed(1)}% = <span className="text-emerald-700">{((baseRate + bonusRate) * 100).toFixed(1)}%</span>
+                                        </span>
+                                        <span className="text-[11px] font-black text-emerald-600">
+                                          {new Intl.NumberFormat('vi-VN').format(commission)}
+                                        </span>
+                                      </div>
+
+                                      {penalty && (
+                                        <div className="text-[8px] font-black text-rose-600 uppercase tracking-wider bg-rose-50 border border-rose-200 px-2 py-1 rounded">
+                                          ⚠ Nghỉ {'>'}4 bạn → Trừ KPI hiệu suất CV
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Summary */}
+                              <div className="flex items-center justify-between pt-2 border-t border-emerald-200">
+                                <div className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Tổng hoa hồng</div>
+                                <div className="text-sm font-black text-emerald-700">
+                                  {new Intl.NumberFormat('vi-VN').format(calcTotalRenewalCommission(renewalClassesEntry))} đ
                                 </div>
                               </div>
+
                               <div className="flex justify-between gap-1 text-[8px] font-bold text-emerald-600/70 italic px-2 py-1 bg-white/50 rounded-lg">
-                                <span>1-15hs: 3%</span>
-                                <span>16-25hs: 4%</span>
-                                <span>26+hs: 5%</span>
+                                <span>1-15: 3%</span>
+                                <span>16-25: 4%</span>
+                                <span>26-34: 5%</span>
+                              </div>
+                              <div className="flex justify-between gap-1 text-[8px] font-bold text-blue-600/70 italic px-2 py-1 bg-white/50 rounded-lg">
+                                <span>100% TT: +1%</span>
+                                <span>Nghỉ 1: +0.7%</span>
+                                <span>Nghỉ 2: +0.5%</span>
+                                <span>Nghỉ ≥3: 0</span>
                               </div>
                             </div>
 
@@ -1659,7 +1963,7 @@ const AdminReportsPage = () => {
                                 </div>
                               </div>
                               <div className="text-[8px] font-bold text-blue-600/70 italic p-2 bg-white/50 rounded-lg leading-tight uppercase text-center">
-                                * Công thức: Tiền KPI = Lương HS chuẩn × % Đạt
+                                * Công thức: Tiền KPI = Lương HS chuẩn × % Đạt {hasAnyKpiPenalty(renewalClassesEntry) ? '— ⚠ Có lớp trừ KPI' : ''}
                               </div>
                             </div>
                           </div>
@@ -1692,14 +1996,20 @@ const AdminReportsPage = () => {
 
                     <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mb-6 flex flex-col gap-1 w-full relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                      {selectedStaffForAction.role === "FULL_TIME" && (
+                        <div className="flex items-center justify-between text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-1 relative z-10">
+                          <span>Hoa hồng tái tục (live)</span>
+                          <span>+{formatVND(calcTotalRenewalCommission(renewalClassesEntry))}</span>
+                        </div>
+                      )}
                       <div className="flex items-baseline gap-3 relative z-10">
-                        <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Tổng Lương:</span>
+                        <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Tổng Lương (đã lưu):</span>
                         <span className="text-xl font-black text-primary">
                           {new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.net || 0)} <span className="text-sm">VNĐ</span>
                         </span>
                       </div>
                       <span className="text-[9px] font-bold text-slate-500 italic relative z-10">
-                        * Ghi chú: Tổng lương = Lương hành chính + Lương doanh thu - Các khoản giảm trừ
+                        * Tổng lương = Lương hành chính + Lương doanh thu (học phí/học liệu được tick) - Các khoản giảm trừ
                       </span>
                     </div>
 
@@ -1927,26 +2237,62 @@ const AdminReportsPage = () => {
                                 })()}
                             </td>
                           </tr>
-                          {selectedStaffForAction.details?.newStudentsCount > 0 && (
-                            <tr>
-                              <td className="py-5">
-                                <p className="text-sm font-bold text-emerald-600">Thưởng KPI HS test thành công</p>
-                                <p className="text-[10px] text-slate-400 font-medium italic">{selectedStaffForAction.details?.newStudentsCount} học viên test thành công</p>
-                              </td>
-                              <td className="py-5 text-center">---</td>
-                              <td className="py-5 text-center">---</td>
-                              <td className="py-5 text-right text-sm font-black text-emerald-600">
-                                 {(() => {
-                                    let commission = 0;
-                                    const salesCount = selectedStaffForAction.details?.newStudentsCount || 0;
-                                    const salesRev = selectedStaffForAction.details?.testRevenue || 0;
-                                    if (salesCount >= 26) commission = salesRev * 0.05;
-                                    else if (salesCount >= 16) commission = salesRev * 0.04;
-                                    else if (salesCount >= 1) commission = salesRev * 0.03;
-                                    return `+${formatVND(commission)}`;
-                                 })()}
-                              </td>
-                            </tr>
+                          {Array.isArray(selectedStaffForAction.details?.renewalClasses) && selectedStaffForAction.details.renewalClasses.length > 0 && (
+                            <>
+                              <tr>
+                                <td colSpan={4} className="py-3">
+                                  <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest border-b border-emerald-200 pb-1">
+                                    Lương Doanh Thu - Lớp Tái Tục
+                                  </p>
+                                </td>
+                              </tr>
+                              {selectedStaffForAction.details.renewalClasses.map((rc: RenewalClass) => {
+                                const baseRate = getBaseRate(rc.studentCount);
+                                const bonusRate = getRenewalBonus(rc.droppedCount);
+                                const totalRate = baseRate + bonusRate;
+                                const rev = (rc.includeTuition ? rc.tuitionRevenue : 0) + (rc.includeMaterial ? rc.materialRevenue : 0);
+                                const commission = Math.round(rev * totalRate);
+                                const sources = [rc.includeTuition && 'Học phí', rc.includeMaterial && 'Học liệu'].filter(Boolean).join(' + ') || '—';
+                                const penalty = isKpiPenalized(rc.droppedCount);
+                                return (
+                                  <tr key={rc.id} className={penalty ? 'bg-rose-50/30' : ''}>
+                                    <td className="py-3">
+                                      <p className="text-sm font-bold text-slate-800">{rc.className}</p>
+                                      <p className="text-[10px] text-slate-400 font-medium italic">
+                                        Sĩ số: {rc.studentCount} • Nghỉ: {rc.droppedCount} • Nguồn: {sources}
+                                        {penalty && <span className="text-rose-600 font-black"> • ⚠ Trừ KPI</span>}
+                                      </p>
+                                    </td>
+                                    <td className="py-3 text-center text-xs font-black text-slate-600">
+                                      {formatVND(rev)}
+                                    </td>
+                                    <td className="py-3 text-center text-xs font-black text-slate-500">
+                                      {(totalRate * 100).toFixed(1)}%
+                                    </td>
+                                    <td className="py-3 text-right text-sm font-black text-emerald-600">
+                                      +{formatVND(commission)}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              <tr>
+                                <td className="py-3 text-right" colSpan={3}>
+                                  <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest">Tổng hoa hồng tái tục</p>
+                                </td>
+                                <td className="py-3 text-right text-base font-black text-emerald-700 border-t border-emerald-200">
+                                  +{formatVND(calcTotalRenewalCommission(selectedStaffForAction.details.renewalClasses))}
+                                </td>
+                              </tr>
+                              {selectedStaffForAction.details?.kpiPenalized && (
+                                <tr>
+                                  <td colSpan={4} className="py-2">
+                                    <div className="text-[10px] font-black text-rose-600 uppercase tracking-wider bg-rose-50 border border-rose-200 px-3 py-2 rounded">
+                                      ⚠ Có lớp HS nghỉ {'>'}4 → KPI hiệu suất CV bị trừ về 0
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </>
                           )}
                           {(selectedStaffForAction.details?.penalty > 0 || selectedStaffForAction.details?.otherDeduction > 0 || selectedStaffForAction.details?.socialInsurance > 0) && (
                             <tr>

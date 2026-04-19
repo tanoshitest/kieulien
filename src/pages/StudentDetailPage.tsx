@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { students, classes, attendanceRecords, mockTuitions } from "@/data/mockData";
-import { ArrowLeft, BookOpen, CalendarCheck, DollarSign, MessageSquare, User, BellRing, Receipt, CheckCircle2, Clock, ClipboardList, FilePlus, Plus, FileText, Printer, CheckCircle } from "lucide-react";
+import { students, classes, attendanceRecords, mockTuitions, branches } from "@/data/mockData";
+import { ArrowLeft, BookOpen, CalendarCheck, DollarSign, MessageSquare, User, BellRing, Receipt, CheckCircle2, Clock, ClipboardList, FilePlus, Plus, FileText, Printer, CheckCircle, Wallet, Landmark, QrCode, Banknote, Percent, StickyNote } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -14,6 +14,72 @@ const StudentDetailPage = () => {
   const student = students.find((s) => s.id === id);
   const [activeTab, setActiveTab] = useState("info");
   const [selectedReport, setSelectedReport] = useState<any>(null);
+
+  // ---- RECEIPT (Phiếu thu học phí) STATE ----
+  const [receiptTuition, setReceiptTuition] = useState<any>(null); // tuition row đang tạo phiếu (null = đóng)
+  const [receiptForm, setReceiptForm] = useState({
+    receiptCode: "",
+    paymentDate: new Date().toISOString().slice(0, 10),
+    // Các khoản thu
+    tuitionAmount: 0,         // Học phí gốc
+    materialAmount: 0,        // Học liệu / sách vở
+    examFee: 0,               // Phí thi (Cambridge/IELTS nội bộ)
+    otherFee: 0,              // Khoản khác (đồng phục, hoạt động...)
+    otherFeeNote: "",
+    // Giảm trừ
+    discountAmount: 0,
+    discountReason: "",        // Lý do giảm (ưu đãi sớm, anh em, renew...)
+    // Thanh toán
+    paymentMethod: "cash" as "cash" | "transfer" | "qr" | "card",
+    bankRef: "",               // Mã giao dịch (nếu CK/QR)
+    payerName: "",             // Người nộp (thường là phụ huynh)
+    payerPhone: "",
+    // Kỳ thu
+    forMonth: "",              // Tháng áp dụng
+    classId: "",               // Lớp áp dụng
+    // Thông tin phát hành
+    branchId: "BR001",
+    collectedBy: "Admin",      // Thu ngân / Học vụ
+    note: "",
+    issueInvoice: false,       // Có xuất hoá đơn VAT không
+  });
+  const openReceiptDialog = (tuition: any) => {
+    const now = new Date();
+    const code = `PT-${student?.id || "STU"}-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(Math.floor(Math.random() * 900) + 100)}`;
+    setReceiptForm(f => ({
+      ...f,
+      receiptCode: code,
+      paymentDate: now.toISOString().slice(0, 10),
+      tuitionAmount: tuition.amount || 0,
+      materialAmount: 0,
+      examFee: 0,
+      otherFee: 0,
+      otherFeeNote: "",
+      discountAmount: 0,
+      discountReason: "",
+      paymentMethod: "cash",
+      bankRef: "",
+      payerName: student?.parentName || "",
+      payerPhone: student?.parentPhone || "",
+      forMonth: tuition.month || "",
+      classId: student?.classIds?.[0] || "",
+      branchId: "BR001",
+      collectedBy: "Admin",
+      note: "",
+      issueInvoice: false,
+    }));
+    setReceiptTuition(tuition);
+  };
+  const receiptSubtotal = receiptForm.tuitionAmount + receiptForm.materialAmount + receiptForm.examFee + receiptForm.otherFee;
+  const receiptTotal = Math.max(0, receiptSubtotal - receiptForm.discountAmount);
+  const handleConfirmReceipt = () => {
+    if (receiptTotal <= 0) { toast.error("Tổng thanh toán phải lớn hơn 0"); return; }
+    if ((receiptForm.paymentMethod === "transfer" || receiptForm.paymentMethod === "qr") && !receiptForm.bankRef.trim()) {
+      toast.error("Vui lòng nhập mã giao dịch chuyển khoản"); return;
+    }
+    toast.success(`Đã tạo phiếu thu ${receiptForm.receiptCode} · ${new Intl.NumberFormat("vi-VN").format(receiptTotal)}đ`);
+    setReceiptTuition(null);
+  };
 
   if (!student) {
     return (
@@ -254,6 +320,21 @@ const StudentDetailPage = () => {
               </div>
 
               {/* History Table */}
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2">
+                  <Receipt className="w-4 h-4" /> Chi tiết các khoản thu
+                </h3>
+                <button
+                  onClick={() => {
+                    const firstUnpaid = mockTuitions.find(t => t.studentId === student.id && t.status === "unpaid");
+                    openReceiptDialog(firstUnpaid || { id: "adhoc", studentId: student.id, month: "Thu khác", amount: 0, dueDate: new Date().toISOString().slice(0, 10), status: "unpaid" });
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-600/20"
+                >
+                  <Receipt className="w-3.5 h-3.5" /> Tạo phiếu thu học phí
+                </button>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -283,17 +364,27 @@ const StudentDetailPage = () => {
                           </span>
                         </td>
                         <td className="py-4 text-right px-2">
-                          {t.status === "unpaid" && (
-                            <button 
-                              onClick={() => toast.success(`Đã gửi yêu cầu nhắc thanh toán đến phụ huynh ${student.parentName}`)}
-                              className="flex items-center gap-1.5 ml-auto px-3 py-1.5 bg-primary text-white text-[10px] font-black uppercase rounded-lg hover:opacity-90 shadow-sm shadow-primary/20 active:scale-95 transition-all"
-                            >
-                              <BellRing className="w-3.5 h-3.5" /> Nhắc thanh toán
-                            </button>
-                          )}
-                          {t.status === "paid" && (
-                            <span className="text-[10px] text-muted-foreground font-medium italic">Ngày đóng: {t.paymentDate}</span>
-                          )}
+                          <div className="flex items-center justify-end gap-2">
+                            {t.status === "unpaid" && (
+                              <>
+                                <button
+                                  onClick={() => toast.success(`Đã gửi yêu cầu nhắc thanh toán đến phụ huynh ${student.parentName}`)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-primary/30 text-primary text-[10px] font-black uppercase rounded-lg hover:bg-primary/5 active:scale-95 transition-all"
+                                >
+                                  <BellRing className="w-3.5 h-3.5" /> Nhắc TT
+                                </button>
+                                <button
+                                  onClick={() => openReceiptDialog(t)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-emerald-700 shadow-sm shadow-emerald-600/20 active:scale-95 transition-all"
+                                >
+                                  <Receipt className="w-3.5 h-3.5" /> Tạo phiếu thu
+                                </button>
+                              </>
+                            )}
+                            {t.status === "paid" && (
+                              <span className="text-[10px] text-muted-foreground font-medium italic">Ngày đóng: {t.paymentDate}</span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -525,6 +616,282 @@ const StudentDetailPage = () => {
           </button>
         </div>
       </div>
+
+      {/* ============ RECEIPT DIALOG - Tạo phiếu thu học phí ============ */}
+      <Dialog open={!!receiptTuition} onOpenChange={(o) => !o && setReceiptTuition(null)}>
+        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader className="border-b pb-3">
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-emerald-600" />
+              Tạo phiếu thu học phí
+            </DialogTitle>
+            <DialogDescription className="flex items-center gap-3 text-xs">
+              <span>HS: <b className="text-foreground">{student.name}</b> ({student.id})</span>
+              <span className="text-muted-foreground">·</span>
+              <span>Mã phiếu: <b className="font-mono text-emerald-700">{receiptForm.receiptCode}</b></span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {/* ---- Block: Kỳ thu & Lớp ---- */}
+            <div className="col-span-2 grid grid-cols-3 gap-3 p-3 rounded-lg bg-slate-50 border border-slate-200">
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500">Kỳ thu (tháng)</label>
+                <input
+                  type="text"
+                  value={receiptForm.forMonth}
+                  onChange={e => setReceiptForm(f => ({ ...f, forMonth: e.target.value }))}
+                  placeholder="Ví dụ: Tháng 04/2025"
+                  className="mt-1 w-full h-9 px-2 rounded-md border border-slate-200 text-sm bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500">Lớp áp dụng</label>
+                <select
+                  value={receiptForm.classId}
+                  onChange={e => setReceiptForm(f => ({ ...f, classId: e.target.value }))}
+                  className="mt-1 w-full h-9 px-2 rounded-md border border-slate-200 text-sm bg-white"
+                >
+                  {student.classIds.map(cid => {
+                    const c = classes.find(x => x.id === cid);
+                    return <option key={cid} value={cid}>{c?.name || cid}</option>;
+                  })}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500">Ngày thu</label>
+                <input
+                  type="date"
+                  value={receiptForm.paymentDate}
+                  onChange={e => setReceiptForm(f => ({ ...f, paymentDate: e.target.value }))}
+                  className="mt-1 w-full h-9 px-2 rounded-md border border-slate-200 text-sm bg-white"
+                />
+              </div>
+            </div>
+
+            {/* ---- Block: Các khoản thu ---- */}
+            <div className="col-span-2 p-3 rounded-lg border border-emerald-200 bg-emerald-50/40 space-y-2">
+              <h4 className="text-[11px] font-black uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
+                <Banknote className="w-3.5 h-3.5" /> Các khoản thu
+              </h4>
+              {[
+                { key: "tuitionAmount", label: "Học phí", required: true },
+                { key: "materialAmount", label: "Học liệu / sách vở" },
+                { key: "examFee", label: "Phí thi (Cambridge/IELTS nội bộ)" },
+              ].map(row => (
+                <div key={row.key} className="grid grid-cols-[1fr,180px] items-center gap-2">
+                  <span className="text-xs font-bold text-slate-700">{row.label}{row.required && <span className="text-rose-500"> *</span>}</span>
+                  <input
+                    type="text"
+                    value={new Intl.NumberFormat("vi-VN").format((receiptForm as any)[row.key] || 0)}
+                    onChange={e => {
+                      const v = Number(e.target.value.replace(/\D/g, "")) || 0;
+                      setReceiptForm(f => ({ ...f, [row.key]: v } as any));
+                    }}
+                    className="h-9 px-2 rounded-md border border-emerald-200 text-sm text-right font-mono font-bold bg-white"
+                  />
+                </div>
+              ))}
+              <div className="grid grid-cols-[1fr,180px] items-start gap-2">
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-slate-700">Khoản khác (đồng phục, hoạt động...)</span>
+                  <input
+                    type="text"
+                    value={receiptForm.otherFeeNote}
+                    onChange={e => setReceiptForm(f => ({ ...f, otherFeeNote: e.target.value }))}
+                    placeholder="Ghi chú khoản khác"
+                    className="w-full h-8 px-2 rounded-md border border-slate-200 text-xs bg-white"
+                  />
+                </div>
+                <input
+                  type="text"
+                  value={new Intl.NumberFormat("vi-VN").format(receiptForm.otherFee)}
+                  onChange={e => {
+                    const v = Number(e.target.value.replace(/\D/g, "")) || 0;
+                    setReceiptForm(f => ({ ...f, otherFee: v }));
+                  }}
+                  className="h-9 px-2 rounded-md border border-emerald-200 text-sm text-right font-mono font-bold bg-white"
+                />
+              </div>
+            </div>
+
+            {/* ---- Block: Giảm trừ ---- */}
+            <div className="col-span-2 p-3 rounded-lg border border-amber-200 bg-amber-50/40 grid grid-cols-[1fr,180px] gap-2 items-start">
+              <div className="space-y-1">
+                <label className="text-[11px] font-black uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
+                  <Percent className="w-3.5 h-3.5" /> Giảm trừ / Ưu đãi
+                </label>
+                <input
+                  type="text"
+                  value={receiptForm.discountReason}
+                  onChange={e => setReceiptForm(f => ({ ...f, discountReason: e.target.value }))}
+                  placeholder="Lý do: ưu đãi tái tục, anh em ruột, voucher..."
+                  className="w-full h-9 px-2 rounded-md border border-amber-200 text-xs bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-amber-700">Số tiền giảm</label>
+                <input
+                  type="text"
+                  value={new Intl.NumberFormat("vi-VN").format(receiptForm.discountAmount)}
+                  onChange={e => {
+                    const v = Number(e.target.value.replace(/\D/g, "")) || 0;
+                    setReceiptForm(f => ({ ...f, discountAmount: v }));
+                  }}
+                  className="mt-1 h-9 px-2 rounded-md border border-amber-200 text-sm text-right font-mono font-bold bg-white w-full"
+                />
+              </div>
+            </div>
+
+            {/* ---- Block: Phương thức thanh toán ---- */}
+            <div className="col-span-2 p-3 rounded-lg border border-sky-200 bg-sky-50/40 space-y-2">
+              <h4 className="text-[11px] font-black uppercase tracking-wider text-sky-700 flex items-center gap-1.5">
+                <Wallet className="w-3.5 h-3.5" /> Phương thức thanh toán
+              </h4>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { v: "cash", label: "Tiền mặt", icon: Banknote },
+                  { v: "transfer", label: "Chuyển khoản", icon: Landmark },
+                  { v: "qr", label: "QR / Ví", icon: QrCode },
+                  { v: "card", label: "Thẻ (POS)", icon: Wallet },
+                ].map(({ v, label, icon: Icon }) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setReceiptForm(f => ({ ...f, paymentMethod: v as any }))}
+                    className={`h-11 rounded-md border-2 flex flex-col items-center justify-center gap-0.5 text-[10px] font-black uppercase transition-all ${
+                      receiptForm.paymentMethod === v
+                        ? "border-sky-500 bg-sky-500 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-sky-300"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {(receiptForm.paymentMethod === "transfer" || receiptForm.paymentMethod === "qr" || receiptForm.paymentMethod === "card") && (
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-500">
+                    Mã giao dịch / 4 số cuối thẻ <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={receiptForm.bankRef}
+                    onChange={e => setReceiptForm(f => ({ ...f, bankRef: e.target.value }))}
+                    placeholder="VD: FT25110098765 hoặc ****1234"
+                    className="mt-1 w-full h-9 px-2 rounded-md border border-sky-200 text-sm font-mono bg-white"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* ---- Block: Người nộp & Phát hành ---- */}
+            <div className="p-3 rounded-lg border border-slate-200 bg-white space-y-2">
+              <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5" /> Người nộp tiền
+              </h4>
+              <input
+                type="text"
+                value={receiptForm.payerName}
+                onChange={e => setReceiptForm(f => ({ ...f, payerName: e.target.value }))}
+                placeholder="Họ tên người nộp"
+                className="w-full h-9 px-2 rounded-md border border-slate-200 text-sm"
+              />
+              <input
+                type="text"
+                value={receiptForm.payerPhone}
+                onChange={e => setReceiptForm(f => ({ ...f, payerPhone: e.target.value }))}
+                placeholder="SĐT người nộp"
+                className="w-full h-9 px-2 rounded-md border border-slate-200 text-sm"
+              />
+            </div>
+
+            <div className="p-3 rounded-lg border border-slate-200 bg-white space-y-2">
+              <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5" /> Phát hành phiếu
+              </h4>
+              <select
+                value={receiptForm.branchId}
+                onChange={e => setReceiptForm(f => ({ ...f, branchId: e.target.value }))}
+                className="w-full h-9 px-2 rounded-md border border-slate-200 text-sm bg-white"
+              >
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+              <input
+                type="text"
+                value={receiptForm.collectedBy}
+                onChange={e => setReceiptForm(f => ({ ...f, collectedBy: e.target.value }))}
+                placeholder="Người lập phiếu / Thu ngân"
+                className="w-full h-9 px-2 rounded-md border border-slate-200 text-sm"
+              />
+              <label className="flex items-center gap-2 text-xs font-medium text-slate-600 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={receiptForm.issueInvoice}
+                  onChange={e => setReceiptForm(f => ({ ...f, issueInvoice: e.target.checked }))}
+                  className="w-4 h-4 accent-emerald-600"
+                />
+                Xuất hóa đơn VAT kèm theo
+              </label>
+            </div>
+
+            {/* ---- Ghi chú ---- */}
+            <div className="col-span-2">
+              <label className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-1.5">
+                <StickyNote className="w-3.5 h-3.5" /> Ghi chú nội bộ
+              </label>
+              <textarea
+                value={receiptForm.note}
+                onChange={e => setReceiptForm(f => ({ ...f, note: e.target.value }))}
+                rows={2}
+                placeholder="VD: Đóng bù tháng 3, còn nợ học liệu..."
+                className="mt-1 w-full px-2 py-1.5 rounded-md border border-slate-200 text-sm resize-none"
+              />
+            </div>
+
+            {/* ---- Tổng kết ---- */}
+            <div className="col-span-2 p-4 rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-700 text-white space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="opacity-80">Tạm tính (học phí + học liệu + phí khác)</span>
+                <span className="font-mono font-bold">{new Intl.NumberFormat("vi-VN").format(receiptSubtotal)}đ</span>
+              </div>
+              {receiptForm.discountAmount > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="opacity-80">Giảm trừ</span>
+                  <span className="font-mono font-bold text-amber-200">- {new Intl.NumberFormat("vi-VN").format(receiptForm.discountAmount)}đ</span>
+                </div>
+              )}
+              <div className="h-px bg-white/20 my-1" />
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-wider">Tổng thanh toán</span>
+                <span className="text-2xl font-black font-mono">{new Intl.NumberFormat("vi-VN").format(receiptTotal)}đ</span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="border-t pt-3 mt-4 flex-row justify-end gap-2">
+            <button
+              onClick={() => setReceiptTuition(null)}
+              className="px-4 py-2 rounded-md border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50"
+            >
+              Huỷ
+            </button>
+            <button
+              onClick={() => { toast.info("Đã lưu nháp phiếu thu (demo)"); }}
+              className="px-4 py-2 rounded-md border border-primary/30 text-sm font-bold text-primary hover:bg-primary/5"
+            >
+              Lưu nháp
+            </button>
+            <button
+              onClick={handleConfirmReceipt}
+              className="px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-black uppercase hover:bg-emerald-700 flex items-center gap-2 shadow-sm shadow-emerald-600/20"
+            >
+              <CheckCircle2 className="w-4 h-4" /> Xác nhận & In phiếu
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

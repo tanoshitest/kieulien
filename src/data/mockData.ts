@@ -201,12 +201,57 @@ export const classes: ClassItem[] = [
 ];
 
 // ---- CRM Leads ----
+export interface CareLogEntry {
+  id: string;
+  timestamp: string;          // ISO datetime
+  by: string;                 // staff name
+  type: "call" | "sms" | "zalo" | "meet" | "test_result_sent" | "note" | "stage_change";
+  content: string;
+}
+
+export interface LeadTestInfo {
+  scheduledDate?: string;     // YYYY-MM-DD
+  actualDate?: string;
+  score?: number;             // /10
+  level?: string;             // VD: "Movers", "Flyers"
+  teacherFeedback?: string;
+  suggestedProgram?: string;
+  sentToParentAt?: string;    // ISO when result sent
+  parentResponse?: "agree" | "decline" | "pending";
+}
+
+export interface LeadEnrollment {
+  classId: string;
+  className: string;
+  enrolledAt: string;         // ISO
+}
+
+export interface LeadPayment {
+  tuitionFee: number;         // Học phí
+  materialFee: number;        // Học liệu
+  paidTuition: boolean;
+  paidMaterial: boolean;
+  paidAt?: string;
+  receiptCode?: string;
+}
+
+export type LeadStage =
+  | "new"               // Lead mới
+  | "nurturing"         // Đang chăm sóc
+  | "test_scheduled"    // Đã hẹn lịch test
+  | "test_done"         // Đã test, chờ gửi KQ
+  | "result_sent"       // Đã gửi KQ phụ huynh
+  | "waiting_class"     // Chờ xếp lớp
+  | "enrolled";         // Đã xếp lớp + thu HP
+
 export interface Lead {
   id: string;
   stt: number;
   name: string;
   dob: string;
   phone: string;
+  parentName?: string;
+  parentPhone?: string;
   customerGroup: string;
   program: {
     name: string;
@@ -215,40 +260,106 @@ export interface Lead {
     collectionDate?: string;
   };
   assignee: string;
-  followUpHistory: string;
+  followUpHistory: string;     // legacy plain string (kept for back-compat)
   source: string;
   category: "nurturing" | "completed" | "raw" | "student";
-  stage: "new" | "nurturing" | "test" | "closed";
+  stage: LeadStage;
+  // ---- NEW ----
+  test?: LeadTestInfo;
+  enrollment?: LeadEnrollment;
+  payment?: LeadPayment;
+  careLog: CareLogEntry[];
+  createdAt: string;          // ISO
 }
 
-const stagesList: Lead["stage"][] = ["new", "nurturing", "test", "closed"];
+const stagesList: Lead["stage"][] = ["new", "nurturing", "test_scheduled", "test_done", "result_sent", "waiting_class", "enrolled"];
 const names = ["NGUYỄN THANH VÂN", "TRẦN HOÀNG KHẢI", "ĐINH HÀ LINH", "NGUYỄN BẢO HÂN", "HOÀNG MINH TÚ", "PHẠM ĐỨC ANH", "LÊ THỊ HỒNG", "VŨ QUANG MINH", "ĐẶNG THU THẢO", "BÙI TIẾN DŨNG", "TRỊNH QUỐC BẢO", "LÊ MINH CHÂU", "PHAN THANH TÙNG", "LÝ THU HÀ", "NGUYỄN TUẤN KIỆT"];
 const sources = ["FACEBOOK", "PHỤ HUYNH CŨ GIỚI THIỆU", "VÃNG LAI", "MARKETING", "TIKTOK", "GOOGLE ADS"];
 const staffNames = ["Nguyễn Bích Ngọc", "Nguyễn Thuỳ Linh", "Trần Minh Quân", "Phạm Hồng Nhung", "Lê Gia Huy"];
 const groups = ["ĐÃ CHỐT THÀNH CÔNG", "CHỜ XẾP LỚP", "Chưa phân nhóm", "TIỀM NĂNG CAO", "KHÁCH HÀNG VIP"];
 
-export const leads: Lead[] = stagesList.flatMap((stage, stageIdx) => 
-  Array.from({ length: 40 }).map((_, i) => {
-    const name = names[i % names.length] + " " + (i + 1 + stageIdx * 40);
-    return {
+const samplePerStage = 18;
+export const leads: Lead[] = stagesList.flatMap((stage, stageIdx) =>
+  Array.from({ length: samplePerStage }).map((_, i) => {
+    const name = names[i % names.length] + " " + (i + 1 + stageIdx * samplePerStage);
+    const assignee = staffNames[i % staffNames.length];
+    const tuition = Math.floor(Math.random() * 3000000 + 1500000);
+    const material = Math.floor(Math.random() * 800000 + 200000);
+    const baseDate = new Date(2025, 2, 1 + i);
+
+    const lead: Lead = {
       id: `L-${stage}-${i}`,
-      stt: i + 1 + stageIdx * 40,
-      name: name,
+      stt: i + 1 + stageIdx * samplePerStage,
+      name,
       dob: "01/01/2018",
       phone: `09${Math.floor(Math.random() * 90000000 + 10000000)}`,
-      customerGroup: stage === "closed" ? "ĐÃ CHỐT THÀNH CÔNG" : groups[i % groups.length],
+      parentName: i % 2 === 0 ? "Phụ huynh " + name.split(" ").slice(-1)[0] : undefined,
+      parentPhone: i % 2 === 0 ? `08${Math.floor(Math.random() * 90000000 + 10000000)}` : undefined,
+      customerGroup: stage === "enrolled" ? "ĐÃ CHỐT THÀNH CÔNG" : groups[i % groups.length],
       program: {
         name: i % 3 === 0 ? "Tiểu học" : i % 3 === 1 ? "Mẫu giáo" : "Trung học cơ sở",
         sessions: Math.floor(Math.random() * 20 + 10),
-        fee: Math.floor(Math.random() * 3000000 + 1000000),
+        fee: tuition,
         collectionDate: "24/10/2025"
       },
-      assignee: staffNames[i % staffNames.length],
-      followUpHistory: "26/12 15:00:",
+      assignee,
+      followUpHistory: "",
       source: sources[i % sources.length],
-      category: stage === "closed" ? "completed" : "nurturing",
-      stage: stage
+      category: stage === "enrolled" ? "completed" : "nurturing",
+      stage,
+      careLog: [
+        {
+          id: `cl-${stage}-${i}-0`,
+          timestamp: baseDate.toISOString(),
+          by: assignee,
+          type: "note",
+          content: "Khởi tạo lead từ nguồn " + sources[i % sources.length],
+        },
+      ],
+      createdAt: baseDate.toISOString(),
     };
+
+    // Augment by stage
+    if (["test_scheduled", "test_done", "result_sent", "waiting_class", "enrolled"].includes(stage)) {
+      lead.test = {
+        scheduledDate: "2025-03-" + String(10 + (i % 15)).padStart(2, "0"),
+      };
+    }
+    if (["test_done", "result_sent", "waiting_class", "enrolled"].includes(stage)) {
+      lead.test = {
+        ...lead.test!,
+        actualDate: lead.test!.scheduledDate,
+        score: Math.round((5 + Math.random() * 5) * 10) / 10,
+        level: ["Starters", "Movers", "Flyers", "KET", "PET"][i % 5],
+        teacherFeedback: "Bé tiếp thu tốt, phát âm cần luyện thêm.",
+        suggestedProgram: "Lộ trình Cambridge YL",
+      };
+    }
+    if (["result_sent", "waiting_class", "enrolled"].includes(stage)) {
+      lead.test = {
+        ...lead.test!,
+        sentToParentAt: new Date(baseDate.getTime() + 86400000 * 2).toISOString(),
+        parentResponse: stage === "result_sent" ? "pending" : "agree",
+      };
+    }
+    if (stage === "enrolled") {
+      const classNames = ["Cam 10", "Cam 25", "Cam 33", "Cam 21", "Cam 34"];
+      const cn = classNames[i % classNames.length];
+      lead.enrollment = {
+        classId: "CLS-" + cn.replace(" ", ""),
+        className: cn,
+        enrolledAt: new Date(baseDate.getTime() + 86400000 * 5).toISOString(),
+      };
+      lead.payment = {
+        tuitionFee: tuition,
+        materialFee: material,
+        paidTuition: true,
+        paidMaterial: true,
+        paidAt: new Date(baseDate.getTime() + 86400000 * 5).toISOString(),
+        receiptCode: "RC-" + lead.id,
+      };
+    }
+    return lead;
   })
 );
 

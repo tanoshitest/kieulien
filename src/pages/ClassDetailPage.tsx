@@ -7,7 +7,8 @@ import {
   ArrowRight, Share2, Layout, Users, CalendarCheck, Award,
   Search, FileSpreadsheet, Calendar, FolderOpen, FileText, Download,
   MoreVertical, FileCode, FileImage, File, MousePointerClick, ChevronDown,
-  Check, Pencil, Paperclip, UploadCloud, Loader2, Plus, Trash2
+  Check, Pencil, Paperclip, UploadCloud, Loader2, Plus, Trash2,
+  GraduationCap, BookMarked, Camera, AlertTriangle, ThumbsUp, ThumbsDown, ImageIcon, Send, ShieldCheck, Lightbulb
 } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
 import { toast } from "sonner";
@@ -47,7 +48,7 @@ export const ClassDetailContent: React.FC<ClassDetailContentProps> = ({ id: prop
   const id = propId || urlId;
   const { role, isParent } = useRole();
   
-  const [activeTab, setActiveTab] = useState<"overview" | "report" | "documents">("report");
+  const [activeTab, setActiveTab] = useState<"overview" | "report" | "documents" | "academic">("report");
   const [selectedSessionId, setSelectedSessionId] = useState(1);
   const [showSessionMenu, setShowSessionMenu] = useState(false);
   const sessionMenuRef = useRef<HTMLDivElement>(null);
@@ -146,10 +147,80 @@ export const ClassDetailContent: React.FC<ClassDetailContentProps> = ({ id: prop
 
   const classDocuments = useMemo(() => {
     if (!classData) return [];
-    return documents.filter((doc) => 
+    return documents.filter((doc) =>
       doc.classId === "all" || doc.classId.toUpperCase() === classData.id.toUpperCase()
     );
   }, [classData]);
+
+  // ============ MOCK: Báo cáo học vụ (Admin check lớp) ============
+  // Mỗi buổi học có 1 báo cáo học vụ do Admin/Học vụ tạo sau khi quan sát lớp
+  const academicReportsData: Record<number, {
+    id: string;
+    sessionId: number;
+    auditorName: string;          // Tên admin/học vụ check lớp
+    auditorAvatar: string;
+    visitedAt: string;            // "24/03/2026 18:15"
+    overallRating: 1 | 2 | 3 | 4 | 5;  // Xếp loại tổng buổi học
+    teachingProgress: string;      // GV dạy gì hôm nay
+    studentEngagement: string;     // Nhận xét tiếp thu của HS
+    classroomAtmosphere: string;   // Không khí lớp / kỷ luật
+    diaryPhotos: { url: string; caption: string }[];   // Ảnh nhật ký lớp
+    needSupportStudents: { studentId: string; reason: string; suggestedAction: string }[];  // HS cần bổ trợ
+    teacherFeedback: string;       // Góp ý cho giáo viên
+    nextActions: string[];         // Việc cần làm tiếp theo
+    parentNoticeNeeded: boolean;   // Có cần thông báo PH không
+    status: "draft" | "submitted" | "acknowledged"; // Trạng thái báo cáo
+  }> = {
+    1: {
+      id: "AR-001",
+      sessionId: 1,
+      auditorName: "Ms. Phương Anh",
+      auditorAvatar: "PA",
+      visitedAt: "24/03/2026 18:15",
+      overallRating: 4,
+      teachingProgress: "GV đã hoàn thành 100% nội dung Movers Unit 01 (vocabulary + listening). Slide trình bày rõ ràng, có sử dụng flashcard tương tác. Tốc độ giảng phù hợp với trình độ lớp.",
+      studentEngagement: "Đa số HS tiếp thu tốt 80–90% bài. Nhóm HS đầu lớp (Đăng Khoa, Bảo Thư) trả lời chính xác >90% câu hỏi vocab. Tuy nhiên có 2 HS bị xao nhãng giữa giờ, cần GV gọi tên thường xuyên hơn.",
+      classroomAtmosphere: "Không khí sôi nổi, HS chủ động phát biểu. Phần warm-up chơi game 'Simon says' được hưởng ứng tích cực. Kỷ luật tốt, không có HS gây ồn.",
+      diaryPhotos: [
+        { url: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=300&fit=crop", caption: "HS làm bài tập nhóm Unit 01" },
+        { url: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=400&h=300&fit=crop", caption: "Bảng nội dung GV viết" },
+        { url: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=400&h=300&fit=crop", caption: "Góc trưng bày flashcard tự làm" },
+      ],
+      needSupportStudents: [
+        { studentId: "STU003", reason: "Phát âm 'th' chưa chuẩn, hay nhầm với 't'", suggestedAction: "Bổ trợ 1-1 30 phút phonics tuần tới" },
+        { studentId: "STU007", reason: "Không hoàn thành BTVN 2 buổi liên tiếp", suggestedAction: "Gọi PH trao đổi, kèm lại Unit 01 vocab" },
+      ],
+      teacherFeedback: "GV Thu Trang quản lớp tốt, năng lượng cao. Đề xuất: tăng thêm 5 phút phần ôn tập cuối buổi để chốt từ vựng cốt lõi. Cân nhắc ghép cặp HS yếu - HS giỏi để tăng tương tác.",
+      nextActions: [
+        "Lên lịch bổ trợ phonics cho STU003 vào thứ 5 tuần sau",
+        "Gọi PH STU007 trong 24h tới",
+        "Order thêm 10 bộ flashcard Unit 01 cho lớp",
+      ],
+      parentNoticeNeeded: true,
+      status: "submitted",
+    },
+    2: {
+      id: "AR-002",
+      sessionId: 2,
+      auditorName: "Mr. Quang Huy",
+      auditorAvatar: "QH",
+      visitedAt: "28/03/2026 17:50",
+      overallRating: 5,
+      teachingProgress: "Hoàn thành đầy đủ Grammar Unit 18 (Present Perfect). GV chuẩn bị bài giảng kỹ, có handout in sẵn cho mỗi HS.",
+      studentEngagement: "100% HS tham gia, không khí tích cực. Test nhanh cuối giờ đạt trung bình 8.5/10.",
+      classroomAtmosphere: "Lớp học rất tập trung, GV điều phối nhịp nhàng giữa giảng và practice.",
+      diaryPhotos: [
+        { url: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=300&fit=crop", caption: "Test nhanh cuối buổi" },
+      ],
+      needSupportStudents: [],
+      teacherFeedback: "Buổi học mẫu mực, đề xuất quay video làm tư liệu training cho GV mới.",
+      nextActions: ["Quay video tư liệu buổi học mẫu", "Khen thưởng GV tháng này"],
+      parentNoticeNeeded: false,
+      status: "acknowledged",
+    },
+  };
+  const currentAcademicReport = academicReportsData[selectedSessionId];
+  // ============ /MOCK ============
 
   const stats = [
     { label: "Sĩ số học sinh", value: `${classStudents.length}/12`, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
@@ -168,6 +239,7 @@ export const ClassDetailContent: React.FC<ClassDetailContentProps> = ({ id: prop
     { id: "overview", label: "Tổng quan", icon: LayoutDashboard, teacherOnly: true },
     { id: "report", label: "Báo cáo buổi học", icon: CalendarCheck },
     { id: "documents", label: "Tài liệu", icon: FolderOpen, teacherOnly: true },
+    { id: "academic", label: "Báo cáo học vụ", icon: ShieldCheck, teacherOnly: true },
   ];
 
   const filteredTabs = allTabs.filter(tab => !isParent || !tab.teacherOnly);
@@ -580,6 +652,226 @@ export const ClassDetailContent: React.FC<ClassDetailContentProps> = ({ id: prop
                    </div>
                  ))}
                </div>
+            </div>
+          )}
+
+          {!isParent && activeTab === "academic" && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              {!currentAcademicReport ? (
+                /* ---- EMPTY STATE: Chưa có báo cáo học vụ cho buổi này ---- */
+                <div className="bg-white rounded-3xl border border-dashed border-slate-200 p-12 text-center">
+                  <div className="w-16 h-16 mx-auto rounded-2xl bg-slate-50 flex items-center justify-center mb-4">
+                    <ShieldCheck className="w-8 h-8 text-slate-300" />
+                  </div>
+                  <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest mb-1">Chưa có báo cáo học vụ</h3>
+                  <p className="text-xs text-slate-500 mb-5">Buổi học này chưa được Học vụ check & lập báo cáo.</p>
+                  <button
+                    onClick={() => toast.success("Đã mở form tạo báo cáo học vụ (demo)")}
+                    className="px-5 py-2.5 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:shadow-lg transition-all inline-flex items-center gap-2"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Lập báo cáo học vụ
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* ---- HEADER: Auditor + Status + Rating ---- */}
+                  <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+                    <div className="px-6 py-5 border-b border-slate-50 bg-gradient-to-r from-violet-50/60 to-fuchsia-50/40 flex items-center justify-between flex-wrap gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white flex items-center justify-center font-black text-sm shadow-md">
+                          {currentAcademicReport.auditorAvatar}
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Học vụ check lớp</p>
+                          <p className="text-sm font-black text-slate-800">{currentAcademicReport.auditorName}</p>
+                          <p className="text-[11px] text-slate-500">{currentAcademicReport.visitedAt} · Mã BC: <span className="font-mono text-violet-600">{currentAcademicReport.id}</span></p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {/* Overall Rating Stars */}
+                        <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200">
+                          {[1,2,3,4,5].map(n => (
+                            <Star key={n} className={`w-4 h-4 ${n <= currentAcademicReport.overallRating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+                          ))}
+                          <span className="ml-1 text-xs font-black text-amber-700">{currentAcademicReport.overallRating}/5</span>
+                        </div>
+                        {/* Status Badge */}
+                        <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
+                          currentAcademicReport.status === "acknowledged" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                          currentAcademicReport.status === "submitted" ? "bg-sky-50 text-sky-700 border-sky-200" :
+                          "bg-slate-50 text-slate-500 border-slate-200"
+                        }`}>
+                          {currentAcademicReport.status === "acknowledged" ? "✓ Đã tiếp nhận" :
+                           currentAcademicReport.status === "submitted" ? "● Đã gửi" : "○ Nháp"}
+                        </span>
+                        {currentAcademicReport.parentNoticeNeeded && (
+                          <span className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-rose-50 text-rose-600 border border-rose-200 inline-flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" /> Cần báo PH
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ---- 2 cột: Trái = nhận xét, Phải = ảnh + actions ---- */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    {/* CỘT TRÁI (2/3) */}
+                    <div className="lg:col-span-2 space-y-4">
+                      {/* Hôm nay học gì */}
+                      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+                        <div className="px-5 py-3 border-b border-slate-50 bg-blue-50/40 flex items-center gap-2">
+                          <BookMarked className="w-4 h-4 text-blue-600" />
+                          <h4 className="text-[11px] font-black uppercase text-slate-700 tracking-widest">Tiến độ giảng dạy</h4>
+                        </div>
+                        <p className="px-5 py-4 text-sm text-slate-700 leading-relaxed">{currentAcademicReport.teachingProgress}</p>
+                      </div>
+
+                      {/* Nhận xét tiếp thu */}
+                      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+                        <div className="px-5 py-3 border-b border-slate-50 bg-emerald-50/40 flex items-center gap-2">
+                          <ThumbsUp className="w-4 h-4 text-emerald-600" />
+                          <h4 className="text-[11px] font-black uppercase text-slate-700 tracking-widest">Khả năng tiếp thu của HS</h4>
+                        </div>
+                        <p className="px-5 py-4 text-sm text-slate-700 leading-relaxed">{currentAcademicReport.studentEngagement}</p>
+                      </div>
+
+                      {/* Không khí lớp */}
+                      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+                        <div className="px-5 py-3 border-b border-slate-50 bg-amber-50/40 flex items-center gap-2">
+                          <Users className="w-4 h-4 text-amber-600" />
+                          <h4 className="text-[11px] font-black uppercase text-slate-700 tracking-widest">Không khí & Kỷ luật lớp</h4>
+                        </div>
+                        <p className="px-5 py-4 text-sm text-slate-700 leading-relaxed">{currentAcademicReport.classroomAtmosphere}</p>
+                      </div>
+
+                      {/* HS cần bổ trợ */}
+                      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+                        <div className="px-5 py-3 border-b border-slate-50 bg-rose-50/40 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 text-rose-600" />
+                            <h4 className="text-[11px] font-black uppercase text-slate-700 tracking-widest">HS cần bổ trợ ({currentAcademicReport.needSupportStudents.length})</h4>
+                          </div>
+                          <button
+                            onClick={() => toast.info("Mở form thêm HS cần bổ trợ (demo)")}
+                            className="text-[10px] font-black uppercase tracking-widest text-rose-600 hover:underline flex items-center gap-1"
+                          >
+                            <Plus className="w-3 h-3" /> Thêm HS
+                          </button>
+                        </div>
+                        {currentAcademicReport.needSupportStudents.length === 0 ? (
+                          <p className="px-5 py-6 text-xs text-center text-slate-400 italic">Toàn bộ HS theo kịp tiến độ — không cần bổ trợ</p>
+                        ) : (
+                          <div className="divide-y divide-slate-50">
+                            {currentAcademicReport.needSupportStudents.map((s, i) => {
+                              const stu = students.find(st => st.id === s.studentId);
+                              return (
+                                <div key={i} className="px-5 py-3 flex items-start gap-3">
+                                  <div className="w-9 h-9 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-black text-xs shrink-0">
+                                    {stu?.avatar || s.studentId.slice(-2)}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                      <span className="text-sm font-black text-slate-800">{stu?.name || s.studentId}</span>
+                                      <span className="text-[9px] font-mono text-slate-400">{s.studentId}</span>
+                                    </div>
+                                    <p className="text-xs text-slate-600"><b className="text-rose-600">Vấn đề:</b> {s.reason}</p>
+                                    <p className="text-xs text-emerald-700 mt-0.5"><b>Đề xuất:</b> {s.suggestedAction}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Góp ý cho GV */}
+                      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+                        <div className="px-5 py-3 border-b border-slate-50 bg-violet-50/40 flex items-center gap-2">
+                          <GraduationCap className="w-4 h-4 text-violet-600" />
+                          <h4 className="text-[11px] font-black uppercase text-slate-700 tracking-widest">Góp ý cho Giáo viên</h4>
+                        </div>
+                        <p className="px-5 py-4 text-sm text-slate-700 leading-relaxed italic border-l-4 border-violet-300 mx-5 my-4 pl-3 bg-violet-50/30 rounded-r">
+                          "{currentAcademicReport.teacherFeedback}"
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* CỘT PHẢI (1/3) */}
+                    <div className="space-y-4">
+                      {/* Ảnh nhật ký lớp */}
+                      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+                        <div className="px-5 py-3 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Camera className="w-4 h-4 text-slate-600" />
+                            <h4 className="text-[11px] font-black uppercase text-slate-700 tracking-widest">Nhật ký lớp ({currentAcademicReport.diaryPhotos.length})</h4>
+                          </div>
+                          <button
+                            onClick={() => toast.info("Mở upload ảnh (demo)")}
+                            className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline flex items-center gap-1"
+                          >
+                            <UploadCloud className="w-3 h-3" /> Tải lên
+                          </button>
+                        </div>
+                        {currentAcademicReport.diaryPhotos.length === 0 ? (
+                          <div className="p-8 text-center text-xs text-slate-400 italic flex flex-col items-center gap-2">
+                            <ImageIcon className="w-8 h-8 text-slate-200" />
+                            Chưa có ảnh
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2 p-4">
+                            {currentAcademicReport.diaryPhotos.map((p, i) => (
+                              <div key={i} className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-slate-100 cursor-pointer hover:shadow-md transition-all">
+                                <img src={p.url} alt={p.caption} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-2 py-1.5">
+                                  <p className="text-[10px] font-bold text-white truncate">{p.caption}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Việc cần làm tiếp theo */}
+                      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+                        <div className="px-5 py-3 border-b border-slate-50 bg-indigo-50/40 flex items-center gap-2">
+                          <Lightbulb className="w-4 h-4 text-indigo-600" />
+                          <h4 className="text-[11px] font-black uppercase text-slate-700 tracking-widest">Next Actions ({currentAcademicReport.nextActions.length})</h4>
+                        </div>
+                        <ul className="px-5 py-4 space-y-2">
+                          {currentAcademicReport.nextActions.map((a, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs text-slate-700">
+                              <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-[10px] shrink-0 mt-0.5">{i+1}</span>
+                              <span className="flex-1 leading-relaxed">{a}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Footer actions */}
+                      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl p-4 space-y-2">
+                        <button
+                          onClick={() => toast.success("Đã gửi báo cáo cho phụ huynh các HS cần bổ trợ")}
+                          className="w-full py-2.5 rounded-xl bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all flex items-center justify-center gap-2"
+                        >
+                          <Send className="w-3.5 h-3.5" /> Gửi PH các HS cần bổ trợ
+                        </button>
+                        <button
+                          onClick={() => toast.success("Đã chuyển task cho GV chủ nhiệm")}
+                          className="w-full py-2.5 rounded-xl bg-violet-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-violet-700 transition-all flex items-center justify-center gap-2"
+                        >
+                          <ArrowRight className="w-3.5 h-3.5" /> Chuyển GV xử lý
+                        </button>
+                        <button
+                          onClick={() => toast.info("Mở form chỉnh sửa báo cáo")}
+                          className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                        >
+                          <Pencil className="w-3.5 h-3.5" /> Sửa báo cáo
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
