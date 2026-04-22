@@ -84,6 +84,11 @@ export default {
           done: "hsl(var(--kanban-done))",
           closed: "hsl(var(--kanban-closed))",
         },
+        brand: {
+          green: { DEFAULT: "#1a9943", dark: "#0f7a3e", light: "#2bb857" },
+          orange: { DEFAULT: "#f5a623", dark: "#e48a00", light: "#ffb84d" },
+          cream: "#fff8ed",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

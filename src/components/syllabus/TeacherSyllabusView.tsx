@@ -3,11 +3,11 @@ import { motion } from "framer-motion";
 import {
   BookOpen, Link2, Video, FileText, Zap, Star, Clock,
   CheckCircle2, ChevronDown, ChevronRight, MessageSquare, Save,
-  UserCheck, Check, X, Timer, ClipboardCheck, Plus, Trash2, Pencil, TrendingUp, ClipboardList,
-  ArrowLeft
+  UserCheck, Check, X, Timer, ClipboardCheck, Plus, Trash2, Pencil, ClipboardList
 } from "lucide-react";
-import ProgressTimelineView from "@/components/syllabus/shared/ProgressTimelineView";
 import StaffReportTabContent from "@/components/syllabus/shared/StaffReportTabContent";
+import SyllabusSidebarLayout, { type NavItem } from "@/components/syllabus/shared/SyllabusSidebarLayout";
+import { GameTabContent, QuizTabContent } from "@/components/syllabus/shared/GameQuizContent";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,8 +45,10 @@ const readOnlyStatusConfig: Record<HomeworkStatus, { label: string; color: strin
 const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelect?: boolean; readOnly?: boolean }> = ({ showStaffReport = false, hideCourseSelect = false, readOnly = false }) => {
   const [selectedSyllabusId, setSelectedSyllabusId] = useState<string | null>(hideCourseSelect ? (syllabuses[0]?.id ?? null) : null);
   const [submissions, setSubmissions] = useState<HomeworkSubmission[]>(initialSubmissions);
-  const [activeTab, setActiveTab] = useState<"today" | "attendance" | "grading" | "classwork" | "staff_report" | "progress">("progress");
+  const [activeTab, setActiveTab] = useState<"today" | "attendance" | "grading" | "classwork" | "staff_report">("today");
   const [expandedProcess, setExpandedProcess] = useState(false);
+  const [activeNavItem, setActiveNavItem] = useState<NavItem>("syllabus");
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   // Attendance
   type AttendanceStatus = "present" | "late" | "absent";
@@ -267,7 +269,6 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
   };
 
   const tabs = [
-    { id: "progress", label: "Tiến độ học", icon: TrendingUp },
     { id: "today", label: "Hôm nay", icon: Clock },
     { id: "attendance", label: `Điểm danh${attendanceSaved ? " ✓" : ""}`, icon: UserCheck },
     { id: "classwork", label: "Chấm bài tập trên lớp", icon: ClipboardCheck },
@@ -318,21 +319,49 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
 
   const currentSyllabus = syllabuses.find(s => s.id === selectedSyllabusId);
 
+  // Initialize selectedSessionId once syllabus loaded — pick today's or first
+  React.useEffect(() => {
+    if (currentSyllabus && !selectedSessionId) {
+      const todaySched = classSchedules.find(cs => cs.date === TODAY && cs.syllabusId === currentSyllabus.id);
+      const initial = todaySched?.syllabusSessionId ?? currentSyllabus.sessions[0]?.id ?? null;
+      setSelectedSessionId(initial);
+    }
+  }, [currentSyllabus, selectedSessionId]);
+
+  if (!currentSyllabus) return null;
+
+  const selectedSession = currentSyllabus.sessions.find(s => s.id === selectedSessionId) ?? currentSyllabus.sessions[0];
+
+  const roleLabel = readOnly ? "Quản trị viên" : (showStaffReport ? "Học vụ" : "Giảng viên");
+
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Back + course header */}
-      {!hideCourseSelect && currentSyllabus && (
-        <div className="mb-4 flex items-center gap-3">
-          <button
-            onClick={() => setSelectedSyllabusId(null)}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" /> Danh sách khóa
-          </button>
-          <div className="h-4 w-px bg-border" />
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-violet-600" />
-            <span className="font-semibold text-sm text-foreground">{currentSyllabus.name}</span>
+    <SyllabusSidebarLayout
+      syllabus={currentSyllabus}
+      classSchedules={classSchedules}
+      selectedSessionId={selectedSessionId}
+      onSessionSelect={setSelectedSessionId}
+      activeNavItem={activeNavItem}
+      onNavItemChange={setActiveNavItem}
+      teacherName="Ms. Thu Trang"
+      breadcrumb={`${roleLabel} / Khoá học của tôi / ${currentSyllabus.id}`}
+      onBack={hideCourseSelect ? undefined : () => { setSelectedSyllabusId(null); setSelectedSessionId(null); }}
+    >
+      {activeNavItem === "game" ? (
+        <GameTabContent />
+      ) : activeNavItem === "quiz" ? (
+        <QuizTabContent />
+      ) : (
+        <>
+      {/* Session header */}
+      {selectedSession && (
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">SESSION {selectedSession.order}</p>
+          <h2 className="text-xl font-bold text-foreground mb-1.5">Buổi {selectedSession.order}: {selectedSession.title}</h2>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="w-3.5 h-3.5" />
+            <span>90 phút</span>
+            <span>·</span>
+            <span>Tuần {Math.ceil(selectedSession.order / 2)}</span>
           </div>
         </div>
       )}
@@ -432,45 +461,6 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                   </div>
                 </div>
               )}
-
-              {/* Quick participation assessment */}
-              <div className="bg-card border border-border rounded-xl p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-sm text-foreground">⭐ Đánh giá tham gia buổi học</h4>
-                  <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" onClick={() => setShowParticipation(p => !p)}>
-                    {showParticipation ? "Thu gọn" : "Mở bảng điểm"}
-                  </Button>
-                </div>
-                {showParticipation && (
-                  <div className="space-y-2">
-                    {["STU001|Đăng Khoa Bing|DK|5", "STU002|Bảo Thư Mimi|BT|4", "STU003|Thành Vinh Brian|TV|5",
-                      "STU005|Thiện Nhân Tom|TN|3", "STU006|Hà Anh Kuromi|HA|4", "STU011|Minh Anh Mina|MA|5"].map(entry => {
-                      const [id, name, avatar, defaultStar] = entry.split("|");
-                      const currentStar = participationScores[id] ?? (readOnly ? Number(defaultStar) : 0);
-                      return (
-                        <div key={id} className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">{avatar}</div>
-                          <span className="text-sm flex-1 text-foreground">{name}</span>
-                          <div className="flex gap-1">
-                            {[1, 2, 3, 4, 5].map(star => (
-                              <button key={star} onClick={() => !readOnly && setParticipationScores(p => ({ ...p, [id]: star }))}
-                                disabled={readOnly}
-                                className={`w-6 h-6 transition-colors ${currentStar >= star ? "text-yellow-400" : "text-muted-foreground/30"} ${readOnly ? "cursor-default" : ""}`}>
-                                <Star className="w-4 h-4 fill-current" />
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {!readOnly && (
-                      <Button size="sm" className="w-full mt-2 gap-1.5" onClick={() => { toast.success("Đã lưu đánh giá tham gia!"); }}>
-                        <Save className="w-3.5 h-3.5" /> Lưu đánh giá
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
             </>
           ) : (
             <div className="text-center py-16 text-muted-foreground border-2 border-dashed border-border rounded-xl">
@@ -852,9 +842,7 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
         <StaffReportTabContent readOnly={readOnly} />
       )}
 
-      {/* PROGRESS TAB */}
-      {activeTab === "progress" && (
-        <ProgressTimelineView showStudentPicker />
+        </>
       )}
 
       {/* Grading Dialog */}
@@ -902,7 +890,7 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </SyllabusSidebarLayout>
   );
 };
 

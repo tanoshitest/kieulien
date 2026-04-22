@@ -260,34 +260,17 @@ const AdminSyllabusView: React.FC = () => {
   // VIEW: Session Detail (inside a Syllabus)
   // ─────────────────────────────────────────────────────────────
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => setSelectedSyllabus(null)} className="h-9 w-9">
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-xl font-bold text-foreground truncate">{selectedSyllabus.name}</h2>
-            <Badge variant="secondary">{selectedSyllabus.level}</Badge>
-            <Badge variant="outline">{selectedSyllabus.sessions.length} sessions</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground mt-0.5 truncate">{selectedSyllabus.description}</p>
-        </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openEditSyllabus(selectedSyllabus)}>
-            <Edit2 className="w-3.5 h-3.5" /> Sửa
-          </Button>
-          <Button size="sm" className="gap-1.5" onClick={openCreateSession}>
-            <Plus className="w-3.5 h-3.5" /> Thêm Session
-          </Button>
-        </div>
-      </div>
+    <div className="-m-6">
+      {/* Render Teacher view với full tabs (Admin chỉ xem, không sửa) — sidebar layout đã có breadcrumb + back */}
+      <TeacherSyllabusView showStaffReport hideCourseSelect readOnly />
 
-      {/* Render Teacher view với full tabs (Admin chỉ xem, không sửa) */}
-      <div className="-mx-6 -mb-6">
-        <TeacherSyllabusView showStaffReport hideCourseSelect readOnly />
-      </div>
+      {/* Back to syllabus list — minimal floating button cho admin */}
+      <button
+        onClick={() => setSelectedSyllabus(null)}
+        className="fixed bottom-6 right-6 z-20 flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-full shadow-lg hover:bg-violet-700 transition-colors text-sm font-medium"
+      >
+        <ArrowLeft className="w-4 h-4" /> Về danh sách Syllabus
+      </button>
 
       {false && (<>
 

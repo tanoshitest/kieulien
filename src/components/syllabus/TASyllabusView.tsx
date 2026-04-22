@@ -3,10 +3,11 @@ import { motion } from "framer-motion";
 import {
   ClipboardCheck, Clock, BookOpen, Link2, CheckCircle2,
   XCircle, AlertCircle, Star, Send, FileText, ChevronDown, ChevronRight,
-  ArrowLeft, ClipboardList, TrendingUp
+  ClipboardList
 } from "lucide-react";
-import ProgressTimelineView from "@/components/syllabus/shared/ProgressTimelineView";
 import StaffReportTabContent from "@/components/syllabus/shared/StaffReportTabContent";
+import SyllabusSidebarLayout, { type NavItem } from "@/components/syllabus/shared/SyllabusSidebarLayout";
+import { GameTabContent, QuizTabContent } from "@/components/syllabus/shared/GameQuizContent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,13 +30,15 @@ const attendanceConfig: Record<AttendanceStatus, { label: string; icon: React.El
 
 const classStudents = students.filter(s => s.classIds.includes("CLS001")).slice(0, 8);
 
-type TATab = "today" | "attendance" | "reports" | "staff_report" | "progress";
+type TATab = "today" | "attendance" | "reports" | "staff_report";
 
 const TASyllabusView: React.FC = () => {
   const [selectedSyllabusId, setSelectedSyllabusId] = useState<string | null>(null);
   const [reports, setReports] = useState<DailyReport[]>(initialReports);
-  const [activeTab, setActiveTab] = useState<TATab>("progress");
+  const [activeTab, setActiveTab] = useState<TATab>("today");
   const [expandedProcess, setExpandedProcess] = useState(false);
+  const [activeNavItem, setActiveNavItem] = useState<NavItem>("syllabus");
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   // Today's data
   const todaySchedule = classSchedules.find(cs => cs.date === TODAY);
@@ -153,29 +156,54 @@ const TASyllabusView: React.FC = () => {
 
   // ====== COURSE DETAIL (TABS) ======
   const tabs: { id: TATab; label: string; icon: React.ElementType }[] = [
-    { id: "progress", label: "Tiến độ học", icon: TrendingUp },
     { id: "today", label: "Ca học hôm nay", icon: Clock },
     { id: "attendance", label: "Điểm danh", icon: ClipboardCheck },
     { id: "staff_report", label: "Báo cáo học vụ", icon: ClipboardList },
   ];
 
+  React.useEffect(() => {
+    if (currentSyllabus && !selectedSessionId) {
+      const todaySched = classSchedules.find(cs => cs.date === TODAY && cs.syllabusId === currentSyllabus.id);
+      const initial = todaySched?.syllabusSessionId ?? currentSyllabus.sessions[0]?.id ?? null;
+      setSelectedSessionId(initial);
+    }
+  }, [currentSyllabus, selectedSessionId]);
+
+  if (!currentSyllabus) return null;
+
+  const selectedSession = currentSyllabus.sessions.find(s => s.id === selectedSessionId) ?? currentSyllabus.sessions[0];
+
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Back + course header */}
-      <div className="mb-4 flex items-center gap-3">
-        <button
-          onClick={() => setSelectedSyllabusId(null)}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Danh sách khóa
-        </button>
-        <div className="h-4 w-px bg-border" />
-        <div className="flex items-center gap-2">
-          <BookOpen className="w-4 h-4 text-violet-600" />
-          <span className="font-semibold text-sm text-foreground">{currentSyllabus?.name}</span>
-          <Badge variant="secondary" className="text-[10px]">{currentSyllabus?.level}</Badge>
+    <SyllabusSidebarLayout
+      syllabus={currentSyllabus}
+      classSchedules={classSchedules}
+      selectedSessionId={selectedSessionId}
+      onSessionSelect={setSelectedSessionId}
+      activeNavItem={activeNavItem}
+      onNavItemChange={setActiveNavItem}
+      teacherName="Ms. Thu Trang"
+      breadcrumb={`Học vụ / Khoá học của tôi / ${currentSyllabus.id}`}
+      onBack={() => { setSelectedSyllabusId(null); setSelectedSessionId(null); }}
+    >
+      {activeNavItem === "game" ? (
+        <GameTabContent />
+      ) : activeNavItem === "quiz" ? (
+        <QuizTabContent />
+      ) : (
+        <>
+      {/* Session header */}
+      {selectedSession && (
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">SESSION {selectedSession.order}</p>
+          <h2 className="text-xl font-bold text-foreground mb-1.5">Buổi {selectedSession.order}: {selectedSession.title}</h2>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="w-3.5 h-3.5" />
+            <span>90 phút</span>
+            <span>·</span>
+            <span>Tuần {Math.ceil(selectedSession.order / 2)}</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 bg-muted/50 rounded-xl p-1 mb-6">
@@ -376,9 +404,7 @@ const TASyllabusView: React.FC = () => {
         <StaffReportTabContent />
       )}
 
-      {/* PROGRESS TAB */}
-      {activeTab === "progress" && (
-        <ProgressTimelineView syllabusId={selectedSyllabusId} showStudentPicker />
+        </>
       )}
 
       {/* Note Dialog */}
@@ -392,7 +418,7 @@ const TASyllabusView: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </SyllabusSidebarLayout>
   );
 };
 

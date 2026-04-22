@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   BookOpen, Video, Zap, FileText,
@@ -15,7 +15,8 @@ import {
   dailyReports,
   type HomeworkSubmission, type HomeworkType, type HomeworkStatus
 } from "@/data/mockData";
-import ProgressTimelineView from "@/components/syllabus/shared/ProgressTimelineView";
+import SyllabusSidebarLayout, { type NavItem } from "@/components/syllabus/shared/SyllabusSidebarLayout";
+import { GameTabContent, QuizTabContent } from "@/components/syllabus/shared/GameQuizContent";
 
 const TODAY = "2026-04-22";
 const MY_STUDENT_ID = "STU011"; // Minh Anh Mina (parent's child)
@@ -59,7 +60,15 @@ function buildStudentHomeworks(submissions: HomeworkSubmission[]) {
 
 const ParentSyllabusView: React.FC = () => {
   const [submissions, setSubmissions] = useState<HomeworkSubmission[]>(initialSubmissions);
-  const [activeTab, setActiveTab] = useState<"progress" | "homework" | "reports">("progress");
+  const [activeTab, setActiveTab] = useState<"homework" | "reports">("homework");
+  const [activeNavItem, setActiveNavItem] = useState<NavItem>("syllabus");
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+
+  // Derive parent's syllabus
+  const parentSyllabus = useMemo(() => {
+    const myClass = classSchedules.find(cs => cs.classId);
+    return syllabuses.find(s => s.id === myClass?.syllabusId) ?? syllabuses[0];
+  }, []);
 
   // Submit dialog
   const [submitDialog, setSubmitDialog] = useState<null | { scheduleId: string; sessionTitle: string; hw: { id: string; type: HomeworkType; title: string; description: string; externalLink?: string } }>(null);
@@ -115,11 +124,25 @@ const ParentSyllabusView: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <SyllabusSidebarLayout
+      syllabus={parentSyllabus}
+      classSchedules={classSchedules}
+      selectedSessionId={selectedSessionId}
+      onSessionSelect={setSelectedSessionId}
+      activeNavItem={activeNavItem}
+      onNavItemChange={setActiveNavItem}
+      teacherName="Ms. Thu Trang"
+      breadcrumb={`Phụ huynh / Khoá học của con / ${parentSyllabus.id}`}
+    >
+      {activeNavItem === "game" ? (
+        <GameTabContent />
+      ) : activeNavItem === "quiz" ? (
+        <QuizTabContent />
+      ) : (
+        <>
       {/* Tabs */}
       <div className="flex gap-1 bg-muted/50 rounded-xl p-1 mb-6">
         {[
-          { id: "progress", label: "Tiến độ học", icon: BookOpen },
           { id: "homework", label: `Bài tập${pendingHWs.length > 0 ? ` (${pendingHWs.length} chờ)` : ""}`, icon: FileText },
           { id: "reports", label: "Báo cáo lớp", icon: MessageSquare },
         ].map(t => (
@@ -132,11 +155,6 @@ const ParentSyllabusView: React.FC = () => {
           </button>
         ))}
       </div>
-
-      {/* PROGRESS TAB — Timeline */}
-      {activeTab === "progress" && (
-        <ProgressTimelineView studentId={MY_STUDENT_ID} />
-      )}
 
       {/* HOMEWORK TAB */}
       {activeTab === "homework" && (
@@ -382,7 +400,9 @@ const ParentSyllabusView: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+        </>
+      )}
+    </SyllabusSidebarLayout>
   );
 };
 

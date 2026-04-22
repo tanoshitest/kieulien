@@ -38,11 +38,9 @@ const navItems: NavItem[] = [
   // Dashboard removed as per user request
   { label: "Lớp học của tôi", path: "/my-classes", icon: BookOpen, teacherOnly: true },
   { label: "Quản lý lớp học", path: "/courses", icon: BookOpen, adminOnly: true },
-  { label: "Quản lý học sinh", path: "/students", icon: GraduationCap, adminOnly: true },
-  { label: "Quản lý User", path: "/users", icon: UserCog, adminOnly: true },
+  { label: "Quản lý người dùng", path: "/users", icon: UserCog, adminOnly: true },
   { label: "Syllabus", path: "/syllabus", icon: BookMarked },
   { label: "Lịch dạy", path: "/schedule", icon: Calendar },
-  { label: "Quản lý tài liệu", path: "/documents", icon: FileText, adminOnly: true },
   { label: "Quản lý hàng hoá", path: "/inventory", icon: Layers, adminOnly: true },
   { label: "Phân công công việc", path: "/tasks", icon: ClipboardList },
   { label: "Ghi chú chấm công", path: "/timekeeping", icon: Fingerprint, teacherOnly: true },
