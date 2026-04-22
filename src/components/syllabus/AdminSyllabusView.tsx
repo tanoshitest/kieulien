@@ -284,9 +284,9 @@ const AdminSyllabusView: React.FC = () => {
         </div>
       </div>
 
-      {/* Render Teacher view with all tabs (Hôm nay / Điểm danh / Chấm bài / Báo cáo học vụ / Tiến độ) */}
+      {/* Render Teacher view với full tabs (Admin chỉ xem, không sửa) */}
       <div className="-mx-6 -mb-6">
-        <TeacherSyllabusView showStaffReport hideCourseSelect />
+        <TeacherSyllabusView showStaffReport hideCourseSelect readOnly />
       </div>
 
       {false && (<>

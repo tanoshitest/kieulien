@@ -35,8 +35,14 @@ const statusConfig: Record<HomeworkStatus, { label: string; color: string }> = {
   submitted: { label: "Đã nộp", color: "bg-yellow-100 text-yellow-700" },
   graded: { label: "Đã chấm", color: "bg-green-100 text-green-700" },
 };
+// Label hiển thị trạng thái cho admin/học vụ (readOnly): bài nộp chưa chấm thì hiển thị "Đợi chấm"
+const readOnlyStatusConfig: Record<HomeworkStatus, { label: string; color: string }> = {
+  pending: { label: "Chờ nộp", color: "bg-gray-100 text-gray-600" },
+  submitted: { label: "Đợi chấm", color: "bg-orange-100 text-orange-700" },
+  graded: { label: "Đã chấm", color: "bg-green-100 text-green-700" },
+};
 
-const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelect?: boolean }> = ({ showStaffReport = false, hideCourseSelect = false }) => {
+const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelect?: boolean; readOnly?: boolean }> = ({ showStaffReport = false, hideCourseSelect = false, readOnly = false }) => {
   const [selectedSyllabusId, setSelectedSyllabusId] = useState<string | null>(hideCourseSelect ? (syllabuses[0]?.id ?? null) : null);
   const [submissions, setSubmissions] = useState<HomeworkSubmission[]>(initialSubmissions);
   const [activeTab, setActiveTab] = useState<"today" | "attendance" | "grading" | "classwork" | "staff_report" | "progress">("progress");
@@ -61,11 +67,27 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
     { id: "ST14", name: "Khánh Ngân Sky", avatar: "KN" },
     { id: "ST15", name: "Hoàng Nam Bo", avatar: "HN" },
   ];
+
+  // Mock attendance data (đầy đủ) - chỉ vắng/trễ ở 1 vài bé
+  const mockAttendanceStatus: Record<string, AttendanceStatus> = {
+    ST01: "present", ST02: "present", ST03: "late", ST04: "present", ST05: "present",
+    ST06: "absent", ST07: "present", ST08: "present", ST09: "present", ST10: "late",
+    ST11: "present", ST12: "present", ST13: "present", ST14: "absent", ST15: "present",
+  };
+  const mockAttendanceNotes: Record<string, string> = {
+    ST03: "Trễ 5 phút do kẹt xe",
+    ST06: "Phụ huynh xin nghỉ ốm",
+    ST10: "Trễ 10 phút",
+    ST14: "Vắng không phép",
+  };
+
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>(
-    () => Object.fromEntries(attendanceStudents.map(s => [s.id, "present" as AttendanceStatus]))
+    () => readOnly ? { ...mockAttendanceStatus } : Object.fromEntries(attendanceStudents.map(s => [s.id, "present" as AttendanceStatus]))
   );
-  const [attendanceNotes, setAttendanceNotes] = useState<Record<string, string>>({});
-  const [attendanceSaved, setAttendanceSaved] = useState(false);
+  const [attendanceNotes, setAttendanceNotes] = useState<Record<string, string>>(
+    () => readOnly ? { ...mockAttendanceNotes } : {}
+  );
+  const [attendanceSaved, setAttendanceSaved] = useState(readOnly);
 
   const setAllAttendance = (status: AttendanceStatus) => {
     setAttendance(Object.fromEntries(attendanceStudents.map(s => [s.id, status])));
@@ -81,10 +103,38 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
 
   // Classwork grading (teacher creates custom columns)
   type ClassworkColumn = { id: string; name: string; maxScore: number };
-  const [classworkColumns, setClassworkColumns] = useState<ClassworkColumn[]>([
+
+  // Mock classwork columns + scores đầy đủ
+  const mockClassworkColumns: ClassworkColumn[] = [
     { id: "col1", name: "Speaking", maxScore: 10 },
-  ]);
-  const [classworkScores, setClassworkScores] = useState<Record<string, Record<string, number | "">>>({});
+    { id: "col2", name: "Listening", maxScore: 10 },
+    { id: "col3", name: "Vocabulary", maxScore: 10 },
+    { id: "col4", name: "Grammar", maxScore: 10 },
+  ];
+  const mockClassworkScores: Record<string, Record<string, number | "">> = {
+    ST01: { col1: 9, col2: 8, col3: 10, col4: 9 },
+    ST02: { col1: 8, col2: 9, col3: 8, col4: 8 },
+    ST03: { col1: 7, col2: 7, col3: 8, col4: 7 },
+    ST04: { col1: 10, col2: 9, col3: 10, col4: 10 },
+    ST05: { col1: 8, col2: 8, col3: 9, col4: 8 },
+    ST06: { col1: "", col2: "", col3: "", col4: "" },
+    ST07: { col1: 9, col2: 10, col3: 9, col4: 9 },
+    ST08: { col1: 7, col2: 8, col3: 7, col4: 8 },
+    ST09: { col1: 8, col2: 7, col3: 9, col4: 8 },
+    ST10: { col1: 6, col2: 7, col3: 7, col4: 6 },
+    ST11: { col1: 9, col2: 9, col3: 10, col4: 9 },
+    ST12: { col1: 10, col2: 10, col3: 10, col4: 9 },
+    ST13: { col1: 8, col2: 8, col3: 8, col4: 8 },
+    ST14: { col1: "", col2: "", col3: "", col4: "" },
+    ST15: { col1: 9, col2: 8, col3: 9, col4: 9 },
+  };
+
+  const [classworkColumns, setClassworkColumns] = useState<ClassworkColumn[]>(
+    () => readOnly ? mockClassworkColumns : [{ id: "col1", name: "Speaking", maxScore: 10 }]
+  );
+  const [classworkScores, setClassworkScores] = useState<Record<string, Record<string, number | "">>>(
+    () => readOnly ? { ...mockClassworkScores } : {}
+  );
   const [newColName, setNewColName] = useState("");
   const [newColMax, setNewColMax] = useState<number>(10);
   const [editingColId, setEditingColId] = useState<string | null>(null);
@@ -151,9 +201,52 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
   const todaySession = todaySyllabus?.sessions.find(s => s.id === todaySchedule?.syllabusSessionId);
 
   // Submissions needing grading
-  const pendingGrading = submissions.filter(s => s.status === "submitted");
-  const gradedList = submissions.filter(s => s.status === "graded");
-  void gradedList;
+  // Mock: khi ở chế độ readOnly (admin/học vụ xem), inject thêm vài bài đợi chấm + đã chấm để có data đầy đủ
+  const mockExtraSubmissions: HomeworkSubmission[] = readOnly ? [
+    {
+      id: "HSUB_MOCK_001", studentId: "ST02", studentName: "Bảo Thư Mimi", studentAvatar: "BT",
+      homeworkId: "HW_001", homeworkTitle: "Video giới thiệu bản thân", homeworkType: "video_speaking",
+      classScheduleId: "CS001", sessionTitle: "Hello! My name is...",
+      submittedAt: "2026-04-21T18:30:00", status: "submitted",
+      submitUrl: "https://drive.google.com/mock-video-bt",
+    },
+    {
+      id: "HSUB_MOCK_002", studentId: "ST04", studentName: "Thiện Nhân Tom", studentAvatar: "TN",
+      homeworkId: "HW_002", homeworkTitle: "Quizizz Unit 3", homeworkType: "quizizz",
+      classScheduleId: "CS002", sessionTitle: "My family",
+      submittedAt: "2026-04-21T20:15:00", status: "submitted",
+      submitUrl: "https://quizizz.com/mock-tom",
+      submitText: "Điểm Quizizz: 85/100",
+    },
+    {
+      id: "HSUB_MOCK_003", studentId: "ST07", studentName: "Quốc Bảo Leo", studentAvatar: "QB",
+      homeworkId: "HW_003", homeworkTitle: "Writing about my family", homeworkType: "writing",
+      classScheduleId: "CS002", sessionTitle: "My family",
+      submittedAt: "2026-04-21T21:00:00", status: "submitted",
+      submitText: "My family has 4 members: my dad, my mom, my sister and me. We love each other...",
+    },
+    {
+      id: "HSUB_MOCK_004", studentId: "ST09", studentName: "Gia Huy Max", studentAvatar: "GH",
+      homeworkId: "HW_001", homeworkTitle: "Video giới thiệu bản thân", homeworkType: "video_speaking",
+      classScheduleId: "CS001", sessionTitle: "Hello! My name is...",
+      submittedAt: "2026-04-20T19:00:00", status: "graded",
+      submitUrl: "https://drive.google.com/mock-video-gh",
+      score: 9, feedback: "Phát âm rõ ràng, tự tin. Cần luyện thêm intonation.",
+      gradedAt: "2026-04-21T08:00:00", gradedByName: "Ms. Thu Trang",
+    },
+    {
+      id: "HSUB_MOCK_005", studentId: "ST12", studentName: "Ngọc Hân Lily", studentAvatar: "NH",
+      homeworkId: "HW_002", homeworkTitle: "Quizizz Unit 3", homeworkType: "quizizz",
+      classScheduleId: "CS002", sessionTitle: "My family",
+      submittedAt: "2026-04-20T17:30:00", status: "graded",
+      submitText: "Điểm Quizizz: 95/100",
+      score: 9.5, feedback: "Xuất sắc! Em nắm rất tốt từ vựng.",
+      gradedAt: "2026-04-21T09:00:00", gradedByName: "Ms. Thu Trang",
+    },
+  ] : [];
+  const allSubmissions = readOnly ? [...submissions, ...mockExtraSubmissions] : submissions;
+  const pendingGrading = allSubmissions.filter(s => s.status === "submitted");
+  const gradedList = allSubmissions.filter(s => s.status === "graded");
 
   const openGrading = (item: HomeworkSubmission) => {
     setGradingItem(item);
@@ -350,17 +443,19 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                 </div>
                 {showParticipation && (
                   <div className="space-y-2">
-                    {["STU001|Đăng Khoa Bing|DK", "STU002|Bảo Thư Mimi|BT", "STU003|Thành Vinh Brian|TV",
-                      "STU005|Thiện Nhân Tom|TN", "STU006|Hà Anh Kuromi|HA", "STU011|Minh Anh Mina|MA"].map(entry => {
-                      const [id, name, avatar] = entry.split("|");
+                    {["STU001|Đăng Khoa Bing|DK|5", "STU002|Bảo Thư Mimi|BT|4", "STU003|Thành Vinh Brian|TV|5",
+                      "STU005|Thiện Nhân Tom|TN|3", "STU006|Hà Anh Kuromi|HA|4", "STU011|Minh Anh Mina|MA|5"].map(entry => {
+                      const [id, name, avatar, defaultStar] = entry.split("|");
+                      const currentStar = participationScores[id] ?? (readOnly ? Number(defaultStar) : 0);
                       return (
                         <div key={id} className="flex items-center gap-3">
                           <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">{avatar}</div>
                           <span className="text-sm flex-1 text-foreground">{name}</span>
                           <div className="flex gap-1">
                             {[1, 2, 3, 4, 5].map(star => (
-                              <button key={star} onClick={() => setParticipationScores(p => ({ ...p, [id]: star }))}
-                                className={`w-6 h-6 transition-colors ${(participationScores[id] ?? 0) >= star ? "text-yellow-400" : "text-muted-foreground/30"}`}>
+                              <button key={star} onClick={() => !readOnly && setParticipationScores(p => ({ ...p, [id]: star }))}
+                                disabled={readOnly}
+                                className={`w-6 h-6 transition-colors ${currentStar >= star ? "text-yellow-400" : "text-muted-foreground/30"} ${readOnly ? "cursor-default" : ""}`}>
                                 <Star className="w-4 h-4 fill-current" />
                               </button>
                             ))}
@@ -368,9 +463,11 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                         </div>
                       );
                     })}
-                    <Button size="sm" className="w-full mt-2 gap-1.5" onClick={() => { toast.success("Đã lưu đánh giá tham gia!"); }}>
-                      <Save className="w-3.5 h-3.5" /> Lưu đánh giá
-                    </Button>
+                    {!readOnly && (
+                      <Button size="sm" className="w-full mt-2 gap-1.5" onClick={() => { toast.success("Đã lưu đánh giá tham gia!"); }}>
+                        <Save className="w-3.5 h-3.5" /> Lưu đánh giá
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
@@ -415,21 +512,23 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
               </div>
             </div>
 
-            <div className="px-5 py-3 border-b border-border bg-muted/20 flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground font-medium">Đánh dấu tất cả:</span>
-              <button onClick={() => setAllAttendance("present")}
-                className="text-xs px-2.5 py-1 rounded-md bg-green-100 text-green-700 hover:bg-green-200 font-medium flex items-center gap-1">
-                <Check className="w-3 h-3" /> Có mặt
-              </button>
-              <button onClick={() => setAllAttendance("late")}
-                className="text-xs px-2.5 py-1 rounded-md bg-yellow-100 text-yellow-700 hover:bg-yellow-200 font-medium flex items-center gap-1">
-                <Timer className="w-3 h-3" /> Đi trễ
-              </button>
-              <button onClick={() => setAllAttendance("absent")}
-                className="text-xs px-2.5 py-1 rounded-md bg-red-100 text-red-700 hover:bg-red-200 font-medium flex items-center gap-1">
-                <X className="w-3 h-3" /> Vắng
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="px-5 py-3 border-b border-border bg-muted/20 flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-muted-foreground font-medium">Đánh dấu tất cả:</span>
+                <button onClick={() => setAllAttendance("present")}
+                  className="text-xs px-2.5 py-1 rounded-md bg-green-100 text-green-700 hover:bg-green-200 font-medium flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Có mặt
+                </button>
+                <button onClick={() => setAllAttendance("late")}
+                  className="text-xs px-2.5 py-1 rounded-md bg-yellow-100 text-yellow-700 hover:bg-yellow-200 font-medium flex items-center gap-1">
+                  <Timer className="w-3 h-3" /> Đi trễ
+                </button>
+                <button onClick={() => setAllAttendance("absent")}
+                  className="text-xs px-2.5 py-1 rounded-md bg-red-100 text-red-700 hover:bg-red-200 font-medium flex items-center gap-1">
+                  <X className="w-3 h-3" /> Vắng
+                </button>
+              </div>
+            )}
 
             <div className="divide-y divide-border">
               {attendanceStudents.map((s, i) => {
@@ -453,9 +552,10 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                         const Icon = opt.icon;
                         const isActive = status === opt.key;
                         return (
-                          <button key={opt.key} onClick={() => setAttendance(p => ({ ...p, [s.id]: opt.key }))}
+                          <button key={opt.key} onClick={() => !readOnly && setAttendance(p => ({ ...p, [s.id]: opt.key }))}
+                            disabled={readOnly}
                             title={opt.label}
-                            className={`flex items-center gap-1 px-2.5 h-8 rounded-md border-2 text-xs font-medium transition-all ${isActive ? opt.active : opt.inactive}`}>
+                            className={`flex items-center gap-1 px-2.5 h-8 rounded-md border-2 text-xs font-medium transition-all ${isActive ? opt.active : opt.inactive} ${readOnly ? "cursor-default opacity-90" : ""}`}>
                             <Icon className="w-3.5 h-3.5" />
                             <span className="hidden sm:inline">{opt.label}</span>
                           </button>
@@ -466,6 +566,7 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                       value={attendanceNotes[s.id] ?? ""}
                       onChange={e => setAttendanceNotes(p => ({ ...p, [s.id]: e.target.value }))}
                       placeholder="Ghi chú..."
+                      readOnly={readOnly}
                       className="h-8 text-xs w-40 flex-shrink-0 hidden md:block"
                     />
                   </motion.div>
@@ -476,10 +577,13 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
             <div className="px-5 py-4 border-t border-border bg-muted/10 flex items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
                 Tổng: <span className="font-semibold text-foreground">{attendanceStudents.length}</span> học sinh
+                {readOnly && <span className="ml-2 text-green-600">✓ Đã điểm danh</span>}
               </p>
-              <Button onClick={saveAttendance} className="gap-1.5">
-                <Save className="w-4 h-4" /> Lưu điểm danh
-              </Button>
+              {!readOnly && (
+                <Button onClick={saveAttendance} className="gap-1.5">
+                  <Save className="w-4 h-4" /> Lưu điểm danh
+                </Button>
+              )}
             </div>
           </div>
         </motion.div>
@@ -488,7 +592,16 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
       {/* GRADING TAB */}
       {activeTab === "grading" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-          {pendingGrading.length === 0 ? (
+          {readOnly && (
+            <div className="flex items-center gap-3 text-xs">
+              <Badge className="bg-orange-100 text-orange-700">Đợi chấm: {pendingGrading.length}</Badge>
+              <Badge className="bg-green-100 text-green-700">Đã chấm: {gradedList.length}</Badge>
+              <span className="text-muted-foreground">Tổng bài nộp: {allSubmissions.filter(s => s.status !== "pending").length}</span>
+            </div>
+          )}
+
+          {/* Pending / Đợi chấm list */}
+          {(readOnly ? pendingGrading : pendingGrading).length === 0 && !readOnly ? (
             <div className="text-center py-16 text-muted-foreground border-2 border-dashed border-border rounded-xl">
               <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="font-medium">Tất cả bài đã được chấm!</p>
@@ -496,9 +609,10 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
           ) : (
             pendingGrading.map((sub, i) => {
               const Icon = hwTypeIcon[sub.homeworkType];
+              const cfg = readOnly ? readOnlyStatusConfig : statusConfig;
               return (
                 <motion.div key={sub.id} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                  className="bg-card border border-yellow-200 rounded-xl p-4">
+                  className={`bg-card border rounded-xl p-4 ${readOnly ? "border-orange-200" : "border-yellow-200"}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
@@ -510,7 +624,7 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                           <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${hwTypeColor[sub.homeworkType]}`}>
                             <Icon className="w-3 h-3" />{hwTypeLabel[sub.homeworkType]}
                           </div>
-                          <Badge variant="secondary" className={statusConfig[sub.status].color}>{statusConfig[sub.status].label}</Badge>
+                          <Badge variant="secondary" className={cfg[sub.status].color}>{cfg[sub.status].label}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{sub.homeworkTitle} · {sub.sessionTitle}</p>
                         {sub.submitText && <p className="text-xs text-foreground mt-1 bg-muted/50 px-2 py-1 rounded">{sub.submitText}</p>}
@@ -524,13 +638,50 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                         <p className="text-xs text-muted-foreground mt-1">Nộp lúc: {new Date(sub.submittedAt).toLocaleString("vi-VN")}</p>
                       </div>
                     </div>
-                    <Button size="sm" className="flex-shrink-0 gap-1.5" onClick={() => openGrading(sub)}>
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Chấm điểm
-                    </Button>
+                    {!readOnly && (
+                      <Button size="sm" className="flex-shrink-0 gap-1.5" onClick={() => openGrading(sub)}>
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Chấm điểm
+                      </Button>
+                    )}
                   </div>
                 </motion.div>
               );
             })
+          )}
+
+          {/* Graded list — chỉ hiện trong readOnly (admin/học vụ) */}
+          {readOnly && gradedList.length > 0 && (
+            <>
+              <div className="pt-3 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Bài đã chấm</div>
+              {gradedList.map((sub, i) => {
+                const Icon = hwTypeIcon[sub.homeworkType];
+                return (
+                  <motion.div key={sub.id} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+                    className="bg-card border border-green-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                        {sub.studentAvatar}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-sm text-foreground">{sub.studentName}</p>
+                          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${hwTypeColor[sub.homeworkType]}`}>
+                            <Icon className="w-3 h-3" />{hwTypeLabel[sub.homeworkType]}
+                          </div>
+                          <Badge className="bg-green-100 text-green-700">Đã chấm</Badge>
+                          {sub.score !== undefined && (
+                            <span className="text-sm font-bold text-green-700">{sub.score}/10</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{sub.homeworkTitle} · {sub.sessionTitle}</p>
+                        {sub.feedback && <p className="text-xs text-foreground mt-1 bg-green-50 border border-green-100 px-2 py-1 rounded">💬 {sub.feedback}</p>}
+                        {sub.gradedByName && <p className="text-[11px] text-muted-foreground mt-1">Chấm bởi: {sub.gradedByName}</p>}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </>
           )}
         </motion.div>
       )}
@@ -552,29 +703,31 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
             </div>
 
             {/* Add column form */}
-            <div className="px-5 py-3 border-b border-border bg-muted/20 flex items-center gap-2 flex-wrap">
-              <Input
-                value={newColName}
-                onChange={e => setNewColName(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && addClassworkColumn()}
-                placeholder="Tên cột điểm (VD: Speaking, Bài tập 1...)"
-                className="h-9 text-sm flex-1 min-w-[200px] bg-background"
-              />
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Thang điểm:</span>
+            {!readOnly && (
+              <div className="px-5 py-3 border-b border-border bg-muted/20 flex items-center gap-2 flex-wrap">
                 <Input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={newColMax}
-                  onChange={e => setNewColMax(Number(e.target.value))}
-                  className="h-9 text-sm w-16 bg-background"
+                  value={newColName}
+                  onChange={e => setNewColName(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && addClassworkColumn()}
+                  placeholder="Tên cột điểm (VD: Speaking, Bài tập 1...)"
+                  className="h-9 text-sm flex-1 min-w-[200px] bg-background"
                 />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">Thang điểm:</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={newColMax}
+                    onChange={e => setNewColMax(Number(e.target.value))}
+                    className="h-9 text-sm w-16 bg-background"
+                  />
+                </div>
+                <Button size="sm" onClick={addClassworkColumn} className="h-9 gap-1.5">
+                  <Plus className="w-3.5 h-3.5" /> Thêm cột
+                </Button>
               </div>
-              <Button size="sm" onClick={addClassworkColumn} className="h-9 gap-1.5">
-                <Plus className="w-3.5 h-3.5" /> Thêm cột
-              </Button>
-            </div>
+            )}
 
             {/* Grade table */}
             {classworkColumns.length === 0 ? (
@@ -614,14 +767,18 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                                   <span>{col.name}</span>
                                   <span className="text-[10px] font-normal text-muted-foreground">/{col.maxScore}</span>
                                 </div>
-                                <button onClick={() => { setEditingColId(col.id); setEditingColName(col.name); }}
-                                  className="text-muted-foreground hover:text-primary" title="Sửa tên">
-                                  <Pencil className="w-3 h-3" />
-                                </button>
-                                <button onClick={() => removeClassworkColumn(col.id)}
-                                  className="text-muted-foreground hover:text-red-500" title="Xoá cột">
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
+                                {!readOnly && (
+                                  <>
+                                    <button onClick={() => { setEditingColId(col.id); setEditingColName(col.name); }}
+                                      className="text-muted-foreground hover:text-primary" title="Sửa tên">
+                                      <Pencil className="w-3 h-3" />
+                                    </button>
+                                    <button onClick={() => removeClassworkColumn(col.id)}
+                                      className="text-muted-foreground hover:text-red-500" title="Xoá cột">
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </>
+                                )}
                               </>
                             )}
                           </div>
@@ -640,19 +797,35 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                             <span className="text-sm font-medium text-foreground">{s.name}</span>
                           </div>
                         </td>
-                        {classworkColumns.map(col => (
-                          <td key={col.id} className="px-3 py-2 text-center">
-                            <Input
-                              type="number"
-                              min={0}
-                              max={col.maxScore}
-                              value={classworkScores[s.id]?.[col.id] ?? ""}
-                              onChange={e => setClassworkScore(s.id, col.id, e.target.value)}
-                              placeholder="—"
-                              className="h-8 text-sm text-center w-20 mx-auto"
-                            />
-                          </td>
-                        ))}
+                        {classworkColumns.map(col => {
+                          const val = classworkScores[s.id]?.[col.id];
+                          if (readOnly) {
+                            return (
+                              <td key={col.id} className="px-3 py-2 text-center">
+                                {val === "" || val === undefined ? (
+                                  <span className="text-xs text-muted-foreground italic">—</span>
+                                ) : (
+                                  <span className={`text-sm font-semibold ${Number(val) >= 8 ? "text-green-600" : Number(val) >= 6.5 ? "text-blue-600" : "text-orange-600"}`}>
+                                    {val}
+                                  </span>
+                                )}
+                              </td>
+                            );
+                          }
+                          return (
+                            <td key={col.id} className="px-3 py-2 text-center">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={col.maxScore}
+                                value={val ?? ""}
+                                onChange={e => setClassworkScore(s.id, col.id, e.target.value)}
+                                placeholder="—"
+                                className="h-8 text-sm text-center w-20 mx-auto"
+                              />
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>
@@ -664,9 +837,11 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
               <p className="text-xs text-muted-foreground">
                 {attendanceStudents.length} học sinh · {classworkColumns.length} cột điểm
               </p>
-              <Button onClick={saveClasswork} className="gap-1.5">
-                <Save className="w-4 h-4" /> Lưu điểm
-              </Button>
+              {!readOnly && (
+                <Button onClick={saveClasswork} className="gap-1.5">
+                  <Save className="w-4 h-4" /> Lưu điểm
+                </Button>
+              )}
             </div>
           </div>
         </motion.div>
@@ -674,7 +849,7 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
 
       {/* STAFF REPORT TAB (chỉ khi showStaffReport) */}
       {activeTab === "staff_report" && showStaffReport && (
-        <StaffReportTabContent />
+        <StaffReportTabContent readOnly={readOnly} />
       )}
 
       {/* PROGRESS TAB */}

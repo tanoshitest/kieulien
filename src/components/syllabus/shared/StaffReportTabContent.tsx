@@ -13,18 +13,38 @@ import { students } from "@/data/mockData";
 
 interface Props {
   classId?: string; // default CLS001
+  readOnly?: boolean;
 }
 
-const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001" }) => {
+const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001", readOnly = false }) => {
   const classStudents = students.filter(s => s.classIds.includes(classId)).slice(0, 15);
 
-  const [srLessonContent, setSrLessonContent] = useState("");
-  const [srPhotos, setSrPhotos] = useState<{ id: string; url: string; caption: string }[]>([]);
-  const [srSupportStudents, setSrSupportStudents] = useState<{ id: string; studentId: string; reason: string }[]>([]);
-  const [srDiary, setSrDiary] = useState("");
-  const [srTeacherRating, setSrTeacherRating] = useState(0);
-  const [srTeacherFeedback, setSrTeacherFeedback] = useState("");
-  const [srExtraNotes, setSrExtraNotes] = useState("");
+  // Mock data đầy đủ cho readOnly (admin/học vụ xem)
+  const mockPhotos = readOnly ? [
+    { id: "IMG_M1", url: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400", caption: "Hoạt động flashcard nhóm 1" },
+    { id: "IMG_M2", url: "https://images.unsplash.com/photo-1577896851231-70ef18881754?w=400", caption: "Bé Mimi thuyết trình family tree" },
+    { id: "IMG_M3", url: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=400", caption: "Trò chơi 'Touch the shape' cuối giờ" },
+  ] : [];
+  const mockSupport = readOnly ? [
+    { id: "SUP_M1", studentId: classStudents[2]?.id ?? "", reason: "Chưa thuộc 5/10 từ vựng tuần trước, cần kèm 30 phút" },
+    { id: "SUP_M2", studentId: classStudents[5]?.id ?? "", reason: "Vắng buổi trước, cần học bù grammar 'to be'" },
+  ] : [];
+
+  const [srLessonContent, setSrLessonContent] = useState(readOnly
+    ? "Session 4 - Colors & Shapes. GV đã dạy 10 từ vựng màu sắc và hình khối, hoạt động flashcard + trò chơi 'Touch the shape'. Các bé tham gia rất tích cực, đặc biệt phần trò chơi nhóm."
+    : "");
+  const [srPhotos, setSrPhotos] = useState<{ id: string; url: string; caption: string }[]>(mockPhotos);
+  const [srSupportStudents, setSrSupportStudents] = useState<{ id: string; studentId: string; reason: string }[]>(mockSupport);
+  const [srDiary, setSrDiary] = useState(readOnly
+    ? "GV vào lớp đúng giờ 8:00. Các bé khá hào hứng với chủ đề màu sắc. Phần game kéo dài hơn plan 5 phút nhưng các bé rất vui. Bé Tom có dấu hiệu mệt cuối giờ, có thể do thiếu ngủ. GV xử lý tốt tình huống bé Mimi mất tập trung bằng cách cho làm trợ giảng."
+    : "");
+  const [srTeacherRating, setSrTeacherRating] = useState(readOnly ? 5 : 0);
+  const [srTeacherFeedback, setSrTeacherFeedback] = useState(readOnly
+    ? "GV phong thái tự tin, quản lý lớp tốt. Truyền đạt rõ ràng, biết cách kích hoạt sự tham gia của HS. Tình huống bé Tom mệt được xử lý nhẹ nhàng. Đề xuất: GV có thể chuẩn bị thêm 1-2 hoạt động dự phòng để linh hoạt thời gian."
+    : "");
+  const [srExtraNotes, setSrExtraNotes] = useState(readOnly
+    ? "Phụ huynh bé Lily phản hồi tích cực về tiến bộ của con. Máy chiếu phòng A1 hơi mờ, đề xuất bảo trì. Đề xuất: in thêm flashcard A4 cho các bé tự luyện ở nhà."
+    : "");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const onPickPhotos = (files: FileList | null) => {
@@ -71,7 +91,7 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001" }) => {
         </label>
         <p className="text-xs text-muted-foreground">Nội dung chính giáo viên đã dạy, hoạt động đã triển khai</p>
         <Textarea rows={4} placeholder="VD: Session 4 - Colors & Shapes. GV đã dạy 10 từ vựng màu sắc và hình khối..."
-          value={srLessonContent} onChange={e => setSrLessonContent(e.target.value)} />
+          value={srLessonContent} onChange={e => setSrLessonContent(e.target.value)} readOnly={readOnly} />
       </div>
 
       {/* 2. Ảnh lớp học */}
@@ -80,7 +100,7 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001" }) => {
           <label className="font-semibold text-sm text-foreground flex items-center gap-2">
             <Camera className="w-4 h-4 text-violet-600" /> Ảnh buổi học
           </label>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => fileInputRef.current?.click()}>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => fileInputRef.current?.click()} disabled={readOnly}>
             <Camera className="w-3.5 h-3.5" /> Chụp / Tải ảnh
           </Button>
           <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
@@ -96,12 +116,15 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001" }) => {
             {srPhotos.map(p => (
               <div key={p.id} className="relative group">
                 <img src={p.url} alt="" className="w-full aspect-video object-cover rounded-lg border border-border" />
-                <button onClick={() => setSrPhotos(prev => prev.filter(x => x.id !== p.id))}
-                  className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <XIcon className="w-3.5 h-3.5" />
-                </button>
-                <Input value={p.caption} onChange={e => setSrPhotos(prev => prev.map(x => x.id === p.id ? { ...x, caption: e.target.value } : x))}
-                  placeholder="Ghi chú ảnh..." className="h-7 text-xs mt-1.5" />
+                {!readOnly && (
+                  <button onClick={() => setSrPhotos(prev => prev.filter(x => x.id !== p.id))}
+                    className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <XIcon className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <Input value={p.caption}
+                  onChange={e => setSrPhotos(prev => prev.map(x => x.id === p.id ? { ...x, caption: e.target.value } : x))}
+                  placeholder="Ghi chú ảnh..." className="h-7 text-xs mt-1.5" readOnly={readOnly} />
               </div>
             ))}
           </div>
@@ -114,7 +137,7 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001" }) => {
           <label className="font-semibold text-sm text-foreground flex items-center gap-2">
             <UserPlus className="w-4 h-4 text-violet-600" /> Học sinh cần bổ trợ
           </label>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={addSupportStudent}>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={addSupportStudent} disabled={readOnly}>
             <UserPlus className="w-3.5 h-3.5" /> Thêm HS
           </Button>
         </div>
@@ -127,6 +150,7 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001" }) => {
                 <select
                   value={sup.studentId}
                   onChange={e => setSrSupportStudents(prev => prev.map(x => x.id === sup.id ? { ...x, studentId: e.target.value } : x))}
+                  disabled={readOnly}
                   className="h-9 text-sm rounded-md border border-border bg-background px-2 min-w-[160px]"
                 >
                   <option value="">-- Chọn học sinh --</option>
@@ -137,11 +161,14 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001" }) => {
                 <Input value={sup.reason}
                   onChange={e => setSrSupportStudents(prev => prev.map(x => x.id === sup.id ? { ...x, reason: e.target.value } : x))}
                   placeholder="Lý do (VD: Chưa thuộc từ vựng, cần dạy kèm grammar...)"
+                  readOnly={readOnly}
                   className="h-9 text-sm flex-1" />
-                <button onClick={() => setSrSupportStudents(prev => prev.filter(x => x.id !== sup.id))}
-                  className="w-8 h-8 rounded-md border border-border text-muted-foreground hover:text-red-500 hover:border-red-300 flex items-center justify-center">
-                  <XIcon className="w-3.5 h-3.5" />
-                </button>
+                {!readOnly && (
+                  <button onClick={() => setSrSupportStudents(prev => prev.filter(x => x.id !== sup.id))}
+                    className="w-8 h-8 rounded-md border border-border text-muted-foreground hover:text-red-500 hover:border-red-300 flex items-center justify-center">
+                    <XIcon className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -155,7 +182,7 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001" }) => {
         </label>
         <p className="text-xs text-muted-foreground">Ghi lại diễn biến, quan sát của học vụ trong buổi học</p>
         <Textarea rows={4} placeholder="VD: GV vào lớp đúng giờ, các bé khá hào hứng. Phần game kéo dài hơn plan 5 phút..."
-          value={srDiary} onChange={e => setSrDiary(e.target.value)} />
+          value={srDiary} onChange={e => setSrDiary(e.target.value)} readOnly={readOnly} />
       </div>
 
       {/* 5. Đánh giá giáo viên */}
@@ -167,8 +194,9 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001" }) => {
           <span className="text-xs text-muted-foreground">Chất lượng buổi dạy:</span>
           <div className="flex gap-1">
             {[1, 2, 3, 4, 5].map(n => (
-              <button key={n} onClick={() => setSrTeacherRating(n)}
-                className={`w-8 h-8 transition-colors ${srTeacherRating >= n ? "text-yellow-400" : "text-muted-foreground/30"}`}>
+              <button key={n} onClick={() => !readOnly && setSrTeacherRating(n)}
+                disabled={readOnly}
+                className={`w-8 h-8 transition-colors ${srTeacherRating >= n ? "text-yellow-400" : "text-muted-foreground/30"} ${readOnly ? "cursor-default" : ""}`}>
                 <Star className="w-5 h-5 fill-current" />
               </button>
             ))}
@@ -181,7 +209,7 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001" }) => {
           </span>
         </div>
         <Textarea rows={3} placeholder="Nhận xét về GV: phong thái, quản lý lớp, truyền đạt, xử lý tình huống..."
-          value={srTeacherFeedback} onChange={e => setSrTeacherFeedback(e.target.value)} />
+          value={srTeacherFeedback} onChange={e => setSrTeacherFeedback(e.target.value)} readOnly={readOnly} />
       </div>
 
       {/* 6. Ghi chú khác */}
@@ -190,18 +218,20 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001" }) => {
           <UsersIcon className="w-4 h-4 text-violet-600" /> Ghi chú khác
         </label>
         <Textarea rows={2} placeholder="Thông tin khác cần báo cho admin: phản hồi phụ huynh, sự cố cơ sở vật chất, đề xuất..."
-          value={srExtraNotes} onChange={e => setSrExtraNotes(e.target.value)} />
+          value={srExtraNotes} onChange={e => setSrExtraNotes(e.target.value)} readOnly={readOnly} />
       </div>
 
       {/* Submit */}
-      <div className="sticky bottom-4 bg-card border border-border rounded-xl p-3 shadow-lg flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">
-          Báo cáo này chỉ <span className="font-semibold text-violet-700">Học vụ và Admin</span> xem được
-        </p>
-        <Button onClick={saveStaffReport} className="gap-1.5 bg-violet-600 hover:bg-violet-700">
-          <Send className="w-4 h-4" /> Gửi báo cáo học vụ
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="sticky bottom-4 bg-card border border-border rounded-xl p-3 shadow-lg flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Báo cáo này chỉ <span className="font-semibold text-violet-700">Học vụ và Admin</span> xem được
+          </p>
+          <Button onClick={saveStaffReport} className="gap-1.5 bg-violet-600 hover:bg-violet-700">
+            <Send className="w-4 h-4" /> Gửi báo cáo học vụ
+          </Button>
+        </div>
+      )}
     </motion.div>
   );
 };
