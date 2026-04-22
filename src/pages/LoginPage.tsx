@@ -47,6 +47,13 @@ const LoginPage = () => {
           >
             Giảng viên (Teacher)
           </button>
+
+          <button
+            onClick={() => handleLogin("ta")}
+            className="w-full py-3 bg-white/20 text-white rounded-2xl font-black text-base hover:bg-white/30 hover:scale-[1.02] active:scale-[0.98] transition-all border-none outline-none shadow-lg"
+          >
+            Học vụ / Trợ giảng (TA)
+          </button>
           
           <button
             onClick={() => handleLogin("parent")}

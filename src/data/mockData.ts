@@ -2,7 +2,7 @@
 // MOCK DATA - School Management System
 // ============================================================
 
-export type Role = "admin" | "teacher" | "parent";
+export type Role = "admin" | "teacher" | "parent" | "ta";
 
 // ---- Students ----
 export interface Student {
@@ -1090,4 +1090,427 @@ export const mockSurveySubmissions: SurveySubmission[] = [
   { id: "SUB08", templateId: "TPL_IELTS", studentId: "STU008", studentName: "Lê Minh Châu", className: "IELTS B2", segment: "IELTS", totalScore: 3.8, feedback: "Cần cập nhật đề Cambridge mới hơn để luyện tập sát thực tế.", submittedAt: "06/04/2026", answers: [] },
   { id: "SUB09", templateId: "TPL_GIAOTIEP", studentId: "STU009", studentName: "Vũ Quang Minh", className: "Giao tiếp T1", segment: "Giao tiếp", totalScore: 4.6, feedback: "Thầy Tây dạy rất hay, tạo động lực tốt cho học viên.", submittedAt: "07/04/2026", answers: [] },
   { id: "SUB10", templateId: "TPL_GIAOTIEP", studentId: "STU010", studentName: "Lý Thu Hà", className: "Giao tiếp T1", segment: "Giao tiếp", totalScore: 2.0, feedback: "Trung tâm hay đổi lịch học đột xuất không báo trước, ảnh hưởng đến kế hoạch của mình.", submittedAt: "08/04/2026", answers: [] }
+];
+
+// ============================================================
+// SYLLABUS MODULE DATA
+// ============================================================
+
+export type HomeworkType = "video_speaking" | "quizizz" | "writing";
+export type HomeworkStatus = "pending" | "submitted" | "graded";
+export type AttendanceStatus = "present" | "absent" | "late";
+
+export interface SyllabusHomework {
+  id: string;
+  type: HomeworkType;
+  title: string;
+  description: string;
+  externalLink?: string; // Quizizz link hoặc tài liệu tham khảo
+}
+
+export interface SyllabusSession {
+  id: string;
+  syllabusId: string;
+  order: number;
+  title: string;
+  vocab: string;
+  grammar: string;
+  teachingProcess: string;
+  materialsLink?: string;
+  homeworks: SyllabusHomework[];
+}
+
+export interface Syllabus {
+  id: string;
+  name: string;
+  description: string;
+  level: string;
+  totalSessions: number;
+  createdAt: string;
+  updatedAt: string;
+  sessions: SyllabusSession[];
+}
+
+export interface ClassSchedule {
+  id: string;
+  classId: string;
+  className: string;
+  syllabusId: string;
+  syllabusSessionId: string;
+  teacherId: string;
+  teacherName: string;
+  taId?: string;
+  taName?: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  room: string;
+  status: "upcoming" | "in_progress" | "completed";
+}
+
+export interface AttendanceRecord {
+  studentId: string;
+  studentName: string;
+  studentAvatar: string;
+  status: AttendanceStatus;
+  note?: string;
+}
+
+export interface DailyReport {
+  id: string;
+  classScheduleId: string;
+  classId: string;
+  className: string;
+  sessionTitle: string;
+  date: string;
+  taId: string;
+  taName: string;
+  attendance: AttendanceRecord[];
+  classEnergy: number; // 1-5
+  generalNotes: string;
+  issues: string;
+  submittedAt?: string;
+  isDraft: boolean;
+}
+
+export interface HomeworkSubmission {
+  id: string;
+  homeworkId: string;
+  homeworkTitle: string;
+  homeworkType: HomeworkType;
+  classScheduleId: string;
+  sessionTitle: string;
+  studentId: string;
+  studentName: string;
+  studentAvatar: string;
+  submitUrl?: string;
+  submitText?: string;
+  submitVideoFileName?: string;
+  submittedAt: string;
+  status: HomeworkStatus;
+  score?: number; // 0-10
+  feedback?: string;
+  gradedAt?: string;
+  gradedByName?: string;
+}
+
+// --- Mock Syllabuses ---
+export const syllabuses: Syllabus[] = [
+  {
+    id: "SYL001",
+    name: "Family & Friends 1",
+    description: "Giáo trình tiếng Anh cho trẻ em lớp 1-2, xây dựng nền tảng từ vựng và giao tiếp cơ bản",
+    level: "4CLC 1",
+    totalSessions: 10,
+    createdAt: "2025-09-01",
+    updatedAt: "2026-01-10",
+    sessions: [
+      {
+        id: "SS001", syllabusId: "SYL001", order: 1,
+        title: "Hello! My name is...",
+        vocab: "Hello, Hi, My name is, What's your name?, Nice to meet you, Goodbye, Bye",
+        grammar: "Subject pronouns: I, You. Simple present: My name is... / I am...",
+        teachingProcess: "1. Warm-up: Teacher greets students (3 min)\n2. Introduce vocabulary with flashcards (10 min)\n3. Model dialogue practice in pairs (10 min)\n4. Role-play: Meet and greet activity (10 min)\n5. Song: 'Hello Song' (5 min)\n6. Wrap-up & assign homework (2 min)",
+        materialsLink: "https://drive.google.com/ff1-session1",
+        homeworks: [
+          { id: "HW001", type: "video_speaking", title: "Introduce yourself", description: "Record a 30-second video introducing yourself in English: name, age, class." },
+          { id: "HW002", type: "writing", title: "Write your name card", description: "Draw and write: My name is ___, I am ___ years old." }
+        ]
+      },
+      {
+        id: "SS002", syllabusId: "SYL001", order: 2,
+        title: "My family",
+        vocab: "Mother, Father, Sister, Brother, Grandmother, Grandfather, Family",
+        grammar: "This is my... / These are my... | Possessive: my, your, his, her",
+        teachingProcess: "1. Review Unit 1 vocabulary (5 min)\n2. Family flashcards presentation (10 min)\n3. Listen & point in the book (8 min)\n4. Draw your family tree activity (10 min)\n5. Present family tree to class (7 min)\n6. Homework explanation (2 min)",
+        materialsLink: "https://drive.google.com/ff1-session2",
+        homeworks: [
+          { id: "HW003", type: "video_speaking", title: "Talk about your family", description: "Record a video (45 seconds) talking about your family members." },
+          { id: "HW004", type: "quizizz", title: "Family vocabulary quiz", description: "Complete the Quizizz on family vocabulary.", externalLink: "https://quizizz.com/join?gc=123456" }
+        ]
+      },
+      {
+        id: "SS003", syllabusId: "SYL001", order: 3,
+        title: "My toys",
+        vocab: "Ball, Doll, Car, Train, Robot, Teddy bear, Bike",
+        grammar: "I have a/an... | Do you have a...? Yes, I do / No, I don't",
+        teachingProcess: "1. Warm-up toy guessing game (5 min)\n2. Introduce toy vocabulary with realia (10 min)\n3. Chant: 'I have a ball' (5 min)\n4. Survey activity: Ask classmates about toys (12 min)\n5. Report back findings (5 min)\n6. Assign homework (3 min)",
+        materialsLink: "https://drive.google.com/ff1-session3",
+        homeworks: [
+          { id: "HW005", type: "video_speaking", title: "Show your favourite toy", description: "Record a video showing and describing your favourite toy." },
+          { id: "HW006", type: "writing", title: "My toy list", description: "Write 5 sentences: I have a ___ . It is ___." }
+        ]
+      },
+      {
+        id: "SS004", syllabusId: "SYL001", order: 4,
+        title: "Colors & Shapes",
+        vocab: "Red, Blue, Green, Yellow, Orange, Circle, Square, Triangle, Star, Heart",
+        grammar: "What color is it? It's... | What shape is it? It's a...",
+        teachingProcess: "1. Rainbow song warm-up (5 min)\n2. Color & shape flashcard drill (10 min)\n3. Art activity: Draw and color shapes (12 min)\n4. Describe each other's artwork (8 min)\n5. Digital quiz on screen (5 min)\n6. Wrap-up (2 min)",
+        materialsLink: "https://drive.google.com/ff1-session4",
+        homeworks: [
+          { id: "HW007", type: "quizizz", title: "Colors & shapes quiz", description: "Complete the Quizizz about colors and shapes.", externalLink: "https://quizizz.com/join?gc=654321" },
+          { id: "HW008", type: "writing", title: "My colorful drawing", description: "Draw a picture and write 5 sentences describing the colors and shapes." }
+        ]
+      },
+      {
+        id: "SS005", syllabusId: "SYL001", order: 5,
+        title: "Food I like",
+        vocab: "Apple, Banana, Rice, Bread, Milk, Juice, Chicken, Fish, Vegetables",
+        grammar: "I like... / I don't like... | Do you like...? Yes, I do / No, I don't",
+        teachingProcess: "1. Food bingo warm-up (5 min)\n2. Food vocabulary with real pictures (10 min)\n3. Like/Don't like sorting activity (10 min)\n4. Interview a classmate about food (10 min)\n5. Share results (5 min)\n6. Homework (2 min)",
+        materialsLink: "https://drive.google.com/ff1-session5",
+        homeworks: [
+          { id: "HW009", type: "video_speaking", title: "My favourite food", description: "Record a 45-second video talking about your favourite food." },
+          { id: "HW010", type: "quizizz", title: "Food vocabulary practice", description: "Complete the Quizizz on food vocabulary.", externalLink: "https://quizizz.com/join?gc=789012" }
+        ]
+      },
+      {
+        id: "SS006", syllabusId: "SYL001", order: 6,
+        title: "My body",
+        vocab: "Head, Shoulders, Knees, Toes, Eyes, Ears, Mouth, Nose, Hands, Feet",
+        grammar: "I have two... | Touch your... | Body part commands",
+        teachingProcess: "1. Head Shoulders Knees & Toes song (5 min)\n2. Body parts flashcard labeling (8 min)\n3. Simon Says game (10 min)\n4. Draw & label a body (10 min)\n5. TPR activity with music (7 min)\n6. Homework (2 min)",
+        materialsLink: "https://drive.google.com/ff1-session6",
+        homeworks: [
+          { id: "HW011", type: "video_speaking", title: "Sing the body parts song", description: "Record yourself singing and acting out 'Head, Shoulders, Knees and Toes'." },
+          { id: "HW012", type: "writing", title: "Body drawing homework", description: "Draw and label 8 body parts in English." }
+        ]
+      },
+      {
+        id: "SS007", syllabusId: "SYL001", order: 7,
+        title: "Animals",
+        vocab: "Cat, Dog, Bird, Fish, Rabbit, Elephant, Lion, Tiger, Monkey, Duck",
+        grammar: "It's a... | It can... (jump, fly, swim, run) | I like animals.",
+        teachingProcess: "1. Animal sound warm-up (5 min)\n2. Introduce animals with flashcards (10 min)\n3. Animal can/can't chart activity (10 min)\n4. Animal riddle game (10 min)\n5. Mini project: My favourite animal (5 min)\n6. Homework (2 min)",
+        materialsLink: "https://drive.google.com/ff1-session7",
+        homeworks: [
+          { id: "HW013", type: "video_speaking", title: "My favourite animal", description: "Record a video about your favourite animal: what it looks like and what it can do." },
+          { id: "HW014", type: "quizizz", title: "Animal vocabulary quiz", description: "Complete the Quizizz on animals.", externalLink: "https://quizizz.com/join?gc=345678" }
+        ]
+      },
+      {
+        id: "SS008", syllabusId: "SYL001", order: 8,
+        title: "At school",
+        vocab: "Classroom, Book, Pencil, Ruler, Bag, Desk, Chair, Teacher, Student, Board",
+        grammar: "There is a... / There are... | Where is the...? It's on/in/under...",
+        teachingProcess: "1. Classroom scavenger hunt (7 min)\n2. School vocab flashcards (8 min)\n3. Preposition practice with classroom objects (10 min)\n4. Listening: find the object (8 min)\n5. Group activity: describe our classroom (7 min)\n6. Homework (2 min)",
+        materialsLink: "https://drive.google.com/ff1-session8",
+        homeworks: [
+          { id: "HW015", type: "video_speaking", title: "Tour of my school bag", description: "Record a video showing what's in your school bag and describing each item." },
+          { id: "HW016", type: "writing", title: "My classroom description", description: "Write 5 sentences describing your classroom using there is/there are." }
+        ]
+      },
+      {
+        id: "SS009", syllabusId: "SYL001", order: 9,
+        title: "Numbers & Counting",
+        vocab: "One to twenty, How many?, First, Second, Third, More, Less",
+        grammar: "How many...are there? There are... | Ordinal numbers: 1st, 2nd, 3rd",
+        teachingProcess: "1. Number song warm-up 1-20 (5 min)\n2. Counting flashcard drill (8 min)\n3. Number line activity on board (8 min)\n4. Ordinal number game (racing) (10 min)\n5. Math in English mini worksheet (9 min)\n6. Homework (2 min)",
+        materialsLink: "https://drive.google.com/ff1-session9",
+        homeworks: [
+          { id: "HW017", type: "video_speaking", title: "Count 1-20 challenge", description: "Record yourself counting from 1-20 and pointing to 5 objects, saying how many." },
+          { id: "HW018", type: "quizizz", title: "Numbers quiz", description: "Complete the Quizizz on numbers 1-20.", externalLink: "https://quizizz.com/join?gc=901234" }
+        ]
+      },
+      {
+        id: "SS010", syllabusId: "SYL001", order: 10,
+        title: "Review & End-of-term celebration",
+        vocab: "Review all units 1-9",
+        grammar: "Review all grammar points from Unit 1-9",
+        teachingProcess: "1. Kahoot review game covering all units (15 min)\n2. Student presentations (from HW) (15 min)\n3. Certificates & celebration (10 min)",
+        materialsLink: "https://drive.google.com/ff1-session10",
+        homeworks: [
+          { id: "HW019", type: "video_speaking", title: "Final speaking showcase", description: "Record a 1-minute video: introduce yourself, talk about your family, favourite food, and favourite animal." }
+        ]
+      }
+    ]
+  },
+  {
+    id: "SYL002",
+    name: "Family & Friends 2",
+    description: "Giáo trình tiếng Anh nâng cao cho trẻ em, mở rộng từ vựng và cấu trúc ngữ pháp",
+    level: "4CLC 2",
+    totalSessions: 10,
+    createdAt: "2025-09-01",
+    updatedAt: "2026-02-15",
+    sessions: [
+      {
+        id: "SS101", syllabusId: "SYL002", order: 1,
+        title: "At home",
+        vocab: "Living room, Bedroom, Kitchen, Bathroom, Garden, Sofa, Table, Window, Door",
+        grammar: "There is/are... | Prepositions: in, on, under, next to, behind, in front of",
+        teachingProcess: "1. House tour video warm-up (5 min)\n2. Room vocabulary flashcards (10 min)\n3. Preposition practice with toy house (10 min)\n4. Describe your dream home (10 min)\n5. Listening activity (5 min)\n6. Homework (2 min)",
+        materialsLink: "https://drive.google.com/ff2-session1",
+        homeworks: [
+          { id: "HW101", type: "video_speaking", title: "Tour of my home", description: "Record a video giving a tour of your home in English." },
+          { id: "HW102", type: "quizizz", title: "Home vocabulary quiz", description: "Complete the Quizizz on home vocabulary.", externalLink: "https://quizizz.com/join?gc=111222" }
+        ]
+      },
+      {
+        id: "SS102", syllabusId: "SYL002", order: 2,
+        title: "Daily routines",
+        vocab: "Wake up, Brush teeth, Have breakfast, Go to school, Do homework, Have dinner, Go to bed",
+        grammar: "Present simple for routines: I wake up at... | Frequency adverbs: always, usually, sometimes, never",
+        teachingProcess: "1. Daily routine timeline warm-up (5 min)\n2. Vocabulary presentation with pictures (10 min)\n3. Adverb of frequency ranking (8 min)\n4. My day writing activity (10 min)\n5. Share routines in pairs (7 min)\n6. Homework (2 min)",
+        materialsLink: "https://drive.google.com/ff2-session2",
+        homeworks: [
+          { id: "HW103", type: "video_speaking", title: "My morning routine", description: "Record a video describing your morning routine from wake up to going to school." },
+          { id: "HW104", type: "writing", title: "My daily schedule", description: "Write a paragraph about your daily routine using frequency adverbs." }
+        ]
+      }
+    ]
+  }
+];
+
+// --- Mock Class Schedules ---
+export const classSchedules: ClassSchedule[] = [
+  {
+    id: "CS001", classId: "CLS001", className: "4CLC 2",
+    syllabusId: "SYL001", syllabusSessionId: "SS004",
+    teacherId: "USR001", teacherName: "Ms. Thu Trang",
+    taId: "USR003", taName: "Ms. Linh Chi",
+    date: "2026-04-22", startTime: "08:00", endTime: "09:30",
+    room: "Phòng A1", status: "in_progress"
+  },
+  {
+    id: "CS002", classId: "CLS001", className: "4CLC 2",
+    syllabusId: "SYL001", syllabusSessionId: "SS003",
+    teacherId: "USR001", teacherName: "Ms. Thu Trang",
+    taId: "USR003", taName: "Ms. Linh Chi",
+    date: "2026-04-19", startTime: "08:00", endTime: "09:30",
+    room: "Phòng A1", status: "completed"
+  },
+  {
+    id: "CS003", classId: "CLS001", className: "4CLC 2",
+    syllabusId: "SYL001", syllabusSessionId: "SS002",
+    teacherId: "USR001", teacherName: "Ms. Thu Trang",
+    taId: "USR003", taName: "Ms. Linh Chi",
+    date: "2026-04-15", startTime: "08:00", endTime: "09:30",
+    room: "Phòng A1", status: "completed"
+  },
+  {
+    id: "CS004", classId: "CLS001", className: "4CLC 2",
+    syllabusId: "SYL001", syllabusSessionId: "SS001",
+    teacherId: "USR001", teacherName: "Ms. Thu Trang",
+    taId: "USR003", taName: "Ms. Linh Chi",
+    date: "2026-04-10", startTime: "08:00", endTime: "09:30",
+    room: "Phòng A1", status: "completed"
+  },
+  {
+    id: "CS005", classId: "CLS001", className: "4CLC 2",
+    syllabusId: "SYL001", syllabusSessionId: "SS005",
+    teacherId: "USR001", teacherName: "Ms. Thu Trang",
+    taId: "USR003", taName: "Ms. Linh Chi",
+    date: "2026-04-26", startTime: "08:00", endTime: "09:30",
+    room: "Phòng A1", status: "upcoming"
+  },
+];
+
+// --- Mock Daily Reports ---
+export const dailyReports: DailyReport[] = [
+  {
+    id: "DR001",
+    classScheduleId: "CS003",
+    classId: "CLS001",
+    className: "4CLC 2",
+    sessionTitle: "My family",
+    date: "2026-04-15",
+    taId: "USR003",
+    taName: "Ms. Linh Chi",
+    attendance: [
+      { studentId: "STU001", studentName: "Đăng Khoa Bing", studentAvatar: "DK", status: "present" },
+      { studentId: "STU002", studentName: "Bảo Thư Mimi", studentAvatar: "BT", status: "present" },
+      { studentId: "STU003", studentName: "Thành Vinh Brian", studentAvatar: "TV", status: "late", note: "Đến trễ 10 phút" },
+      { studentId: "STU004", studentName: "Jessica", studentAvatar: "JS", status: "absent", note: "Báo bệnh" },
+      { studentId: "STU005", studentName: "Thiện Nhân Tom", studentAvatar: "TN", status: "present" },
+      { studentId: "STU006", studentName: "Hà Anh Kuromi", studentAvatar: "HA", status: "present" },
+    ],
+    classEnergy: 4,
+    generalNotes: "Lớp học sôi nổi, các bé rất hứng thú với chủ đề gia đình. Bài family tree được các bé thực hiện sáng tạo.",
+    issues: "Jessica vắng buổi này, cần nhắc bé bắt kịp bài.",
+    submittedAt: "2026-04-15T10:00:00",
+    isDraft: false,
+  },
+  {
+    id: "DR002",
+    classScheduleId: "CS004",
+    classId: "CLS001",
+    className: "4CLC 2",
+    sessionTitle: "Hello! My name is...",
+    date: "2026-04-10",
+    taId: "USR003",
+    taName: "Ms. Linh Chi",
+    attendance: [
+      { studentId: "STU001", studentName: "Đăng Khoa Bing", studentAvatar: "DK", status: "present" },
+      { studentId: "STU002", studentName: "Bảo Thư Mimi", studentAvatar: "BT", status: "present" },
+      { studentId: "STU003", studentName: "Thành Vinh Brian", studentAvatar: "TV", status: "present" },
+      { studentId: "STU004", studentName: "Jessica", studentAvatar: "JS", status: "present" },
+      { studentId: "STU005", studentName: "Thiện Nhân Tom", studentAvatar: "TN", status: "present" },
+      { studentId: "STU006", studentName: "Hà Anh Kuromi", studentAvatar: "HA", status: "present" },
+    ],
+    classEnergy: 5,
+    generalNotes: "Buổi đầu tiên, không khí rất vui vẻ. Tất cả học sinh đến đúng giờ và hào hứng làm quen nhau.",
+    issues: "",
+    submittedAt: "2026-04-10T10:15:00",
+    isDraft: false,
+  }
+];
+
+// --- Mock Homework Submissions ---
+export const homeworkSubmissions: HomeworkSubmission[] = [
+  {
+    id: "HWS001", homeworkId: "HW001", homeworkTitle: "Introduce yourself", homeworkType: "video_speaking",
+    classScheduleId: "CS004", sessionTitle: "Hello! My name is...",
+    studentId: "STU011", studentName: "Minh Anh Mina", studentAvatar: "MA",
+    submitUrl: "https://www.youtube.com/watch?v=example1",
+    submittedAt: "2026-04-11T08:30:00", status: "graded",
+    score: 9, feedback: "Phát âm rất chuẩn, giọng tự nhiên! Cố gắng nhìn vào camera nhiều hơn nha con.", gradedAt: "2026-04-12T10:00:00", gradedByName: "Ms. Thu Trang"
+  },
+  {
+    id: "HWS002", homeworkId: "HW001", homeworkTitle: "Introduce yourself", homeworkType: "video_speaking",
+    classScheduleId: "CS004", sessionTitle: "Hello! My name is...",
+    studentId: "STU001", studentName: "Đăng Khoa Bing", studentAvatar: "DK",
+    submitUrl: "https://drive.google.com/file/d/example2",
+    submittedAt: "2026-04-11T14:20:00", status: "graded",
+    score: 8, feedback: "Tốt lắm! Câu giới thiệu rõ ràng. Lần sau thêm thông tin về sở thích nha.", gradedAt: "2026-04-12T11:00:00", gradedByName: "Ms. Thu Trang"
+  },
+  {
+    id: "HWS003", homeworkId: "HW003", homeworkTitle: "Talk about your family", homeworkType: "video_speaking",
+    classScheduleId: "CS003", sessionTitle: "My family",
+    studentId: "STU002", studentName: "Bảo Thư Mimi", studentAvatar: "BT",
+    submitUrl: "https://www.youtube.com/watch?v=example3",
+    submittedAt: "2026-04-16T09:00:00", status: "graded",
+    score: 10, feedback: "Xuất sắc! Mimi giới thiệu gia đình rất rõ ràng và tự nhiên. Keep it up!", gradedAt: "2026-04-17T09:00:00", gradedByName: "Ms. Thu Trang"
+  },
+  {
+    id: "HWS004", homeworkId: "HW003", homeworkTitle: "Talk about your family", homeworkType: "video_speaking",
+    classScheduleId: "CS003", sessionTitle: "My family",
+    studentId: "STU003", studentName: "Thành Vinh Brian", studentAvatar: "TV",
+    submitUrl: "https://drive.google.com/file/d/example4",
+    submittedAt: "2026-04-17T16:45:00", status: "submitted",
+  },
+  {
+    id: "HWS005", homeworkId: "HW007", homeworkTitle: "Colors & shapes quiz", homeworkType: "quizizz",
+    classScheduleId: "CS001", sessionTitle: "Colors & Shapes",
+    studentId: "STU001", studentName: "Đăng Khoa Bing", studentAvatar: "DK",
+    submitUrl: "https://quizizz.com/results/example5",
+    submitText: "Score: 18/20",
+    submittedAt: "2026-04-22T11:00:00", status: "submitted",
+  },
+  {
+    id: "HWS006", homeworkId: "HW007", homeworkTitle: "Colors & shapes quiz", homeworkType: "quizizz",
+    classScheduleId: "CS001", sessionTitle: "Colors & Shapes",
+    studentId: "STU011", studentName: "Minh Anh Mina", studentAvatar: "MA",
+    submitText: "Đã hoàn thành Quizizz - 100% correct!",
+    submittedAt: "2026-04-22T12:00:00", status: "submitted",
+  },
+  {
+    id: "HWS007", homeworkId: "HW008", homeworkTitle: "My colorful drawing", homeworkType: "writing",
+    classScheduleId: "CS001", sessionTitle: "Colors & Shapes",
+    studentId: "STU005", studentName: "Thiện Nhân Tom", studentAvatar: "TN",
+    submitUrl: "https://drive.google.com/file/d/example7",
+    submitText: "I have a red circle. I have a blue square. I have a green triangle. I have a yellow star. I have an orange heart.",
+    submittedAt: "2026-04-22T13:30:00", status: "submitted",
+  },
 ];

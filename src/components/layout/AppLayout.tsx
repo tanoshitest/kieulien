@@ -9,7 +9,8 @@ import {
   Fingerprint, Wallet, MessageCircle, ClipboardCheck, History,
   PieChart, MessageSquareX, BarChart3, Repeat, GraduationCap as StudentIcon,
   CircleDollarSign, Layers, CalendarClock, TrendingUp, HandCoins, Building2,
-  Users2, Clock, BellRing, UserMinus, ShieldAlert, LineChart, LogOut, Mic
+  Users2, Clock, BellRing, UserMinus, ShieldAlert, LineChart, LogOut, Mic,
+  BookMarked
 } from "lucide-react";
 import { notifications } from "@/data/mockData";
 import {
@@ -29,6 +30,8 @@ interface NavItem {
   adminOnly?: boolean;
   parentOnly?: boolean;
   teacherOnly?: boolean;
+  taOnly?: boolean;
+  hideForParent?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -37,6 +40,7 @@ const navItems: NavItem[] = [
   { label: "Quản lý lớp học", path: "/courses", icon: BookOpen, adminOnly: true },
   { label: "Quản lý học sinh", path: "/students", icon: GraduationCap, adminOnly: true },
   { label: "Quản lý User", path: "/users", icon: UserCog, adminOnly: true },
+  { label: "Syllabus", path: "/syllabus", icon: BookMarked },
   { label: "Lịch dạy", path: "/schedule", icon: Calendar },
   { label: "Quản lý tài liệu", path: "/documents", icon: FileText, adminOnly: true },
   { label: "Quản lý hàng hoá", path: "/inventory", icon: Layers, adminOnly: true },
@@ -56,7 +60,7 @@ const navItems: NavItem[] = [
 
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { role, login, logout, isAdmin, isTeacher, isParent } = useRole();
+  const { role, login, logout, isAdmin, isTeacher, isParent, isTA } = useRole();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -65,10 +69,13 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [crmOpen, setCrmOpen] = useState(true);
 
   const filteredNav = navItems.filter((item) => {
-    if (isParent) return item.parentOnly;
+    if (isParent) return item.parentOnly || item.path === "/syllabus";
     if (item.parentOnly) return false;
     if (item.adminOnly && !isAdmin) return false;
     if (item.teacherOnly && !isTeacher) return false;
+    if (item.taOnly && !isTA) return false;
+    // TA: chỉ thấy Syllabus + Lịch dạy + Công việc
+    if (isTA) return ["/syllabus", "/schedule", "/tasks"].includes(item.path);
     return true;
   });
   const currentPage = navItems.find((n) => n.path === location.pathname);
@@ -159,10 +166,10 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <button
                 className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-2 px-3'} py-2 rounded-md text-sm bg-sidebar-accent text-sidebar-accent-foreground hover:bg-primary hover:text-primary-foreground transition-colors outline-none cursor-pointer`}
               >
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isAdmin ? "bg-kpi-blue" : isTeacher ? "bg-kpi-green" : "bg-purple-500"}`} />
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isAdmin ? "bg-kpi-blue" : isTeacher ? "bg-kpi-green" : isTA ? "bg-violet-500" : "bg-purple-500"}`} />
                 {!isCollapsed && (
                   <>
-                    {isAdmin ? "Admin" : isTeacher ? "Giảng viên" : "Phụ huynh"}
+                    {isAdmin ? "Admin" : isTeacher ? "Giảng viên" : isTA ? "Học vụ / TA" : "Phụ huynh"}
                     <ChevronRight className="w-3 h-3 ml-auto opacity-50" />
                   </>
                 )}

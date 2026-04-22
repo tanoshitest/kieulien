@@ -11,6 +11,7 @@ interface RoleContextType {
   isAdmin: boolean;
   isTeacher: boolean;
   isParent: boolean;
+  isTA: boolean;
 }
 
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
@@ -23,7 +24,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<Role>(() => {
     try {
       const savedRole = localStorage.getItem("menglish_user_role");
-      if (savedRole === "admin" || savedRole === "teacher" || savedRole === "parent") {
+      if (savedRole === "admin" || savedRole === "teacher" || savedRole === "parent" || savedRole === "ta") {
         return savedRole as Role;
       }
     } catch (e) {
@@ -48,23 +49,25 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const toggleRole = useCallback(() => setRole((r) => {
     if (r === "admin") return "teacher";
-    if (r === "teacher") return "parent";
+    if (r === "teacher") return "ta";
+    if (r === "ta") return "parent";
     return "admin";
   }), []);
 
   const changeRole = useCallback((newRole: Role) => setRole(newRole), []);
   
   return (
-    <RoleContext.Provider value={{ 
-      role, 
+    <RoleContext.Provider value={{
+      role,
       isLoggedIn,
       login,
       logout,
-      toggleRole, 
+      toggleRole,
       changeRole,
-      isAdmin: role === "admin", 
+      isAdmin: role === "admin",
       isTeacher: role === "teacher",
-      isParent: role === "parent"
+      isParent: role === "parent",
+      isTA: role === "ta",
     }}>
       {children}
     </RoleContext.Provider>

@@ -29,6 +29,7 @@ import InventoryPage from "@/pages/InventoryPage";
 import LoginPage from "@/pages/LoginPage";
 import NotFound from "@/pages/NotFound";
 import SurveyDemoPage from "@/pages/SurveyDemoPage";
+import SyllabusPage from "@/pages/SyllabusPage";
 import { useRole } from "@/contexts/RoleContext";
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ const AppContent = () => {
           <Route path="/admin-reports" element={<AdminReportsPage />} />
           <Route path="/survey-demo" element={<SurveyDemoPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
+          <Route path="/syllabus" element={<SyllabusPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AppLayout>
