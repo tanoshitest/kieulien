@@ -256,6 +256,24 @@ export default function PptxViewer({ url, title }: Props) {
 
   return (
     <div id="pptx-viewer-wrap" className="rounded-lg ring-1 ring-border bg-white overflow-hidden flex flex-col">
+      {/* CSS override cho pptxjs — fix clip chữ dưới cùng */}
+      <style>{`
+        #pptx-local-host .slide {
+          overflow: visible !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 8px !important;
+          background: white !important;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+          margin-bottom: 24px !important;
+        }
+        #pptx-local-host .slide div.block {
+          overflow: visible !important;
+          line-height: 1.15 !important;
+        }
+        #pptx-local-host .slide * {
+          overflow: visible !important;
+        }
+      `}</style>
       {/* ── Toolbar ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-3 py-2 bg-slate-100 border-b border-slate-200 text-sm select-none gap-2">
         {/* Left: title + loading badge */}
