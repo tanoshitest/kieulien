@@ -178,6 +178,33 @@ export default function PptxViewer({ url, title }: Props) {
     const host = pptxContainerRef.current;
     if (!host) return;
 
+    // ── Auto-fit slides vào container width, giữ aspect ratio ─────────
+    const fitSlides = () => {
+      const slides = host.querySelectorAll<HTMLElement>(".slide");
+      if (!slides.length) return;
+      // Đo native width của slide (pptxjs đặt inline style width = px)
+      const first = slides[0];
+      const nativeW = first.offsetWidth || parseInt(first.style.width) || 960;
+      const nativeH = first.offsetHeight || parseInt(first.style.height) || 540;
+      // Container width khả dụng (trừ padding)
+      const containerW = host.clientWidth - 24; // 12px padding mỗi bên
+      const scale = Math.min(1, containerW / nativeW);
+
+      slides.forEach(s => {
+        s.style.transform = `scale(${scale})`;
+        s.style.transformOrigin = "top left";
+        // Wrap để chiếm đúng size sau khi scale (tránh overlap)
+        s.style.marginBottom = `${(1 - scale) * -nativeH + 24}px`;
+        s.style.marginRight = `${(1 - scale) * -nativeW}px`;
+      });
+    };
+
+    fitSlides();
+    // Refit khi resize window
+    const ro = new ResizeObserver(fitSlides);
+    ro.observe(host);
+    window.addEventListener("resize", fitSlides);
+
     // Disable drag/select/right-click trên TẤT CẢ img + svg trong slides
     const harden = () => {
       host.querySelectorAll<HTMLElement>("img, svg, image").forEach(el => {
@@ -216,6 +243,8 @@ export default function PptxViewer({ url, title }: Props) {
 
     return () => {
       observer.disconnect();
+      ro.disconnect();
+      window.removeEventListener("resize", fitSlides);
       document.removeEventListener("keydown", blockKey);
     };
   }, [pptxStatus, slideCount]);
