@@ -383,6 +383,14 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
         </div>
       )}
 
+      {/* Tài liệu giảng dạy của buổi đang chọn — luôn hiện inline */}
+      {selectedSession?.materialsLink && (
+        <div className="mb-6 bg-card border border-border rounded-xl p-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">📂 Tài liệu giảng dạy</p>
+          <MaterialsViewer url={selectedSession.materialsLink} title={`Buổi ${selectedSession.order}: ${selectedSession.title}`} watermark="Giảng viên" />
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 bg-muted/50 rounded-xl p-1 mb-6">
         {tabs.map(t => (
