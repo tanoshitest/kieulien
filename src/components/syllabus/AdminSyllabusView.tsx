@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import ProgressTimelineView from "@/components/syllabus/shared/ProgressTimelineView";
 import ClassScheduleManager from "@/components/syllabus/shared/ClassScheduleManager";
+import MaterialsViewer from "@/components/syllabus/shared/MaterialsViewer";
 import TeacherSyllabusView from "@/components/syllabus/TeacherSyllabusView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -484,11 +485,8 @@ const AdminSyllabusView: React.FC = () => {
                               </div>
                               {sess.materialsLink && (
                                 <div>
-                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Tài liệu</p>
-                                  <a href={sess.materialsLink} target="_blank" rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
-                                    <Link2 className="w-3.5 h-3.5" /> {sess.materialsLink}
-                                  </a>
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Tài liệu giảng dạy</p>
+                                  <MaterialsViewer url={sess.materialsLink} title={sess.title} watermark="Admin" />
                                 </div>
                               )}
                               {sess.homeworks.length > 0 && (

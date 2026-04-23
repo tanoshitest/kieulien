@@ -6,6 +6,7 @@ import {
   ClipboardList
 } from "lucide-react";
 import StaffReportTabContent from "@/components/syllabus/shared/StaffReportTabContent";
+import MaterialsViewer from "@/components/syllabus/shared/MaterialsViewer";
 import SyllabusSidebarLayout, { type NavItem } from "@/components/syllabus/shared/SyllabusSidebarLayout";
 import { GameTabContent, QuizTabContent } from "@/components/syllabus/shared/GameQuizContent";
 import { Button } from "@/components/ui/button";
@@ -235,10 +236,9 @@ const TASyllabusView: React.FC = () => {
                     </p>
                   </div>
                   {todaySession.materialsLink && (
-                    <a href={todaySession.materialsLink} target="_blank" rel="noopener noreferrer"
-                      className="ml-auto flex items-center gap-1.5 text-xs text-indigo-600 font-medium hover:underline">
-                      <Link2 className="w-3.5 h-3.5" /> Tài liệu buổi học
-                    </a>
+                    <div className="ml-auto">
+                      <MaterialsViewer url={todaySession.materialsLink} title={todaySession.title} watermark="Học vụ" compact />
+                    </div>
                   )}
                 </div>
               </div>

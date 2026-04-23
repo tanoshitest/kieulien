@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import StaffReportTabContent from "@/components/syllabus/shared/StaffReportTabContent";
 import ClassScheduleManager from "@/components/syllabus/shared/ClassScheduleManager";
+import MaterialsViewer from "@/components/syllabus/shared/MaterialsViewer";
 import ContentSecurityWrapper from "@/components/syllabus/shared/ContentSecurityWrapper";
 import BigTestPanel from "@/components/syllabus/shared/BigTestPanel";
 import TeacherNotePanel from "@/components/syllabus/shared/TeacherNotePanel";
@@ -415,16 +416,14 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                       </p>
                     </div>
                     {todaySchedule?.materialsLink && (
-                      <a href={todaySchedule.materialsLink} target="_blank" rel="noopener noreferrer"
-                        className="ml-auto flex items-center gap-1.5 text-xs text-primary font-medium hover:underline">
-                        <Link2 className="w-3.5 h-3.5" /> Mở tài liệu
-                      </a>
+                      <div className="ml-auto">
+                        <MaterialsViewer url={todaySchedule.materialsLink} title={`${todaySyllabus.name} – ${todaySession.title}`} watermark="Giảng viên" compact />
+                      </div>
                     )}
-                    {todaySession.materialsLink && (
-                      <a href={todaySession.materialsLink} target="_blank" rel="noopener noreferrer"
-                        className="ml-auto flex items-center gap-1.5 text-xs text-primary font-medium hover:underline">
-                        <Link2 className="w-3.5 h-3.5" /> PPT / Drive
-                      </a>
+                    {todaySession.materialsLink && !todaySchedule?.materialsLink && (
+                      <div className="ml-auto">
+                        <MaterialsViewer url={todaySession.materialsLink} title={todaySession.title} watermark="Giảng viên" compact />
+                      </div>
                     )}
                   </div>
                 </div>
