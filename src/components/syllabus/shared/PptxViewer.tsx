@@ -6,18 +6,18 @@ interface Props {
   title?: string;
 }
 
-// CDN của PPTXjs (theo repo meshesha/PPTXjs)
+// Local libs — đã download vào /public/libs/ để tránh CDN bị chặn
 const CDN = {
-  jquery: "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js",
-  jszip: "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js",
-  jszipUtils: "https://cdn.jsdelivr.net/npm/jszip-utils@0.1.0/dist/jszip-utils.min.js",
-  filereader: "https://cdn.jsdelivr.net/npm/filereader.js@0.99/filereader.js",
-  divs2slides: "https://cdn.jsdelivr.net/npm/divs2slides@1.0.6/divs2slides.min.js",
-  pptxjsCss: "https://cdn.jsdelivr.net/npm/pptxjs@1.6.0/css/pptxjs.css",
-  nvCss: "https://cdn.jsdelivr.net/npm/pptxjs@1.6.0/css/nv.d3.min.css",
-  d3: "https://cdn.jsdelivr.net/npm/d3@3.5.17/d3.min.js",
-  nvd3: "https://cdn.jsdelivr.net/npm/nvd3@1.8.6/build/nv.d3.min.js",
-  pptxjs: "https://cdn.jsdelivr.net/npm/pptxjs@1.6.0/js/pptxjs.min.js",
+  jquery: "/libs/jquery.min.js",
+  jszip: "/libs/jszip.min.js",
+  jszipUtils: "/libs/jszip-utils.min.js",
+  filereader: "/libs/filereader.js",
+  divs2slides: "/libs/divs2slides.min.js",
+  pptxjsCss: "/libs/pptxjs.css",
+  nvCss: "/libs/nv.d3.min.css",
+  d3: "/libs/d3.min.js",
+  nvd3: "/libs/nv.d3.min.js",
+  pptxjs: "/libs/pptxjs.min.js",
 };
 
 const loadedScripts = new Set<string>();
