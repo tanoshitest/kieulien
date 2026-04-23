@@ -220,7 +220,7 @@ const Hero: React.FC = () => {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}
           className="rounded-2xl overflow-hidden shadow-lg border border-slate-200">
           <img
-            src="/banner-summer.png"
+            src="/660305638_1496505205818848_4103334412897090650_n.jpg"
             alt="MEducation tuyển sinh mùa hè — Cùng con bứt phá tiếng Anh"
             className="w-full h-auto block"
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
@@ -295,17 +295,25 @@ const Hero: React.FC = () => {
 /* ────────── About ────────── */
 
 const About: React.FC = () => (
-  <section id="about" className="py-16 md:py-20 bg-slate-50">
-    <div className="max-w-7xl mx-auto px-4 md:px-6">
+  <section
+    id="about"
+    className="relative py-16 md:py-24 bg-cover bg-center bg-fixed"
+    style={{ backgroundImage: "url('/anh2.jpg')" }}
+  >
+    {/* Overlay mờ */}
+    <div className="absolute inset-0 bg-slate-900/60" />
+    <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-slate-900/50 to-slate-900/70" />
+
+    <div className="relative max-w-7xl mx-auto px-4 md:px-6">
       <div className="text-center mb-10">
-        <p className="text-brand-orange font-semibold text-sm uppercase tracking-wider">Về chúng tôi</p>
-        <h2 className="mt-2 text-3xl md:text-4xl font-bold text-slate-900">
-          MEducation — <span className="text-brand-green">We change, We lead</span>
+        <p className="text-brand-orange-light font-semibold text-sm uppercase tracking-wider">Về chúng tôi</p>
+        <h2 className="mt-2 text-3xl md:text-4xl font-bold text-white drop-shadow">
+          MEducation — <span className="text-brand-orange-light">We change, We lead</span>
         </h2>
       </div>
       <div className="grid lg:grid-cols-2 gap-10 items-center">
         <div>
-          <div className="rounded-2xl bg-brand-green p-8 text-white shadow-md">
+          <div className="rounded-2xl bg-brand-green/95 backdrop-blur-sm p-8 text-white shadow-xl border border-white/10">
             <Award className="w-10 h-10 text-brand-orange mb-4" />
             <h3 className="text-xl font-bold mb-2">8 năm đồng hành cùng các bé</h3>
             <p className="text-white/90 leading-relaxed">
@@ -314,10 +322,10 @@ const About: React.FC = () => (
           </div>
         </div>
         <div>
-          <p className="text-slate-700 leading-relaxed">
+          <p className="text-white/95 leading-relaxed drop-shadow-sm">
             MEducation là trung tâm Anh ngữ uy tín với đội ngũ giảng viên được tuyển chọn kỹ lưỡng, phương pháp giảng dạy tiên tiến và môi trường học tập thân thiện — nơi các bé được khơi dậy niềm đam mê tiếng Anh từ những ngày đầu.
           </p>
-          <p className="mt-4 text-slate-700 leading-relaxed">
+          <p className="mt-4 text-white/95 leading-relaxed drop-shadow-sm">
             Chúng tôi tin rằng học tiếng Anh không chỉ là kỹ năng, mà là hành trình khám phá thế giới. Mỗi giờ học tại MEducation là một trải nghiệm tương tác, vui vẻ và đầy cảm hứng.
           </p>
           <div className="mt-6 grid grid-cols-2 gap-4">
@@ -329,10 +337,10 @@ const About: React.FC = () => (
             ].map(s => {
               const I = s.Icon;
               return (
-                <div key={s.l} className="bg-white rounded-xl p-4 border border-slate-200">
+                <div key={s.l} className="bg-white/95 backdrop-blur-sm rounded-xl p-4 border border-white/20 shadow-md">
                   <I className="w-5 h-5 text-brand-orange mb-2" />
                   <p className="text-xl font-bold text-brand-green">{s.n}</p>
-                  <p className="text-xs text-slate-500">{s.l}</p>
+                  <p className="text-xs text-slate-600">{s.l}</p>
                 </div>
               );
             })}

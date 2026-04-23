@@ -194,7 +194,7 @@ const TASyllabusView: React.FC = () => {
       {/* Session header */}
       {selectedSession && (
         <div className="mb-5">
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">SESSION {selectedSession.order}</p>
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">BUỔI {selectedSession.order}</p>
           <h2 className="text-xl font-bold text-foreground mb-1.5">Buổi {selectedSession.order}: {selectedSession.title}</h2>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Clock className="w-3.5 h-3.5" />

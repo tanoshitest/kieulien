@@ -3,9 +3,16 @@ import { motion } from "framer-motion";
 import {
   BookOpen, Link2, Video, FileText, Zap, Star, Clock,
   CheckCircle2, ChevronDown, ChevronRight, MessageSquare, Save,
-  UserCheck, Check, X, Timer, ClipboardCheck, Plus, Trash2, Pencil, ClipboardList
+  UserCheck, Check, X, Timer, ClipboardCheck, Plus, Trash2, Pencil, ClipboardList, Calendar
 } from "lucide-react";
 import StaffReportTabContent from "@/components/syllabus/shared/StaffReportTabContent";
+import ClassScheduleManager from "@/components/syllabus/shared/ClassScheduleManager";
+import ContentSecurityWrapper from "@/components/syllabus/shared/ContentSecurityWrapper";
+import BigTestPanel from "@/components/syllabus/shared/BigTestPanel";
+import TeacherNotePanel from "@/components/syllabus/shared/TeacherNotePanel";
+import SyllabusEditRequestPanel from "@/components/syllabus/shared/SyllabusEditRequestPanel";
+import TeacherEvaluationPanel from "@/components/syllabus/shared/TeacherEvaluationPanel";
+import { useSyllabusFeatures } from "@/contexts/SyllabusFeaturesContext";
 import SyllabusSidebarLayout, { type NavItem } from "@/components/syllabus/shared/SyllabusSidebarLayout";
 import { GameTabContent, QuizTabContent } from "@/components/syllabus/shared/GameQuizContent";
 import { Input } from "@/components/ui/input";
@@ -43,9 +50,11 @@ const readOnlyStatusConfig: Record<HomeworkStatus, { label: string; color: strin
 };
 
 const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelect?: boolean; readOnly?: boolean }> = ({ showStaffReport = false, hideCourseSelect = false, readOnly = false }) => {
+  const featureCtx = useSyllabusFeatures();
+  const { studentStars, awardStar } = featureCtx;
   const [selectedSyllabusId, setSelectedSyllabusId] = useState<string | null>(hideCourseSelect ? (syllabuses[0]?.id ?? null) : null);
   const [submissions, setSubmissions] = useState<HomeworkSubmission[]>(initialSubmissions);
-  const [activeTab, setActiveTab] = useState<"today" | "attendance" | "grading" | "classwork" | "staff_report">("today");
+  const [activeTab, setActiveTab] = useState<"today" | "attendance" | "grading" | "classwork" | "staff_report" | "schedule">("today");
   const [expandedProcess, setExpandedProcess] = useState(false);
   const [activeNavItem, setActiveNavItem] = useState<NavItem>("syllabus");
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -264,12 +273,30 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
     setSubmissions(prev => prev.map(s => s.id === gradingItem.id
       ? { ...s, status: "graded", score: Number(gradeScore), feedback: gradeFeedback, gradedAt: new Date().toISOString(), gradedByName: "Ms. Thu Trang" }
       : s));
-    toast.success(`Đã chấm điểm ${gradingItem.studentName}: ${gradeScore}/10`);
+    // Auto tích sao nếu điểm >= 7
+    if (Number(gradeScore) >= 7) {
+      const stuKey = gradingItem.studentId.startsWith("STU") ? gradingItem.studentId : `STU${gradingItem.studentId.slice(2).padStart(3, "0")}`;
+      awardStar(stuKey, gradingItem.studentName, 1, `Nộp BTVN đúng hạn (${gradeScore}/10)`, "auto-homework", "Hệ thống", gradingItem.classScheduleId);
+    }
+    toast.success(`Đã chấm điểm ${gradingItem.studentName}: ${gradeScore}/10${Number(gradeScore) >= 7 ? " · ⭐ +1 sao" : ""}`);
     setGradingItem(null);
   };
 
+  const currentSyllabus = syllabuses.find(s => s.id === selectedSyllabusId);
+
+  // Initialize selectedSessionId once syllabus loaded — pick today's or first
+  // ⚠️ Hook MUST be called before any conditional return to satisfy Rules of Hooks
+  React.useEffect(() => {
+    if (currentSyllabus && !selectedSessionId) {
+      const todaySched = classSchedules.find(cs => cs.date === TODAY && cs.syllabusId === currentSyllabus.id);
+      const initial = todaySched?.syllabusSessionId ?? currentSyllabus.sessions[0]?.id ?? null;
+      setSelectedSessionId(initial);
+    }
+  }, [currentSyllabus, selectedSessionId]);
+
   const tabs = [
     { id: "today", label: "Hôm nay", icon: Clock },
+    { id: "schedule", label: "Lịch lớp & Tiến độ", icon: Calendar },
     { id: "attendance", label: `Điểm danh${attendanceSaved ? " ✓" : ""}`, icon: UserCheck },
     { id: "classwork", label: "Chấm bài tập trên lớp", icon: ClipboardCheck },
     { id: "grading", label: `Chấm bài tập về nhà ${pendingGrading.length > 0 ? `(${pendingGrading.length})` : ""}`, icon: CheckCircle2 },
@@ -317,17 +344,6 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
     );
   }
 
-  const currentSyllabus = syllabuses.find(s => s.id === selectedSyllabusId);
-
-  // Initialize selectedSessionId once syllabus loaded — pick today's or first
-  React.useEffect(() => {
-    if (currentSyllabus && !selectedSessionId) {
-      const todaySched = classSchedules.find(cs => cs.date === TODAY && cs.syllabusId === currentSyllabus.id);
-      const initial = todaySched?.syllabusSessionId ?? currentSyllabus.sessions[0]?.id ?? null;
-      setSelectedSessionId(initial);
-    }
-  }, [currentSyllabus, selectedSessionId]);
-
   if (!currentSyllabus) return null;
 
   const selectedSession = currentSyllabus.sessions.find(s => s.id === selectedSessionId) ?? currentSyllabus.sessions[0];
@@ -355,7 +371,7 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
       {/* Session header */}
       {selectedSession && (
         <div className="mb-5">
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">SESSION {selectedSession.order}</p>
+          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">BUỔI {selectedSession.order}</p>
           <h2 className="text-xl font-bold text-foreground mb-1.5">Buổi {selectedSession.order}: {selectedSession.title}</h2>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Clock className="w-3.5 h-3.5" />
@@ -378,7 +394,8 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
 
       {/* TODAY TAB */}
       {activeTab === "today" && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+        <ContentSecurityWrapper watermarkText={`${roleLabel} · Ms. Thu Trang`}>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 relative z-20">
           {todaySession && todaySyllabus ? (
             <>
               {/* Session info card */}
@@ -461,6 +478,36 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                   </div>
                 </div>
               )}
+
+              {/* Teacher Note (GV/Học vụ/Admin xem; PH ẩn) */}
+              {todaySchedule && (
+                <TeacherNotePanel
+                  classScheduleId={todaySchedule.id}
+                  classId={todaySchedule.classId}
+                  syllabusSessionId={todaySession.id}
+                  teacherName="Ms. Thu Trang"
+                />
+              )}
+
+              {/* Đề xuất sửa Syllabus template */}
+              <SyllabusEditRequestPanel syllabus={todaySyllabus} session={todaySession} />
+
+              {/* Big Test panel — chỉ hiển thị nếu session này là Big Test của 1 chặng */}
+              {todaySchedule && (() => {
+                const stages = featureCtx.getStagesBySyllabus(todaySyllabus.id);
+                const stage = stages.find(s => s.bigTestSessionId === todaySession.id);
+                if (!stage) return null;
+                return (
+                  <BigTestPanel
+                    syllabusSessionId={todaySession.id}
+                    classId={todaySchedule.classId}
+                    className={todaySchedule.className}
+                    stageId={stage.id}
+                    stageName={stage.name}
+                    students={attendanceStudents}
+                  />
+                );
+              })()}
             </>
           ) : (
             <div className="text-center py-16 text-muted-foreground border-2 border-dashed border-border rounded-xl">
@@ -470,6 +517,7 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
             </div>
           )}
         </motion.div>
+        </ContentSecurityWrapper>
       )}
 
       {/* ATTENDANCE TAB */}
@@ -523,16 +571,34 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
             <div className="divide-y divide-border">
               {attendanceStudents.map((s, i) => {
                 const status = attendance[s.id];
+                const stuKey = `STU${s.id.slice(2).padStart(3, "0")}`; // ST01 -> STU001
+                const starCount = studentStars[stuKey] ?? 0;
                 return (
                   <motion.div key={s.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }}
                     className="px-5 py-3 flex items-center gap-3 hover:bg-muted/20">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
-                      {s.avatar}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                        {s.avatar}
+                      </div>
+                      {starCount > 0 && (
+                        <span title={`${starCount} sao`} className="absolute -top-1.5 -right-1.5 bg-amber-400 text-white text-[9px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center shadow border border-white">
+                          ⭐{starCount}
+                        </span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{s.name}</p>
                       <p className="text-[11px] text-muted-foreground">{s.id}</p>
                     </div>
+                    {!readOnly && (
+                      <button
+                        onClick={() => { awardStar(stuKey, s.name, 1, "GV thưởng sao trong lớp", "teacher-tick", "Ms. Thu Trang"); toast.success(`⭐ +1 sao cho ${s.name}`); }}
+                        className="flex items-center gap-1 px-2 h-7 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 text-xs font-medium flex-shrink-0"
+                        title="Tặng 1 sao"
+                      >
+                        <Star className="w-3 h-3" /> +1
+                      </button>
+                    )}
                     <div className="flex gap-1 flex-shrink-0">
                       {([
                         { key: "present" as const, icon: Check, label: "Có mặt", active: "bg-green-500 text-white border-green-500", inactive: "border-border text-muted-foreground hover:border-green-400" },
@@ -837,9 +903,17 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
         </motion.div>
       )}
 
+      {/* SCHEDULE & PROGRESS TAB (Phase 2-5) */}
+      {activeTab === "schedule" && (
+        <ClassScheduleManager syllabus={currentSyllabus} />
+      )}
+
       {/* STAFF REPORT TAB (chỉ khi showStaffReport) */}
       {activeTab === "staff_report" && showStaffReport && (
-        <StaffReportTabContent readOnly={readOnly} />
+        <div className="space-y-4">
+          <StaffReportTabContent readOnly={readOnly} />
+          <TeacherEvaluationPanel teacherId="USR001" teacherName="Ms. Thu Trang" className={todaySchedule?.className} classScheduleId={todaySchedule?.id} />
+        </div>
       )}
 
         </>

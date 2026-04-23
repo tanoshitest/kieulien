@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { RoleProvider } from "@/contexts/RoleContext";
+import { ClassScheduleProvider } from "@/contexts/ClassScheduleContext";
+import { SyllabusFeaturesProvider } from "@/contexts/SyllabusFeaturesContext";
 import AppLayout from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import CRMPage from "@/pages/CRMPage";
@@ -81,11 +83,15 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <RoleProvider>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/*" element={<ProtectedApp />} />
-          </Routes>
+          <ClassScheduleProvider>
+            <SyllabusFeaturesProvider>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/*" element={<ProtectedApp />} />
+              </Routes>
+            </SyllabusFeaturesProvider>
+          </ClassScheduleProvider>
         </RoleProvider>
       </BrowserRouter>
     </TooltipProvider>

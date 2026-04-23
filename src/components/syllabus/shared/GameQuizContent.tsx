@@ -330,11 +330,11 @@ interface QuizMeta {
 
 const mockQuizzes: QuizMeta[] = [
   { id: "Q1", title: "Đề thi thử số 1 — Unit 1-3", type: "Full test", questions: 30, duration: "45 phút", durationMinutes: 45, attempts: 128, avgScore: 78, myScore: 85, status: "completed" },
-  { id: "Q2", title: "Quick Quiz — Vocabulary Session 4", type: "Mini", questions: 15, duration: "15 phút", durationMinutes: 15, attempts: 92, avgScore: 82, myScore: 93, status: "completed" },
+  { id: "Q2", title: "Quiz nhanh — Từ vựng Buổi 4", type: "Mini", questions: 15, duration: "15 phút", durationMinutes: 15, attempts: 92, avgScore: 82, myScore: 93, status: "completed" },
   { id: "Q3", title: "Đề thi thử số 2 — Unit 4-6", type: "Full test", questions: 30, duration: "45 phút", durationMinutes: 45, attempts: 76, avgScore: 75, status: "in_progress" },
-  { id: "Q4", title: "Listening Challenge — Session 5", type: "Listening", questions: 20, duration: "25 phút", durationMinutes: 25, attempts: 54, avgScore: 71, status: "pending" },
+  { id: "Q4", title: "Thử thách Nghe — Buổi 5", type: "Listening", questions: 20, duration: "25 phút", durationMinutes: 25, attempts: 54, avgScore: 71, status: "pending" },
   { id: "Q5", title: "Đề kiểm tra giữa kỳ", type: "Midterm", questions: 50, duration: "90 phút", durationMinutes: 90, attempts: 0, avgScore: 0, status: "pending" },
-  { id: "Q6", title: "Grammar Drill — Present tenses", type: "Grammar", questions: 25, duration: "30 phút", durationMinutes: 30, attempts: 112, avgScore: 80, myScore: 76, status: "completed" },
+  { id: "Q6", title: "Luyện Ngữ pháp — Thì hiện tại", type: "Grammar", questions: 25, duration: "30 phút", durationMinutes: 30, attempts: 112, avgScore: 80, myScore: 76, status: "completed" },
 ];
 
 interface Question {

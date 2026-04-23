@@ -1146,6 +1146,20 @@ export interface ClassSchedule {
   endTime: string;
   room: string;
   status: "upcoming" | "in_progress" | "completed";
+
+  // ─── Phase 1: Class Schedule Instance Layer ──────────────────────
+  /** Loại buổi: regular = buổi gốc theo template; split-a/-b = sau khi tách; makeup = buổi bù; merged = buổi gộp 2 session */
+  kind?: "regular" | "split-a" | "split-b" | "makeup" | "merged";
+  /** Trạng thái tiến độ chi tiết (Phase 2 sẽ giáo viên tick) */
+  progressStatus?: "planned" | "completed-full" | "completed-partial" | "skipped";
+  /** % nội dung session đã dạy (0-100). Mặc định 100 nếu completed-full */
+  progressPercent?: number;
+  /** Ghi chú từ giáo viên về tiến độ buổi học */
+  progressNote?: string;
+  /** Nếu là split/makeup, tham chiếu tới buổi gốc */
+  parentScheduleId?: string;
+  /** Nếu kind=merged, danh sách session gộp thêm (ngoài syllabusSessionId chính) */
+  mergedSessionIds?: string[];
 }
 
 export interface AttendanceRecord {
@@ -1371,7 +1385,8 @@ export const classSchedules: ClassSchedule[] = [
     teacherId: "USR001", teacherName: "Ms. Thu Trang",
     taId: "USR003", taName: "Ms. Linh Chi",
     date: "2026-04-22", startTime: "08:00", endTime: "09:30",
-    room: "Phòng A1", status: "in_progress"
+    room: "Phòng A1", status: "in_progress",
+    kind: "regular", progressStatus: "planned",
   },
   {
     id: "CS002", classId: "CLS001", className: "4CLC 2",
@@ -1379,15 +1394,30 @@ export const classSchedules: ClassSchedule[] = [
     teacherId: "USR001", teacherName: "Ms. Thu Trang",
     taId: "USR003", taName: "Ms. Linh Chi",
     date: "2026-04-19", startTime: "08:00", endTime: "09:30",
-    room: "Phòng A1", status: "completed"
+    room: "Phòng A1", status: "completed",
+    kind: "regular", progressStatus: "completed-full", progressPercent: 100,
   },
+  // SS002 (My family) bị tách thành 2 buổi vì lớp học chậm
   {
     id: "CS003", classId: "CLS001", className: "4CLC 2",
     syllabusId: "SYL001", syllabusSessionId: "SS002",
     teacherId: "USR001", teacherName: "Ms. Thu Trang",
     taId: "USR003", taName: "Ms. Linh Chi",
     date: "2026-04-15", startTime: "08:00", endTime: "09:30",
-    room: "Phòng A1", status: "completed"
+    room: "Phòng A1", status: "completed",
+    kind: "split-a", progressStatus: "completed-partial", progressPercent: 60,
+    progressNote: "Dạy được Vocab + giới thiệu Grammar. Phần luyện tập + Speaking dời sang buổi sau.",
+  },
+  {
+    id: "CS003B", classId: "CLS001", className: "4CLC 2",
+    syllabusId: "SYL001", syllabusSessionId: "SS002",
+    teacherId: "USR001", teacherName: "Ms. Thu Trang",
+    taId: "USR003", taName: "Ms. Linh Chi",
+    date: "2026-04-17", startTime: "08:00", endTime: "09:30",
+    room: "Phòng A1", status: "completed",
+    kind: "split-b", parentScheduleId: "CS003",
+    progressStatus: "completed-full", progressPercent: 40,
+    progressNote: "Hoàn thành 40% còn lại của Session 2 (luyện tập + Speaking).",
   },
   {
     id: "CS004", classId: "CLS001", className: "4CLC 2",
@@ -1395,7 +1425,8 @@ export const classSchedules: ClassSchedule[] = [
     teacherId: "USR001", teacherName: "Ms. Thu Trang",
     taId: "USR003", taName: "Ms. Linh Chi",
     date: "2026-04-10", startTime: "08:00", endTime: "09:30",
-    room: "Phòng A1", status: "completed"
+    room: "Phòng A1", status: "completed",
+    kind: "regular", progressStatus: "completed-full", progressPercent: 100,
   },
   {
     id: "CS005", classId: "CLS001", className: "4CLC 2",
@@ -1403,7 +1434,8 @@ export const classSchedules: ClassSchedule[] = [
     teacherId: "USR001", teacherName: "Ms. Thu Trang",
     taId: "USR003", taName: "Ms. Linh Chi",
     date: "2026-04-26", startTime: "08:00", endTime: "09:30",
-    room: "Phòng A1", status: "upcoming"
+    room: "Phòng A1", status: "upcoming",
+    kind: "regular", progressStatus: "planned",
   },
 ];
 

@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import {
   BookOpen, Plus, Edit2, Trash2, GripVertical, ChevronDown, ChevronRight,
-  Link2, Video, FileText, Zap, X, Save, Eye, ArrowLeft, Layers, Settings, TrendingUp, LayoutGrid
+  Link2, Video, FileText, Zap, X, Save, Eye, ArrowLeft, Layers, Settings, TrendingUp, LayoutGrid, Calendar
 } from "lucide-react";
 import ProgressTimelineView from "@/components/syllabus/shared/ProgressTimelineView";
+import ClassScheduleManager from "@/components/syllabus/shared/ClassScheduleManager";
 import TeacherSyllabusView from "@/components/syllabus/TeacherSyllabusView";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { syllabuses as initialSyllabuses, type Syllabus, type SyllabusSession, type SyllabusHomework, type HomeworkType } from "@/data/mockData";
+import { useSyllabusFeatures } from "@/contexts/SyllabusFeaturesContext";
 
 const hwTypeLabel: Record<HomeworkType, string> = {
   video_speaking: "Video Speaking",
@@ -35,10 +37,45 @@ const hwTypeIcon: Record<HomeworkType, React.ElementType> = {
 };
 
 const AdminSyllabusView: React.FC = () => {
+  const { configureSyllabusStages, getStagesBySyllabus } = useSyllabusFeatures();
   const [syllabuses, setSyllabuses] = useState<Syllabus[]>(initialSyllabuses);
   const [selectedSyllabus, setSelectedSyllabus] = useState<Syllabus | null>(null);
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
   const [adminTab, setAdminTab] = useState<"sessions" | "design" | "progress">("sessions");
+
+  // Lắng nghe event "syllabus:apply-edit" từ panel duyệt đề xuất sửa
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        syllabusId: string; sessionId: string;
+        field: "title" | "vocab" | "grammar" | "teachingProcess" | "materialsLink";
+        newValue: string;
+      };
+      setSyllabuses(prev => prev.map(s => {
+        if (s.id !== detail.syllabusId) return s;
+        return {
+          ...s,
+          sessions: s.sessions.map(ss => ss.id === detail.sessionId
+            ? { ...ss, [detail.field]: detail.newValue }
+            : ss
+          ),
+        };
+      }));
+      // Update selectedSyllabus nếu đang mở
+      setSelectedSyllabus(prev => {
+        if (!prev || prev.id !== detail.syllabusId) return prev;
+        return {
+          ...prev,
+          sessions: prev.sessions.map(ss => ss.id === detail.sessionId
+            ? { ...ss, [detail.field]: detail.newValue }
+            : ss
+          ),
+        };
+      });
+    };
+    window.addEventListener("syllabus:apply-edit", handler);
+    return () => window.removeEventListener("syllabus:apply-edit", handler);
+  }, []);
 
   // Dialogs
   const [showSyllabusDialog, setShowSyllabusDialog] = useState(false);
@@ -48,6 +85,10 @@ const AdminSyllabusView: React.FC = () => {
 
   // Syllabus form
   const [syllabusForm, setSyllabusForm] = useState({ name: "", description: "", level: "" });
+
+  // Stage config form (sử dụng khi sửa syllabus đã có session)
+  const [stageCount, setStageCount] = useState(2);
+  const [stageNames, setStageNames] = useState<string[]>(["Chặng 1 — Khởi đầu", "Chặng 2 — Mở rộng"]);
 
   // Session form
   const [sessionForm, setSessionForm] = useState<Omit<SyllabusSession, "id" | "syllabusId" | "order" | "homeworks">>({
@@ -65,6 +106,15 @@ const AdminSyllabusView: React.FC = () => {
   const openEditSyllabus = (s: Syllabus) => {
     setEditingSyllabus(s);
     setSyllabusForm({ name: s.name, description: s.description, level: s.level });
+    // Pre-fill stage config từ stages hiện tại (nếu có)
+    const existing = getStagesBySyllabus(s.id);
+    if (existing.length > 0) {
+      setStageCount(existing.length);
+      setStageNames(existing.map(st => st.name));
+    } else {
+      setStageCount(2);
+      setStageNames(["Chặng 1 — Khởi đầu", "Chặng 2 — Mở rộng"]);
+    }
     setShowSyllabusDialog(true);
   };
 
@@ -77,7 +127,12 @@ const AdminSyllabusView: React.FC = () => {
       if (selectedSyllabus?.id === editingSyllabus.id) {
         setSelectedSyllabus(prev => prev ? { ...prev, ...syllabusForm } : prev);
       }
-      toast.success("Đã cập nhật syllabus");
+      // Áp dụng cấu hình stages nếu syllabus đã có session
+      if (editingSyllabus.sessions.length > 0 && stageCount > 0) {
+        const sessionIds = editingSyllabus.sessions.map(s => s.id);
+        configureSyllabusStages(editingSyllabus.id, sessionIds, stageCount, stageNames.slice(0, stageCount));
+      }
+      toast.success("Đã cập nhật syllabus" + (editingSyllabus.sessions.length > 0 ? ` & cấu hình ${stageCount} chặng` : ""));
     } else {
       const newS: Syllabus = {
         id: `SYL${Date.now()}`, ...syllabusForm, totalSessions: 0,
@@ -86,7 +141,7 @@ const AdminSyllabusView: React.FC = () => {
         sessions: []
       };
       setSyllabuses(prev => [...prev, newS]);
-      toast.success("Đã tạo syllabus mới");
+      toast.success("Đã tạo syllabus mới — thêm session rồi mới cấu hình được chặng");
     }
     setShowSyllabusDialog(false);
   };
@@ -236,7 +291,7 @@ const AdminSyllabusView: React.FC = () => {
 
         {/* Syllabus Dialog */}
         <Dialog open={showSyllabusDialog} onOpenChange={setShowSyllabusDialog}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editingSyllabus ? "Chỉnh sửa Syllabus" : "Tạo Syllabus mới"}</DialogTitle></DialogHeader>
             <div className="space-y-3 py-2">
               <div><label className="text-sm font-medium mb-1 block">Tên Syllabus *</label>
@@ -245,6 +300,72 @@ const AdminSyllabusView: React.FC = () => {
                 <Input placeholder="VD: 4CLC 1, IELTS..." value={syllabusForm.level} onChange={e => setSyllabusForm(p => ({ ...p, level: e.target.value }))} /></div>
               <div><label className="text-sm font-medium mb-1 block">Mô tả</label>
                 <Textarea rows={3} placeholder="Mô tả ngắn về syllabus này..." value={syllabusForm.description} onChange={e => setSyllabusForm(p => ({ ...p, description: e.target.value }))} /></div>
+
+              {/* Stage config — chỉ hiện khi edit syllabus đã có session */}
+              {editingSyllabus && editingSyllabus.sessions.length > 0 && (
+                <div className="p-3 rounded-lg border border-violet-200 bg-violet-50/40 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-violet-600" />
+                    <label className="text-sm font-semibold text-violet-900">Cấu hình Chặng (Stages)</label>
+                  </div>
+                  <p className="text-[11px] text-violet-800">
+                    Syllabus này có <strong>{editingSyllabus.sessions.length} buổi</strong>. Chia thành các chặng — buổi cuối mỗi chặng sẽ thành Big Test, HS phải hoàn tất mới mở được chặng sau.
+                  </p>
+
+                  <div>
+                    <label className="text-xs font-medium mb-1 block">Số chặng</label>
+                    <Select value={String(stageCount)} onValueChange={v => {
+                      const n = Number(v);
+                      setStageCount(n);
+                      setStageNames(prev => {
+                        const next = [...prev];
+                        while (next.length < n) next.push(`Chặng ${next.length + 1}`);
+                        return next.slice(0, n);
+                      });
+                    }}>
+                      <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <SelectItem key={n} value={String(n)} disabled={n > editingSyllabus.sessions.length}>
+                            {n} chặng
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium block">Tên từng chặng</label>
+                    {Array.from({ length: stageCount }).map((_, idx) => {
+                      const per = Math.ceil(editingSyllabus.sessions.length / stageCount);
+                      const start = idx * per;
+                      const end = Math.min(start + per, editingSyllabus.sessions.length);
+                      const bigTest = editingSyllabus.sessions[end - 1];
+                      return (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-violet-700 w-8">#{idx + 1}</span>
+                          <Input
+                            className="h-8 text-xs"
+                            value={stageNames[idx] ?? ""}
+                            onChange={e => setStageNames(prev => {
+                              const next = [...prev];
+                              next[idx] = e.target.value;
+                              return next;
+                            })}
+                            placeholder={`Chặng ${idx + 1}`}
+                          />
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                            B{start + 1}–B{end} · BigTest: B{end}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] italic text-violet-700/70">
+                    Chặng sẽ được chia đều theo thứ tự buổi. Big Test = buổi cuối mỗi chặng.
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSyllabusDialog(false)}>Hủy</Button>
@@ -261,8 +382,40 @@ const AdminSyllabusView: React.FC = () => {
   // ─────────────────────────────────────────────────────────────
   return (
     <div className="-m-6">
-      {/* Render Teacher view với full tabs (Admin chỉ xem, không sửa) — sidebar layout đã có breadcrumb + back */}
-      <TeacherSyllabusView showStaffReport hideCourseSelect readOnly />
+      {/* Tab switcher: Giáo trình mẫu (template) vs Lịch học thực tế (instance) */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border px-6 pt-3 pb-0 flex items-center gap-2">
+        <button
+          onClick={() => setAdminTab("sessions")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+            adminTab === "sessions"
+              ? "border-violet-600 text-violet-700"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          Giáo trình mẫu
+        </button>
+        <button
+          onClick={() => setAdminTab("progress")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+            adminTab === "progress"
+              ? "border-violet-600 text-violet-700"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          Lịch học thực tế (Class Schedule)
+        </button>
+      </div>
+
+      {adminTab === "sessions" ? (
+        /* Render Teacher view với full tabs (Admin chỉ xem, không sửa) */
+        <TeacherSyllabusView showStaffReport hideCourseSelect readOnly />
+      ) : (
+        <div className="p-6">
+          <ClassScheduleManager syllabus={selectedSyllabus} />
+        </div>
+      )}
 
       {/* Back to syllabus list — minimal floating button cho admin */}
       <button

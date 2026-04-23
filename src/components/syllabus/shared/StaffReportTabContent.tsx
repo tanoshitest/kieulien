@@ -2,7 +2,8 @@ import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   ClipboardList, BookOpen, Camera, Image as ImageIcon, X as XIcon,
-  UserPlus, NotebookPen, Award, Star, Send, Users as UsersIcon
+  UserPlus, NotebookPen, Award, Star, Send, Users as UsersIcon,
+  FileCheck2, CheckCircle2, Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { students } from "@/data/mockData";
+import { useRole } from "@/contexts/RoleContext";
+
+type ReportStatus = "draft" | "pending" | "published";
 
 interface Props {
   classId?: string; // default CLS001
@@ -17,7 +21,14 @@ interface Props {
 }
 
 const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001", readOnly = false }) => {
+  const { isAdmin, isTA } = useRole();
   const classStudents = students.filter(s => s.classIds.includes(classId)).slice(0, 15);
+
+  // Workflow status: draft (TA tạo) → pending (TA gửi) → published (Học vụ duyệt)
+  const [reportStatus, setReportStatus] = useState<ReportStatus>(readOnly ? "published" : "draft");
+  const [reportMeta, setReportMeta] = useState<{ submittedAt?: string; reviewerName?: string; reviewedAt?: string }>(
+    readOnly ? { submittedAt: "2026-04-22T18:30:00", reviewerName: "Ms. Linh Chi", reviewedAt: "2026-04-23T08:15:00" } : {}
+  );
 
   // Mock data đầy đủ cho readOnly (admin/học vụ xem)
   const mockPhotos = readOnly ? [
@@ -31,7 +42,7 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001", readOnly =
   ] : [];
 
   const [srLessonContent, setSrLessonContent] = useState(readOnly
-    ? "Session 4 - Colors & Shapes. GV đã dạy 10 từ vựng màu sắc và hình khối, hoạt động flashcard + trò chơi 'Touch the shape'. Các bé tham gia rất tích cực, đặc biệt phần trò chơi nhóm."
+    ? "Buổi 4 - Colors & Shapes. GV đã dạy 10 từ vựng màu sắc và hình khối, hoạt động flashcard + trò chơi 'Touch the shape'. Các bé tham gia rất tích cực, đặc biệt phần trò chơi nhóm."
     : "");
   const [srPhotos, setSrPhotos] = useState<{ id: string; url: string; caption: string }[]>(mockPhotos);
   const [srSupportStudents, setSrSupportStudents] = useState<{ id: string; studentId: string; reason: string }[]>(mockSupport);
@@ -64,7 +75,30 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001", readOnly =
 
   const saveStaffReport = () => {
     if (!srLessonContent.trim()) { toast.error("Vui lòng nhập 'Hôm nay học gì'"); return; }
-    toast.success("Đã lưu báo cáo học vụ!");
+    setReportStatus("draft");
+    toast.success("Đã lưu nháp báo cáo");
+  };
+
+  const submitForReview = () => {
+    if (!srLessonContent.trim()) { toast.error("Vui lòng nhập 'Hôm nay học gì'"); return; }
+    setReportStatus("pending");
+    setReportMeta(m => ({ ...m, submittedAt: new Date().toISOString() }));
+    toast.success("Đã gửi báo cáo cho Học vụ duyệt");
+  };
+
+  const publishReport = () => {
+    setReportStatus("published");
+    setReportMeta(m => ({ ...m, reviewerName: "Ms. Linh Chi", reviewedAt: new Date().toISOString() }));
+    toast.success("Đã xuất bản báo cáo — Admin có thể xem");
+  };
+
+  const overdue = reportStatus === "pending" && reportMeta.submittedAt
+    && (Date.now() - new Date(reportMeta.submittedAt).getTime()) > 24 * 3600 * 1000;
+
+  const statusConfig: Record<ReportStatus, { label: string; color: string; icon: React.ElementType }> = {
+    draft:     { label: "Nháp",          color: "bg-slate-100 text-slate-700",   icon: NotebookPen },
+    pending:   { label: "Chờ Học vụ duyệt", color: "bg-amber-100 text-amber-700", icon: Clock },
+    published: { label: "Đã xuất bản",   color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
   };
 
   return (
@@ -73,14 +107,26 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001", readOnly =
         <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center flex-shrink-0">
           <ClipboardList className="w-5 h-5 text-white" />
         </div>
-        <div>
-          <h3 className="font-bold text-foreground flex items-center gap-2">
+        <div className="flex-1">
+          <h3 className="font-bold text-foreground flex items-center gap-2 flex-wrap">
             Báo cáo học vụ
             <Badge className="bg-violet-100 text-violet-700 text-[10px]">Chỉ Học vụ / Admin</Badge>
+            {(() => { const cfg = statusConfig[reportStatus]; const Icon = cfg.icon; return (
+              <Badge className={`${cfg.color} text-[10px] gap-1`}>
+                <Icon className="w-3 h-3" /> {cfg.label}
+              </Badge>
+            ); })()}
+            {overdue && <Badge className="bg-rose-100 text-rose-700 text-[10px] animate-pulse">⚠ Quá 24h chưa duyệt</Badge>}
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Báo cáo nội bộ: nội dung buổi học, ảnh lớp, học sinh cần bổ trợ, nhật ký dạy, đánh giá giáo viên
+            Workflow: TA tạo nháp → gửi Học vụ duyệt → Học vụ xuất bản → Admin xem được
           </p>
+          {reportMeta.submittedAt && (
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Gửi lúc {new Date(reportMeta.submittedAt).toLocaleString("vi-VN")}
+              {reportMeta.reviewerName && ` · Duyệt bởi ${reportMeta.reviewerName} lúc ${reportMeta.reviewedAt ? new Date(reportMeta.reviewedAt).toLocaleString("vi-VN") : ""}`}
+            </p>
+          )}
         </div>
       </div>
 
@@ -90,7 +136,7 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001", readOnly =
           <BookOpen className="w-4 h-4 text-violet-600" /> Hôm nay học gì <span className="text-red-500">*</span>
         </label>
         <p className="text-xs text-muted-foreground">Nội dung chính giáo viên đã dạy, hoạt động đã triển khai</p>
-        <Textarea rows={4} placeholder="VD: Session 4 - Colors & Shapes. GV đã dạy 10 từ vựng màu sắc và hình khối..."
+        <Textarea rows={4} placeholder="VD: Buổi 4 - Colors & Shapes. GV đã dạy 10 từ vựng màu sắc và hình khối..."
           value={srLessonContent} onChange={e => setSrLessonContent(e.target.value)} readOnly={readOnly} />
       </div>
 
@@ -221,15 +267,36 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001", readOnly =
           value={srExtraNotes} onChange={e => setSrExtraNotes(e.target.value)} readOnly={readOnly} />
       </div>
 
-      {/* Submit */}
+      {/* Submit / Workflow */}
       {!readOnly && (
-        <div className="sticky bottom-4 bg-card border border-border rounded-xl p-3 shadow-lg flex items-center justify-between gap-3">
+        <div className="sticky bottom-4 bg-card border border-border rounded-xl p-3 shadow-lg flex items-center justify-between gap-3 flex-wrap">
           <p className="text-xs text-muted-foreground">
-            Báo cáo này chỉ <span className="font-semibold text-violet-700">Học vụ và Admin</span> xem được
+            {reportStatus === "draft" && "TA: Lưu nháp hoặc gửi cho Học vụ duyệt"}
+            {reportStatus === "pending" && "Đang chờ Học vụ duyệt — Học vụ bấm 'Duyệt & Xuất bản' để hoàn tất"}
+            {reportStatus === "published" && "Báo cáo đã xuất bản"}
           </p>
-          <Button onClick={saveStaffReport} className="gap-1.5 bg-violet-600 hover:bg-violet-700">
-            <Send className="w-4 h-4" /> Gửi báo cáo học vụ
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            {reportStatus === "draft" && (
+              <>
+                <Button onClick={saveStaffReport} variant="outline" className="gap-1.5">
+                  <Send className="w-4 h-4" /> Lưu nháp
+                </Button>
+                <Button onClick={submitForReview} className="gap-1.5 bg-violet-600 hover:bg-violet-700">
+                  <Send className="w-4 h-4" /> Gửi Học vụ duyệt
+                </Button>
+              </>
+            )}
+            {reportStatus === "pending" && (isAdmin || (!isTA)) && (
+              <Button onClick={publishReport} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">
+                <FileCheck2 className="w-4 h-4" /> Duyệt & Xuất bản
+              </Button>
+            )}
+            {reportStatus === "published" && (
+              <Badge className="bg-emerald-100 text-emerald-700 text-xs gap-1 px-3 py-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Đã xuất bản
+              </Badge>
+            )}
+          </div>
         </div>
       )}
     </motion.div>

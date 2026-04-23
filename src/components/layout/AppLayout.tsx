@@ -13,6 +13,7 @@ import {
   BookMarked
 } from "lucide-react";
 import { notifications } from "@/data/mockData";
+import { useClassSchedules } from "@/contexts/ClassScheduleContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,6 +60,7 @@ const navItems: NavItem[] = [
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { role, login, logout, isAdmin, isTeacher, isParent, isTA } = useRole();
+  const { pendingCount } = useClassSchedules();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -73,7 +75,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     if (item.teacherOnly && !isTeacher) return false;
     if (item.taOnly && !isTA) return false;
     // TA: chỉ thấy Syllabus + Lịch dạy + Công việc
-    if (isTA) return ["/syllabus", "/schedule", "/tasks"].includes(item.path);
+    if (isTA) return ["/syllabus", "/tasks"].includes(item.path);
     return true;
   });
   const currentPage = navItems.find((n) => n.path === location.pathname);
@@ -151,7 +153,12 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   }`}
                 >
                   <item.icon className="w-4 h-4 flex-shrink-0" />
-                  {!isCollapsed && <span>{label}</span>}
+                  {!isCollapsed && <span className="flex-1 text-left">{label}</span>}
+                  {!isCollapsed && isAdmin && item.path === "/syllabus" && pendingCount > 0 && (
+                    <span className="bg-amber-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+                      {pendingCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
