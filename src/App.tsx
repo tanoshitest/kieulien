@@ -9,7 +9,6 @@ import { SyllabusFeaturesProvider } from "@/contexts/SyllabusFeaturesContext";
 import AppLayout from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import CRMPage from "@/pages/CRMPage";
-import CoursesPage from "@/pages/CoursesPage";
 import StudentsPage from "@/pages/StudentsPage";
 import StudentDetailPage from "@/pages/StudentDetailPage";
 import UserManagementPage from "@/pages/UserManagementPage";
@@ -46,7 +45,6 @@ const ProtectedApp = () => {
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/crm" element={<CRMPage />} />
-        <Route path="/courses" element={<CoursesPage />} />
         <Route path="/schedule" element={<SchedulePage />} />
         <Route path="/students" element={<StudentsPage />} />
         <Route path="/students/:id" element={<StudentDetailPage />} />

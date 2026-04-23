@@ -38,7 +38,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   // Dashboard removed as per user request
   { label: "Lớp học của tôi", path: "/my-classes", icon: BookOpen, teacherOnly: true },
-  { label: "Quản lý lớp học", path: "/courses", icon: BookOpen, adminOnly: true },
   { label: "Quản lý người dùng", path: "/users", icon: UserCog, adminOnly: true },
   { label: "Syllabus", path: "/syllabus", icon: BookMarked },
   { label: "Lịch dạy", path: "/schedule", icon: Calendar },
@@ -134,8 +133,6 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
               const label = item.path === "/tasks"
                 ? (isAdmin ? "Phân công công việc" : "Công việc của tôi")
-                : item.path === "/courses" 
-                ? (isAdmin ? "Quản lý lớp học" : "Lớp đc phân công")
                 : item.path === "/schedule"
                 ? (isAdmin ? "Quản lý lịch dạy" : "Lịch dạy của tôi")
                 : item.path === "/timekeeping"
