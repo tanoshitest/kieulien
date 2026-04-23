@@ -192,13 +192,23 @@ export default function PptxViewer({ url, title }: Props) {
       const containerW = host.clientWidth - 8;
       const scale = Math.min(1, containerW / nativeW);
 
-      // Dùng CSS zoom thay transform — zoom thu cả layout nên không bị crop
+      // Inline style — thắng mọi CSS khác (specificity cao nhất)
       slides.forEach(s => {
         s.style.zoom = String(scale);
         s.style.transform = "";
-        s.style.marginBottom = "16px";
+        s.style.marginBottom = "24px";
         s.style.marginRight = "";
         s.style.display = "block";
+        s.style.overflow = "visible"; // fix clip chữ dưới
+        // Tăng height +15% bù cho font render lệch
+        const h = parseInt(s.style.height || "0");
+        if (h > 0) s.style.height = `${Math.ceil(h * 1.15)}px`;
+        // Các div con bên trong cũng phải visible
+        s.querySelectorAll<HTMLElement>("div, span, p").forEach(child => {
+          child.style.overflow = "visible";
+          child.style.whiteSpace = "normal";
+          child.style.textOverflow = "clip";
+        });
       });
     };
 
