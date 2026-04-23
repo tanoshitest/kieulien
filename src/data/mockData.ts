@@ -1225,7 +1225,7 @@ export const syllabuses: Syllabus[] = [
         vocab: "Hello, Hi, My name is, What's your name?, Nice to meet you, Goodbye, Bye",
         grammar: "Subject pronouns: I, You. Simple present: My name is... / I am...",
         teachingProcess: "1. Warm-up: Teacher greets students (3 min)\n2. Introduce vocabulary with flashcards (10 min)\n3. Model dialogue practice in pairs (10 min)\n4. Role-play: Meet and greet activity (10 min)\n5. Song: 'Hello Song' (5 min)\n6. Wrap-up & assign homework (2 min)",
-        materialsLink: "/unit-1-lesson-1-2.mp4",
+        materialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW001", type: "video_speaking", title: "Introduce yourself", description: "Record a 30-second video introducing yourself in English: name, age, class." },
           { id: "HW002", type: "writing", title: "Write your name card", description: "Draw and write: My name is ___, I am ___ years old." }
