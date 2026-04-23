@@ -1225,7 +1225,7 @@ export const syllabuses: Syllabus[] = [
         vocab: "Hello, Hi, My name is, What's your name?, Nice to meet you, Goodbye, Bye",
         grammar: "Subject pronouns: I, You. Simple present: My name is... / I am...",
         teachingProcess: "1. Warm-up: Teacher greets students (3 min)\n2. Introduce vocabulary with flashcards (10 min)\n3. Model dialogue practice in pairs (10 min)\n4. Role-play: Meet and greet activity (10 min)\n5. Song: 'Hello Song' (5 min)\n6. Wrap-up & assign homework (2 min)",
-        materialsLink: "/unit 1_lesson 1&2.pptx",
+        materialsLink: "https://docs.google.com/presentation/d/1LaQbRKZF42ixQhsHeXDEaIXn8ZkjZK-M/edit?slide=id.p10#slide=id.p10",
         homeworks: [
           { id: "HW001", type: "video_speaking", title: "Introduce yourself", description: "Record a 30-second video introducing yourself in English: name, age, class." },
           { id: "HW002", type: "writing", title: "Write your name card", description: "Draw and write: My name is ___, I am ___ years old." }
@@ -1237,7 +1237,7 @@ export const syllabuses: Syllabus[] = [
         vocab: "Mother, Father, Sister, Brother, Grandmother, Grandfather, Family",
         grammar: "This is my... / These are my... | Possessive: my, your, his, her",
         teachingProcess: "1. Review Unit 1 vocabulary (5 min)\n2. Family flashcards presentation (10 min)\n3. Listen & point in the book (8 min)\n4. Draw your family tree activity (10 min)\n5. Present family tree to class (7 min)\n6. Homework explanation (2 min)",
-        materialsLink: "/unit 1_lesson 1&2.pptx",
+        materialsLink: "https://docs.google.com/presentation/d/1LaQbRKZF42ixQhsHeXDEaIXn8ZkjZK-M/edit?slide=id.p10#slide=id.p10",
         homeworks: [
           { id: "HW003", type: "video_speaking", title: "Talk about your family", description: "Record a video (45 seconds) talking about your family members." },
           { id: "HW004", type: "quizizz", title: "Family vocabulary quiz", description: "Complete the Quizizz on family vocabulary.", externalLink: "https://quizizz.com/join?gc=123456" }

@@ -79,9 +79,9 @@ function VideoPlayer({ url, title, watermark }: { url: string; title?: string; w
 
 function GSlidesPlayer({ url, title }: { url: string; title?: string }) {
   // Đảm bảo dùng /embed thay vì /edit
-  const embedUrl = url.replace(/\/edit.*$/i, "/embed?start=false&loop=false&delayms=3000");
+  const embedUrl = url.replace(/\/edit.*$/i, "/embed?start=false&loop=false&delayms=3000&rm=minimal");
   return (
-    <div className="rounded-lg overflow-hidden ring-1 ring-border bg-black">
+    <div className="relative rounded-lg overflow-hidden ring-1 ring-border bg-black">
       <iframe
         src={embedUrl}
         title={title ?? "Slides"}
