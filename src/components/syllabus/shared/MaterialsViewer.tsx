@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Link2, Maximize2, ShieldCheck, FileVideo, ExternalLink, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import PptxViewer from "@/components/syllabus/shared/PptxViewer";
 
 interface Props {
   url?: string;
@@ -130,7 +131,7 @@ export default function MaterialsViewer({ url, title, watermark, compact }: Prop
   const inner = (() => {
     if (kind === "video") return <VideoPlayer url={url} title={title} watermark={watermark} />;
     if (kind === "gslides") return <GSlidesPlayer url={url} title={title} />;
-    if (kind === "pptx") return <PptxNotice url={url} />;
+    if (kind === "pptx") return <PptxViewer url={url} title={title} />;
     return <ExternalLinkBlock url={url} title={title} />;
   })();
 
