@@ -11,8 +11,10 @@ import MaterialsViewer from "@/components/syllabus/shared/MaterialsViewer";
 import ContentSecurityWrapper from "@/components/syllabus/shared/ContentSecurityWrapper";
 import BigTestPanel from "@/components/syllabus/shared/BigTestPanel";
 import TeacherNotePanel from "@/components/syllabus/shared/TeacherNotePanel";
+import VnToForeignNotePanel from "@/components/syllabus/shared/VnToForeignNotePanel";
 import SyllabusEditRequestPanel from "@/components/syllabus/shared/SyllabusEditRequestPanel";
 import TeacherEvaluationPanel from "@/components/syllabus/shared/TeacherEvaluationPanel";
+import ForeignTeacherEvaluationPanel from "@/components/syllabus/shared/ForeignTeacherEvaluationPanel";
 import { useSyllabusFeatures } from "@/contexts/SyllabusFeaturesContext";
 import SyllabusSidebarLayout, { type NavItem } from "@/components/syllabus/shared/SyllabusSidebarLayout";
 import { GameTabContent, QuizTabContent } from "@/components/syllabus/shared/GameQuizContent";
@@ -50,13 +52,14 @@ const readOnlyStatusConfig: Record<HomeworkStatus, { label: string; color: strin
   graded: { label: "Đã chấm", color: "bg-green-100 text-green-700" },
 };
 
-const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelect?: boolean; readOnly?: boolean }> = ({ showStaffReport = false, hideCourseSelect = false, readOnly = false }) => {
+const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelect?: boolean; readOnly?: boolean; foreignMode?: boolean }> = ({ showStaffReport = false, hideCourseSelect = false, readOnly = false, foreignMode = false }) => {
   const featureCtx = useSyllabusFeatures();
   const { studentStars, awardStar } = featureCtx;
   const [selectedSyllabusId, setSelectedSyllabusId] = useState<string | null>(hideCourseSelect ? (syllabuses[0]?.id ?? null) : null);
   const [submissions, setSubmissions] = useState<HomeworkSubmission[]>(initialSubmissions);
   const [activeTab, setActiveTab] = useState<"today" | "attendance" | "grading" | "classwork" | "staff_report" | "schedule">("today");
   const [expandedProcess, setExpandedProcess] = useState(false);
+  const [processTab, setProcessTab] = useState<"vn" | "foreign">(foreignMode ? "foreign" : "vn");
   const [activeNavItem, setActiveNavItem] = useState<NavItem>("syllabus");
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
@@ -449,19 +452,84 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                   </div>
 
                   <div>
-                    <button onClick={() => setExpandedProcess(p => !p)}
-                      className="w-full flex items-center justify-between text-sm font-semibold text-foreground py-1">
-                      <span>📋 Quy trình dạy</span>
-                      {expandedProcess ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                    </button>
+                    <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                      <span className="text-sm font-semibold text-foreground">📋 Quy trình dạy</span>
+                      {/* Sub-tabs: VN / GVNN — luôn hiện */}
+                      <div className="inline-flex bg-muted/40 rounded-lg p-0.5 border border-border">
+                        <button
+                          onClick={() => { setProcessTab("vn"); setExpandedProcess(true); }}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                            processTab === "vn" && expandedProcess
+                              ? "bg-background shadow text-foreground"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          🇻🇳 GV Việt Nam
+                          <span className="text-[10px] font-normal opacity-70">(40-45′)</span>
+                        </button>
+                        <button
+                          onClick={() => { setProcessTab("foreign"); setExpandedProcess(true); }}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                            processTab === "foreign" && expandedProcess
+                              ? "bg-background shadow text-foreground"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          🌍 GV Nước ngoài
+                          <span className="text-[10px] font-normal opacity-70">(15-20′)</span>
+                        </button>
+                        <button
+                          onClick={() => setExpandedProcess(p => !p)}
+                          className="px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                          title={expandedProcess ? "Thu gọn" : "Mở rộng"}
+                        >
+                          {expandedProcess ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
                     {expandedProcess && (
-                      <pre className="mt-2 text-sm font-sans text-foreground whitespace-pre-wrap leading-relaxed bg-muted/30 p-3 rounded-lg">
-                        {todaySession.teachingProcess}
-                      </pre>
+                      <>
+                        {processTab === "foreign" && !todaySchedule?.foreignTeacherId && (
+                          <div className="mb-2 px-3 py-2 rounded-lg border border-amber-300 bg-amber-50 text-xs text-amber-900 flex items-start gap-2">
+                            <span>⚠️</span>
+                            <div>
+                              <b>Buổi này chưa gán GVNN.</b> GV Việt cần handle CẢ phần này (15-20 phút cuối). Liên hệ học vụ/admin nếu cần xếp GVNN.
+                            </div>
+                          </div>
+                        )}
+                        <pre className={`text-sm font-sans whitespace-pre-wrap leading-relaxed p-3 rounded-lg border ${
+                          processTab === "foreign"
+                            ? "bg-emerald-50/60 border-emerald-200 text-foreground"
+                            : "bg-muted/30 border-border text-foreground"
+                        }`}>
+                          {processTab === "foreign"
+                            ? (todaySession.foreignContent ?? "Buổi này chưa có nội dung dành cho GVNN. Liên hệ admin/TA để bổ sung.")
+                            : (todaySession.vnContent ?? todaySession.teachingProcess)}
+                        </pre>
+                      </>
                     )}
                   </div>
                 </div>
               </div>
+
+              {/* 🌍 Bridge với GVNN — đặt ngay dưới session info để GV Việt thấy ngay */}
+              {!foreignMode && todaySchedule && (
+                <VnToForeignNotePanel
+                  classId={todaySchedule.classId}
+                  className={todaySchedule.className}
+                  date={todaySchedule.date}
+                  classScheduleId={todaySchedule.id}
+                  sessionId={todaySession.id}
+                  foreignTeacherId={todaySchedule.foreignTeacherId}
+                  foreignTeacherName={todaySchedule.foreignTeacherName}
+                  foreignStartTime={todaySchedule.foreignStartTime}
+                  foreignEndTime={todaySchedule.foreignEndTime}
+                  foreignContent={todaySession.foreignContent}
+                  foreignMaterialsLink={todaySession.foreignMaterialsLink}
+                  vnTeacherId={todaySchedule.teacherId}
+                  vnTeacherName={todaySchedule.teacherName}
+                />
+              )}
 
               {/* Bài tập của session hôm nay */}
               {todaySession.homeworks.length > 0 && (
@@ -493,6 +561,16 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                   classId={todaySchedule.classId}
                   syllabusSessionId={todaySession.id}
                   teacherName="Ms. Thu Trang"
+                />
+              )}
+
+              {/* GV Việt chấm GVNN sau buổi dạy (nếu buổi này có GVNN) */}
+              {todaySchedule?.foreignTeacherId && todaySchedule?.foreignTeacherName && (
+                <ForeignTeacherEvaluationPanel
+                  foreignTeacherId={todaySchedule.foreignTeacherId}
+                  foreignTeacherName={todaySchedule.foreignTeacherName}
+                  classScheduleId={todaySchedule.id}
+                  className={todaySchedule.className}
                 />
               )}
 

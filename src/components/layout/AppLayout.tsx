@@ -12,8 +12,9 @@ import {
   Users2, Clock, BellRing, UserMinus, ShieldAlert, LineChart, LogOut, Mic,
   BookMarked
 } from "lucide-react";
-import { notifications } from "@/data/mockData";
+import { notifications, foreignTeachers } from "@/data/mockData";
 import { useClassSchedules } from "@/contexts/ClassScheduleContext";
+import { useForeignNotes } from "@/contexts/ForeignNoteContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,18 +33,18 @@ interface NavItem {
   parentOnly?: boolean;
   teacherOnly?: boolean;
   taOnly?: boolean;
+  foreignOnly?: boolean;
   hideForParent?: boolean;
 }
 
 const navItems: NavItem[] = [
   // Dashboard removed as per user request
-  { label: "Lớp học của tôi", path: "/my-classes", icon: BookOpen, teacherOnly: true },
   { label: "Quản lý người dùng", path: "/users", icon: UserCog, adminOnly: true },
   { label: "Syllabus", path: "/syllabus", icon: BookMarked },
   { label: "Lịch dạy", path: "/schedule", icon: Calendar },
   { label: "Quản lý hàng hoá", path: "/inventory", icon: Layers, adminOnly: true },
   { label: "Phân công công việc", path: "/tasks", icon: ClipboardList },
-  { label: "Ghi chú chấm công", path: "/timekeeping", icon: Fingerprint, teacherOnly: true },
+  { label: "Ghi chú chấm công", path: "/timekeeping", icon: Fingerprint },
   { label: "Báo cáo", path: "/admin-reports", icon: BarChart3, adminOnly: true },
   { label: "Cấu hình", path: "/settings", icon: Settings, adminOnly: true },
   // Parent Items
@@ -58,8 +59,14 @@ const navItems: NavItem[] = [
 
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { role, login, logout, isAdmin, isTeacher, isParent, isTA } = useRole();
+  const { role, login, logout, isAdmin, isTeacher, isParent, isTA, isForeignTeacher } = useRole();
   const { pendingCount } = useClassSchedules();
+  const { unreadCount } = useForeignNotes();
+  // GVNN xem lịch của mình → đếm note unread cho FT đầu tiên (mock current user)
+  // GV Việt / TA / Admin → đếm tất cả note unread trong system (để biết có note mới chưa GVNN nào đọc)
+  const foreignNoteUnread = isForeignTeacher
+    ? unreadCount(foreignTeachers[0]?.id)
+    : unreadCount();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -68,13 +75,17 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [crmOpen, setCrmOpen] = useState(true);
 
   const filteredNav = navItems.filter((item) => {
+    if (isForeignTeacher) return ["/schedule", "/timekeeping"].includes(item.path);
     if (isParent) return item.parentOnly || item.path === "/syllabus";
     if (item.parentOnly) return false;
+    if (item.foreignOnly) return false;
     if (item.adminOnly && !isAdmin) return false;
+    // Admin không cần "Quản lý chấm công" — đã có trong Báo cáo
+    if (isAdmin && item.path === "/timekeeping") return false;
     if (item.teacherOnly && !isTeacher) return false;
     if (item.taOnly && !isTA) return false;
-    // TA: chỉ thấy Syllabus + Lịch dạy + Công việc
-    if (isTA) return ["/syllabus", "/tasks"].includes(item.path);
+    // TA: chỉ thấy Syllabus + Lịch dạy + Công việc + Lịch GVNN
+    if (isTA) return ["/syllabus", "/tasks", "/schedule", "/timekeeping"].includes(item.path);
     return true;
   });
   const currentPage = navItems.find((n) => n.path === location.pathname);
@@ -134,7 +145,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               const label = item.path === "/tasks"
                 ? (isAdmin ? "Phân công công việc" : "Công việc của tôi")
                 : item.path === "/schedule"
-                ? (isAdmin ? "Quản lý lịch dạy" : "Lịch dạy của tôi")
+                ? (isAdmin || isTA ? "Lịch dạy" : "Lịch dạy của tôi")
                 : item.path === "/timekeeping"
                 ? (isAdmin ? "Quản lý chấm công" : "Chấm công của tôi")
                 : item.label;
@@ -156,6 +167,17 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       {pendingCount}
                     </span>
                   )}
+                  {!isCollapsed && item.path === "/schedule" && foreignNoteUnread > 0 && (
+                    <span
+                      title={isForeignTeacher ? `${foreignNoteUnread} note mới từ GV Việt` : `${foreignNoteUnread} note GVNN chưa đọc`}
+                      className="bg-rose-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center animate-pulse"
+                    >
+                      {foreignNoteUnread}
+                    </span>
+                  )}
+                  {isCollapsed && item.path === "/schedule" && foreignNoteUnread > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+                  )}
                 </button>
               );
             })}
@@ -168,10 +190,10 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <button
                 className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-2 px-3'} py-2 rounded-md text-sm bg-sidebar-accent text-sidebar-accent-foreground hover:bg-primary hover:text-primary-foreground transition-colors outline-none cursor-pointer`}
               >
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isAdmin ? "bg-kpi-blue" : isTeacher ? "bg-kpi-green" : isTA ? "bg-violet-500" : "bg-purple-500"}`} />
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isAdmin ? "bg-kpi-blue" : isTeacher ? "bg-kpi-green" : isTA ? "bg-violet-500" : isForeignTeacher ? "bg-emerald-500" : "bg-purple-500"}`} />
                 {!isCollapsed && (
                   <>
-                    {isAdmin ? "Admin" : isTeacher ? "Giảng viên" : isTA ? "Học vụ / TA" : "Phụ huynh"}
+                    {isAdmin ? "Admin" : isTeacher ? "Giảng viên" : isTA ? "Học vụ / TA" : isForeignTeacher ? "GV Nước ngoài" : "Phụ huynh"}
                     <ChevronRight className="w-3 h-3 ml-auto opacity-50" />
                   </>
                 )}
@@ -224,7 +246,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       const label = item.path === "/tasks"
                         ? (isAdmin ? "Phân công công việc" : "Công việc của tôi")
                       : item.path === "/schedule"
-                        ? (isAdmin ? "Quản lý lịch dạy" : "Lịch dạy của tôi")
+                        ? (isAdmin || isTA ? "Lịch dạy" : "Lịch dạy của tôi")
                       : item.path === "/users"
                         ? "Quản lý User"
                       : item.label;

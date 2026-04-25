@@ -31,10 +31,11 @@ interface RoleEntry {
 }
 
 const ROLES: RoleEntry[] = [
-  { id: "admin",   label: "Quản trị viên", desc: "Toàn quyền hệ thống",      Icon: ShieldCheck,  landing: "/dashboard",     color: "text-violet-600" },
-  { id: "teacher", label: "Giảng viên",    desc: "Lớp học & chấm bài",       Icon: GraduationCap,landing: "/my-classes",    color: "text-blue-600"   },
-  { id: "ta",      label: "Học vụ / TA",   desc: "Syllabus & lịch dạy",      Icon: UserCog,      landing: "/syllabus",      color: "text-amber-600"  },
-  { id: "parent",  label: "Phụ huynh",     desc: "Theo dõi con học",         Icon: Users,        landing: "/parent-portal", color: "text-emerald-600"},
+  { id: "admin",   label: "Admin",                  desc: "Toàn quyền hệ thống",       Icon: ShieldCheck,   landing: "/dashboard",     color: "text-violet-600" },
+  { id: "ta",      label: "Học vụ",                 desc: "Syllabus & lịch dạy",       Icon: UserCog,       landing: "/syllabus",      color: "text-amber-600"  },
+  { id: "teacher", label: "Giáo viên Việt Nam",     desc: "Lớp học & chấm bài",        Icon: GraduationCap, landing: "/syllabus",      color: "text-blue-600"   },
+  { id: "foreign_teacher", label: "Giáo viên nước ngoài", desc: "Lịch dạy GVNN",       Icon: GraduationCap, landing: "/schedule",      color: "text-emerald-700" },
+  { id: "parent",  label: "Phụ huynh",              desc: "Theo dõi con học",          Icon: Users,         landing: "/parent-portal", color: "text-emerald-600"},
 ];
 
 interface Course {

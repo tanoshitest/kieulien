@@ -145,6 +145,24 @@ export interface TeacherEvaluation {
   publishedAt?: string;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// FOREIGN TEACHER EVALUATION — TA + GV đánh giá GVNN
+// ═══════════════════════════════════════════════════════════════
+export interface ForeignTeacherEvaluation {
+  id: string;
+  foreignTeacherId: string;
+  foreignTeacherName: string;
+  classScheduleId?: string;
+  className?: string;
+  date: string;
+  criteria: { criterionId: string; score: number; note?: string }[];
+  overallNote: string;
+  reviewerId: string;
+  reviewerName: string;
+  reviewerRole: "ta" | "teacher" | "admin";
+  createdAt: string;
+}
+
 // ─────────────────────────────────────────────────────────────
 // CONTEXT
 // ─────────────────────────────────────────────────────────────
@@ -185,6 +203,11 @@ interface FeaturesCtx {
   evaluationCriteria: EvaluationCriterion[];
   upsertEvaluation: (evalu: TeacherEvaluation) => void;
   publishEvaluation: (id: string) => void;
+
+  // Foreign teacher evaluations
+  foreignEvaluations: ForeignTeacherEvaluation[];
+  foreignEvalCriteria: EvaluationCriterion[];
+  upsertForeignEvaluation: (evalu: ForeignTeacherEvaluation) => void;
 }
 
 const FeaturesContext = createContext<FeaturesCtx | null>(null);
@@ -199,6 +222,15 @@ const DEFAULT_CRITERIA: EvaluationCriterion[] = [
   { id: "C6", label: "Đúng giờ & tác phong", maxScore: 10 },
   { id: "C7", label: "Kết quả học tập của HS", maxScore: 10 },
   { id: "C8", label: "Phản hồi PH & học vụ", maxScore: 10 },
+];
+
+// Tiêu chí dành cho GVNN (15-20 phút cuối buổi, focus phát âm + tương tác)
+const FOREIGN_CRITERIA: EvaluationCriterion[] = [
+  { id: "FC1", label: "Phát âm bản ngữ chuẩn", maxScore: 10 },
+  { id: "FC2", label: "Tương tác trẻ em / năng lượng", maxScore: 10 },
+  { id: "FC3", label: "Phối hợp với GV Việt", maxScore: 10 },
+  { id: "FC4", label: "Đúng giờ & tác phong", maxScore: 10 },
+  { id: "FC5", label: "Hiệu quả speaking/listening cho HS", maxScore: 10 },
 ];
 
 const today = () => new Date().toISOString();
@@ -433,6 +465,33 @@ export const SyllabusFeaturesProvider: React.FC<{ children: React.ReactNode }> =
     setEvaluations(prev => prev.map(e => e.id === id ? { ...e, visibleToTeacher: true, publishedAt: today() } : e));
   }, []);
 
+  // ─── Foreign Teacher Evaluations ───────────────────────────
+  const [foreignEvaluations, setForeignEvaluations] = useState<ForeignTeacherEvaluation[]>([
+    {
+      id: "FEVAL_001",
+      foreignTeacherId: "FT001",
+      foreignTeacherName: "Mr. John Smith",
+      classScheduleId: "CS002", className: "4CLC 2",
+      date: "2026-04-22",
+      criteria: [
+        { criterionId: "FC1", score: 10 }, { criterionId: "FC2", score: 9 },
+        { criterionId: "FC3", score: 8 }, { criterionId: "FC4", score: 9 },
+        { criterionId: "FC5", score: 9 },
+      ],
+      overallNote: "Phát âm rất tốt, HS hào hứng. Phối hợp GV Việt mượt mà.",
+      reviewerId: "USR001", reviewerName: "Ms. Thu Trang", reviewerRole: "teacher",
+      createdAt: "2026-04-22T20:30:00",
+    },
+  ]);
+
+  const upsertForeignEvaluation = useCallback<FeaturesCtx["upsertForeignEvaluation"]>((evalu) => {
+    setForeignEvaluations(prev => {
+      const idx = prev.findIndex(e => e.id === evalu.id);
+      if (idx === -1) return [evalu, ...prev];
+      const next = [...prev]; next[idx] = evalu; return next;
+    });
+  }, []);
+
   const value = useMemo<FeaturesCtx>(() => ({
     studentStars, starLogs, awardStar,
     stages, configureSyllabusStages, getStagesBySyllabus, stageStatusMap, setStageStatus, isSessionLocked,
@@ -440,6 +499,7 @@ export const SyllabusFeaturesProvider: React.FC<{ children: React.ReactNode }> =
     teacherNotes, upsertTeacherNote,
     sylEditRequests, submitSylEditRequest, approveSylEdit, rejectSylEdit,
     evaluations, evaluationCriteria: DEFAULT_CRITERIA, upsertEvaluation, publishEvaluation,
+    foreignEvaluations, foreignEvalCriteria: FOREIGN_CRITERIA, upsertForeignEvaluation,
   }), [
     studentStars, starLogs, awardStar,
     stages, configureSyllabusStages, getStagesBySyllabus, stageStatusMap, setStageStatus, isSessionLocked,
@@ -447,6 +507,7 @@ export const SyllabusFeaturesProvider: React.FC<{ children: React.ReactNode }> =
     teacherNotes, upsertTeacherNote,
     sylEditRequests, submitSylEditRequest, approveSylEdit, rejectSylEdit,
     evaluations, upsertEvaluation, publishEvaluation,
+    foreignEvaluations, upsertForeignEvaluation,
   ]);
 
   return <FeaturesContext.Provider value={value}>{children}</FeaturesContext.Provider>;

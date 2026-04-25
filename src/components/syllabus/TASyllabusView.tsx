@@ -6,6 +6,7 @@ import {
   ClipboardList
 } from "lucide-react";
 import StaffReportTabContent from "@/components/syllabus/shared/StaffReportTabContent";
+import ForeignTeacherEvaluationPanel from "@/components/syllabus/shared/ForeignTeacherEvaluationPanel";
 import MaterialsViewer from "@/components/syllabus/shared/MaterialsViewer";
 import SyllabusSidebarLayout, { type NavItem } from "@/components/syllabus/shared/SyllabusSidebarLayout";
 import { GameTabContent, QuizTabContent } from "@/components/syllabus/shared/GameQuizContent";
@@ -401,7 +402,17 @@ const TASyllabusView: React.FC = () => {
 
       {/* STAFF REPORT TAB (chỉ TA/Admin) */}
       {activeTab === "staff_report" && (
-        <StaffReportTabContent />
+        <div className="space-y-4">
+          <StaffReportTabContent />
+          {todaySchedule?.foreignTeacherId && todaySchedule?.foreignTeacherName && (
+            <ForeignTeacherEvaluationPanel
+              foreignTeacherId={todaySchedule.foreignTeacherId}
+              foreignTeacherName={todaySchedule.foreignTeacherName}
+              classScheduleId={todaySchedule.id}
+              className={todaySchedule.className}
+            />
+          )}
+        </div>
       )}
 
         </>

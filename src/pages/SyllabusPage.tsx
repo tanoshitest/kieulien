@@ -40,10 +40,18 @@ const roleConfig = {
     bg: "bg-rose-50",
     text: "text-rose-700",
   },
+  foreign_teacher: {
+    label: "GV Nước ngoài",
+    sublabel: "Xem nội dung 15-20 phút phụ trách",
+    icon: GraduationCap,
+    gradient: "from-emerald-600 to-green-700",
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+  },
 };
 
 const SyllabusPage: React.FC = () => {
-  const { role, isAdmin, isTeacher, isParent, isTA } = useRole();
+  const { role, isAdmin, isTeacher, isParent, isTA, isForeignTeacher } = useRole();
 
   const cfg = roleConfig[role] ?? roleConfig.admin;
   const Icon = cfg.icon;
@@ -51,6 +59,7 @@ const SyllabusPage: React.FC = () => {
   const renderContent = () => {
     if (isAdmin) return <AdminSyllabusView />;
     if (isTeacher) return <TeacherSyllabusView />;
+    if (isForeignTeacher) return <TeacherSyllabusView foreignMode />;
     if (isTA) return <TASyllabusView />;
     if (isParent) return <ParentSyllabusView />;
     return null;

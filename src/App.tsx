@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { RoleProvider } from "@/contexts/RoleContext";
 import { ClassScheduleProvider } from "@/contexts/ClassScheduleContext";
 import { SyllabusFeaturesProvider } from "@/contexts/SyllabusFeaturesContext";
+import { ForeignNoteProvider } from "@/contexts/ForeignNoteContext";
 import AppLayout from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import CRMPage from "@/pages/CRMPage";
@@ -21,6 +22,7 @@ import TasksPage from "@/pages/TasksPage";
 import SettingsPage from "@/pages/SettingsPage";
 import DocumentsPage from "@/pages/DocumentsPage";
 import SchedulePage from "@/pages/SchedulePage";
+import UnifiedSchedulePage from "@/pages/UnifiedSchedulePage";
 import TimekeepingPage from "@/pages/TimekeepingPage";
 import MyClassesPage from "@/pages/MyClassesPage";
 import ParentDashboard from "@/pages/ParentDashboard";
@@ -33,6 +35,7 @@ import LandingPage from "@/pages/LandingPage";
 import NotFound from "@/pages/NotFound";
 import SurveyDemoPage from "@/pages/SurveyDemoPage";
 import SyllabusPage from "@/pages/SyllabusPage";
+import ForeignTeacherSchedulePage from "@/pages/ForeignTeacherSchedulePage";
 import { useRole } from "@/contexts/RoleContext";
 
 const queryClient = new QueryClient();
@@ -45,7 +48,7 @@ const ProtectedApp = () => {
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/crm" element={<CRMPage />} />
-        <Route path="/schedule" element={<SchedulePage />} />
+        <Route path="/schedule" element={<UnifiedSchedulePage />} />
         <Route path="/students" element={<StudentsPage />} />
         <Route path="/students/:id" element={<StudentDetailPage />} />
         <Route path="/users" element={<UserHubPage />} />
@@ -68,6 +71,7 @@ const ProtectedApp = () => {
         <Route path="/survey-demo" element={<SurveyDemoPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/syllabus" element={<SyllabusPage />} />
+        <Route path="/foreign-schedule" element={<UnifiedSchedulePage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>
@@ -83,11 +87,13 @@ const App = () => (
         <RoleProvider>
           <ClassScheduleProvider>
             <SyllabusFeaturesProvider>
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/*" element={<ProtectedApp />} />
-              </Routes>
+              <ForeignNoteProvider>
+                <Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/*" element={<ProtectedApp />} />
+                </Routes>
+              </ForeignNoteProvider>
             </SyllabusFeaturesProvider>
           </ClassScheduleProvider>
         </RoleProvider>

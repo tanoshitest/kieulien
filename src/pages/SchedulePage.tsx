@@ -42,9 +42,11 @@ const COMPACT_SLOTS = [
 ];
 
 const SchedulePage = () => {
-  const { isAdmin } = useRole();
+  const { isAdmin, isTeacher } = useRole();
   const navigate = useNavigate();
-  const [filterTeacher, setFilterTeacher] = useState("all");
+  // Mock current teacher = Ms. Thu Trang (USR001)
+  const CURRENT_TEACHER_ID = "USR001";
+  const [filterTeacher, setFilterTeacher] = useState(isTeacher && !isAdmin ? CURRENT_TEACHER_ID : "all");
   const [filterClass, setFilterClass] = useState("all");
   
   // Generating Demo Data (80% coverage)
@@ -147,14 +149,16 @@ const SchedulePage = () => {
     return events.filter(s => {
       const cls = classes.find(c => c.id === s.classId);
       const isCorrectDate = s.date === fullDate;
-      
+
       // Basic time matching logic for the slots
       const startHour = parseInt(s.startTime.split(":")[0]);
       const slotStartHour = parseInt(slot.time.split(":")[0]);
-      
-      const teacherMatch = filterTeacher === "all" || cls?.teacherId === filterTeacher;
+
+      // Teacher-only: luôn ép filter về chính mình
+      const effectiveTeacherFilter = (isTeacher && !isAdmin) ? CURRENT_TEACHER_ID : filterTeacher;
+      const teacherMatch = effectiveTeacherFilter === "all" || cls?.teacherId === effectiveTeacherFilter;
       const classMatch = filterClass === "all" || s.classId === filterClass;
-      
+
       return isCorrectDate && (startHour === slotStartHour) && teacherMatch && classMatch;
     });
   };
@@ -176,18 +180,21 @@ const SchedulePage = () => {
           <div className="h-10 w-[1px] bg-slate-100 mx-1 hidden lg:block" />
 
           <div className="flex items-center gap-2">
-            <div className="relative group">
-              <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
-              <select 
-                value={filterTeacher}
-                onChange={(e) => setFilterTeacher(e.target.value)}
-                className="pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-[11px] font-black uppercase tracking-tight appearance-none outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/50 transition-all cursor-pointer min-w-[160px]"
-              >
-                <option value="all">Tất cả Giáo viên</option>
-                {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-              <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-            </div>
+            {/* Teacher filter — chỉ admin/TA mới đổi được. Teacher chỉ thấy lịch của mình. */}
+            {(isAdmin) && (
+              <div className="relative group">
+                <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
+                <select
+                  value={filterTeacher}
+                  onChange={(e) => setFilterTeacher(e.target.value)}
+                  className="pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-[11px] font-black uppercase tracking-tight appearance-none outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/50 transition-all cursor-pointer min-w-[160px]"
+                >
+                  <option value="all">Tất cả Giáo viên</option>
+                  {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              </div>
+            )}
 
             <div className="relative group">
               <School className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
@@ -259,7 +266,7 @@ const SchedulePage = () => {
                                   initial={{ opacity: 0, scale: 0.98 }}
                                   animate={{ opacity: 1, scale: 1 }}
                                   key={event.id}
-                                  onClick={() => navigate(`/classes/${event.classId}`)}
+                                  onClick={() => navigate(`/syllabus`)}
                                   className={`p-2 rounded-2xl border shadow-sm cursor-pointer transition-all hover:scale-[1.01] flex flex-col justify-between h-full min-h-0 ${
                                     slot.session === 'Morning' ? "bg-amber-50 border-amber-100 text-amber-800" :
                                     slot.session === 'Afternoon' ? "bg-blue-50 border-blue-100 text-blue-800" :

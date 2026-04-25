@@ -2,7 +2,7 @@
 // MOCK DATA - School Management System
 // ============================================================
 
-export type Role = "admin" | "teacher" | "parent" | "ta";
+export type Role = "admin" | "teacher" | "parent" | "ta" | "foreign_teacher";
 
 // ---- Students ----
 export interface Student {
@@ -106,10 +106,11 @@ export const branches: Branch[] = [
   { id: "BR001", name: "MENGLISH - Cầu Giấy", location: "8 Xuân Thủy, Cầu Giấy, HN", phone: "024.123.456" },
   { id: "BR002", name: "MENGLISH - Quận 1", location: "15 Lê Thánh Tôn, Quận 1, HCM", phone: "028.987.654" },
   { id: "BR003", name: "MENGLISH - Online", location: "Hệ thống học trực tuyến", phone: "1900.555.666" },
+  { id: "BR004", name: "MENGLISH - Ba Đình", location: "55 Hoàng Hoa Thám, Ba Đình, HN", phone: "024.555.777" },
 ];
 
 // ---- Users (Giảng viên, Vận hành, Trợ giảng...) ----
-export type AppUserRole = "teacher" | "ta" | "ops" | "accounting" | "admin";
+export type AppUserRole = "teacher" | "ta" | "ops" | "accounting" | "admin" | "foreign_teacher";
 
 export interface AppUser {
   id: string;
@@ -130,6 +131,12 @@ export interface AppUser {
     startDate: string;
     endDate: string | null;
     contractFile?: string;
+  };
+  availability?: {
+    days: number[];           // ISO weekday: 1=T2, 2=T3, ..., 6=T7, 7=CN
+    shifts: ("ca1" | "ca2")[]; // ca làm việc
+    maxClassesPerWeek: number;
+    unavailableDates: string[]; // ["YYYY-MM-DD"] nghỉ ad-hoc
   };
 }
 
@@ -163,12 +170,75 @@ export const users: AppUser[] = [
     email: "nhungph@menglish.edu.vn", phone: "0966777888", status: "active",
     contractInfo: { type: "Toàn thời gian", baseSalary: 10000000, startDate: "2023-11-01", endDate: null, contractFile: "hop-dong-nhung.pdf" } 
   },
-  { 
+  {
     id: "USR006", name: "Hoàng Gia Bảo", avatar: "GB", role: "accounting", branchId: "BR001",
     email: "baohg@menglish.edu.vn", phone: "0977888999", status: "active",
-    contractInfo: { type: "Toàn thời gian", baseSalary: 12000000, startDate: "2023-08-15", endDate: null, contractFile: "contract-gb.pdf" } 
+    contractInfo: { type: "Toàn thời gian", baseSalary: 12000000, startDate: "2023-08-15", endDate: null, contractFile: "contract-gb.pdf" }
   },
+  // Giáo viên VN phụ trách lớp tối ở BR003 + BR004
+  { id: "USR007", name: "Ms. Ngô Hà My", avatar: "HM", role: "teacher", branchId: "BR003",
+    specialty: "Kids English Online", hoursThisMonth: 32, totalClasses: 3, avgRating: 4.7,
+    email: "hamyngo@menglish.edu.vn", phone: "0933222111", status: "active",
+    contractInfo: { type: "Toàn thời gian", baseSalary: 14000000, startDate: "2023-05-01", endDate: null } },
+  { id: "USR008", name: "Mr. Lê Quang Huy", avatar: "QH", role: "teacher", branchId: "BR004",
+    specialty: "Cambridge YLE", hoursThisMonth: 36, totalClasses: 4, avgRating: 4.8,
+    email: "quanghuyle@menglish.edu.vn", phone: "0944333222", status: "active",
+    contractInfo: { type: "Toàn thời gian", baseSalary: 15000000, startDate: "2023-02-01", endDate: null } },
+  // ─── 10 Giáo viên Nước ngoài (GVNN) cho 4 cơ sở ───
+  { id: "FT001", name: "Mr. James Wilson", avatar: "JW", role: "foreign_teacher", branchId: "BR001",
+    specialty: "Phonics & Speaking", hoursThisMonth: 40, totalClasses: 0, avgRating: 4.8,
+    email: "james.w@menglish.edu.vn", phone: "0901111001", status: "active",
+    contractInfo: { type: "Bán thời gian", baseSalary: 18000000, startDate: "2024-01-10", endDate: null },
+    availability: { days: [1, 3, 5], shifts: ["ca2"], maxClassesPerWeek: 6, unavailableDates: [] } },
+  { id: "FT002", name: "Ms. Emily Carter", avatar: "EC", role: "foreign_teacher", branchId: "BR001",
+    specialty: "Storytelling & Conversation", hoursThisMonth: 36, totalClasses: 0, avgRating: 4.9,
+    email: "emily.c@menglish.edu.vn", phone: "0901111002", status: "active",
+    contractInfo: { type: "Bán thời gian", baseSalary: 17000000, startDate: "2024-03-01", endDate: null },
+    availability: { days: [2, 4, 6], shifts: ["ca2"], maxClassesPerWeek: 6, unavailableDates: [] } },
+  { id: "FT003", name: "Mr. David Brown", avatar: "DB", role: "foreign_teacher", branchId: "BR001",
+    specialty: "Pronunciation Coaching", hoursThisMonth: 32, totalClasses: 0, avgRating: 4.7,
+    email: "david.b@menglish.edu.vn", phone: "0901111003", status: "active",
+    contractInfo: { type: "Bán thời gian", baseSalary: 16000000, startDate: "2024-05-15", endDate: null },
+    availability: { days: [1, 4, 6], shifts: ["ca1", "ca2"], maxClassesPerWeek: 8, unavailableDates: [] } },
+  { id: "FT004", name: "Ms. Olivia Martinez", avatar: "OM", role: "foreign_teacher", branchId: "BR002",
+    specialty: "Kids English", hoursThisMonth: 38, totalClasses: 0, avgRating: 4.9,
+    email: "olivia.m@menglish.edu.vn", phone: "0901111004", status: "active",
+    contractInfo: { type: "Bán thời gian", baseSalary: 18000000, startDate: "2024-02-20", endDate: null },
+    availability: { days: [1, 3, 5], shifts: ["ca2"], maxClassesPerWeek: 6, unavailableDates: [] } },
+  { id: "FT005", name: "Mr. Liam Thompson", avatar: "LT", role: "foreign_teacher", branchId: "BR002",
+    specialty: "Communication", hoursThisMonth: 30, totalClasses: 0, avgRating: 4.6,
+    email: "liam.t@menglish.edu.vn", phone: "0901111005", status: "active",
+    contractInfo: { type: "Bán thời gian", baseSalary: 16000000, startDate: "2024-04-01", endDate: null },
+    availability: { days: [2, 4], shifts: ["ca2"], maxClassesPerWeek: 4, unavailableDates: [] } },
+  { id: "FT006", name: "Ms. Sophia Lee", avatar: "SL", role: "foreign_teacher", branchId: "BR002",
+    specialty: "Drama & Speaking", hoursThisMonth: 34, totalClasses: 0, avgRating: 4.8,
+    email: "sophia.l@menglish.edu.vn", phone: "0901111006", status: "active",
+    contractInfo: { type: "Bán thời gian", baseSalary: 17000000, startDate: "2024-06-10", endDate: null },
+    availability: { days: [1, 2, 4, 5], shifts: ["ca2"], maxClassesPerWeek: 8, unavailableDates: [] } },
+  { id: "FT007", name: "Mr. Noah Anderson", avatar: "NA", role: "foreign_teacher", branchId: "BR003",
+    specialty: "Online Conversation", hoursThisMonth: 28, totalClasses: 0, avgRating: 4.7,
+    email: "noah.a@menglish.edu.vn", phone: "0901111007", status: "active",
+    contractInfo: { type: "Bán thời gian", baseSalary: 15000000, startDate: "2024-07-01", endDate: null },
+    availability: { days: [2, 4, 5], shifts: ["ca2"], maxClassesPerWeek: 6, unavailableDates: [] } },
+  { id: "FT008", name: "Ms. Ava Robinson", avatar: "AR", role: "foreign_teacher", branchId: "BR003",
+    specialty: "IELTS Speaking", hoursThisMonth: 42, totalClasses: 0, avgRating: 4.9,
+    email: "ava.r@menglish.edu.vn", phone: "0901111008", status: "active",
+    contractInfo: { type: "Toàn thời gian", baseSalary: 22000000, startDate: "2024-01-05", endDate: null },
+    availability: { days: [1, 2, 3, 4, 5], shifts: ["ca1", "ca2"], maxClassesPerWeek: 10, unavailableDates: [] } },
+  { id: "FT009", name: "Mr. Ethan Walker", avatar: "EW", role: "foreign_teacher", branchId: "BR004",
+    specialty: "Phonics for Kids", hoursThisMonth: 36, totalClasses: 0, avgRating: 4.8,
+    email: "ethan.w@menglish.edu.vn", phone: "0901111009", status: "active",
+    contractInfo: { type: "Bán thời gian", baseSalary: 17000000, startDate: "2024-03-15", endDate: null },
+    availability: { days: [1, 3, 5], shifts: ["ca2"], maxClassesPerWeek: 6, unavailableDates: [] } },
+  { id: "FT010", name: "Ms. Mia Harris", avatar: "MH", role: "foreign_teacher", branchId: "BR004",
+    specialty: "Cambridge YLE Coach", hoursThisMonth: 40, totalClasses: 0, avgRating: 4.9,
+    email: "mia.h@menglish.edu.vn", phone: "0901111010", status: "active",
+    contractInfo: { type: "Toàn thời gian", baseSalary: 21000000, startDate: "2023-12-01", endDate: null },
+    availability: { days: [1, 2, 3, 4, 5], shifts: ["ca1", "ca2"], maxClassesPerWeek: 10, unavailableDates: [] } },
 ];
+
+// Helper: foreign teachers
+export const foreignTeachers = users.filter(u => u.role === "foreign_teacher");
 
 // Re-export teachers for legacy support
 export const teachers = users.filter(u => u.role === "teacher");
@@ -188,6 +258,8 @@ export interface ClassItem {
   endDate: string;
   status: "active" | "upcoming" | "completed";
   levelId?: string;
+  /** Độ tuổi hiển thị (vd: "Kinder - 1st Grade", "1st - 3rd Grade") */
+  ageRange?: string;
 }
 
 export const classes: ClassItem[] = [
@@ -1116,6 +1188,12 @@ export interface SyllabusSession {
   vocab: string;
   grammar: string;
   teachingProcess: string;
+  /** Nội dung phần GV Việt Nam dạy (40-45 phút đầu). Nếu trống, dùng teachingProcess. */
+  vnContent?: string;
+  /** Nội dung phần GV Nước Ngoài dạy (15-20 phút). */
+  foreignContent?: string;
+  /** Link tài liệu dành riêng cho GVNN (pptx/pdf/video) */
+  foreignMaterialsLink?: string;
   materialsLink?: string;
   homeworks: SyllabusHomework[];
 }
@@ -1139,6 +1217,19 @@ export interface ClassSchedule {
   syllabusSessionId: string;
   teacherId: string;
   teacherName: string;
+  /** GVNN phụ trách phần 15-20 phút cuối (optional) */
+  foreignTeacherId?: string;
+  foreignTeacherName?: string;
+  /** Thời điểm GVNN bắt đầu dạy (giờ cuối buổi). Tự tính từ auto-schedule. */
+  foreignStartTime?: string;
+  foreignEndTime?: string;
+  /** Shift của lớp trong lịch GVNN: "ca1" (trước giải lao 19:25) hoặc "ca2" (sau 19:35) */
+  foreignShift?: "ca1" | "ca2";
+  /** Snapshot tiện cho UI GVNN: số học viên + độ tuổi của lớp tại thời điểm xếp lịch */
+  studentCount?: number;
+  ageRange?: string;
+  /** Chi nhánh — thường derive từ teacher.branchId, nhưng cache cho UI nhanh */
+  branchId?: string;
   taId?: string;
   taName?: string;
   date: string;
@@ -1226,6 +1317,8 @@ export const syllabuses: Syllabus[] = [
         grammar: "Subject pronouns: I, You. Simple present: My name is... / I am...",
         teachingProcess: "1. Warm-up: Teacher greets students (3 min)\n2. Introduce vocabulary with flashcards (10 min)\n3. Model dialogue practice in pairs (10 min)\n4. Role-play: Meet and greet activity (10 min)\n5. Song: 'Hello Song' (5 min)\n6. Wrap-up & assign homework (2 min)",
         materialsLink: "https://docs.google.com/presentation/d/1LaQbRKZF42ixQhsHeXDEaIXn8ZkjZK-M/edit?slide=id.p10#slide=id.p10",
+        foreignContent: "++++ Practice Speaking (Authentic) ++++\n- Warm up (3 mins): Clap Your Hands – THE KIBOOMERS Preschool Songs for Circle Time – YouTube Music\n- Review words & structure (5 mins): Hi / Hello / My name is… / Nice to meet you\n- Who's this? This is my…\n- Teach the structure (7 mins): ask 3 classmates and report back to teacher\n- Game (5 mins): Pass the ball & greet each other\n> You can use the suggested activities in the presentation or come up with your own.",
+        foreignMaterialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW001", type: "video_speaking", title: "Introduce yourself", description: "Record a 30-second video introducing yourself in English: name, age, class." },
           { id: "HW002", type: "writing", title: "Write your name card", description: "Draw and write: My name is ___, I am ___ years old." }
@@ -1238,6 +1331,8 @@ export const syllabuses: Syllabus[] = [
         grammar: "This is my... / These are my... | Possessive: my, your, his, her",
         teachingProcess: "1. Review Unit 1 vocabulary (5 min)\n2. Family flashcards presentation (10 min)\n3. Listen & point in the book (8 min)\n4. Draw your family tree activity (10 min)\n5. Present family tree to class (7 min)\n6. Homework explanation (2 min)",
         materialsLink: "https://docs.google.com/presentation/d/1LaQbRKZF42ixQhsHeXDEaIXn8ZkjZK-M/edit?slide=id.p10#slide=id.p10",
+        foreignContent: "- Words: mom, dad, brother, sister\n- Who's this? This is my…\n- Teach new vocabulary (7 mins): doll, car, puzzle, ball (using flashcards)\n- Game (7 mins): Teach the structure — What have you got? / I've got a…\n- Sing-a-long (if time allows)",
+        foreignMaterialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW003", type: "video_speaking", title: "Talk about your family", description: "Record a video (45 seconds) talking about your family members." },
           { id: "HW004", type: "quizizz", title: "Family vocabulary quiz", description: "Complete the Quizizz on family vocabulary.", externalLink: "https://quizizz.com/join?gc=123456" }
@@ -1250,6 +1345,8 @@ export const syllabuses: Syllabus[] = [
         grammar: "I have a/an... | Do you have a...? Yes, I do / No, I don't",
         teachingProcess: "1. Warm-up toy guessing game (5 min)\n2. Introduce toy vocabulary with realia (10 min)\n3. Chant: 'I have a ball' (5 min)\n4. Survey activity: Ask classmates about toys (12 min)\n5. Report back findings (5 min)\n6. Assign homework (3 min)",
         materialsLink: "https://drive.google.com/ff1-session3",
+        foreignContent: "- Review Unit 2 (slides 10-16)\n- Review Unit 3 (slides 17-23)\n- Free-talk: What's your favourite toy?\n> You can use the suggested activities in the presentation or come up with your own.",
+        foreignMaterialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW005", type: "video_speaking", title: "Show your favourite toy", description: "Record a video showing and describing your favourite toy." },
           { id: "HW006", type: "writing", title: "My toy list", description: "Write 5 sentences: I have a ___ . It is ___." }
@@ -1262,6 +1359,8 @@ export const syllabuses: Syllabus[] = [
         grammar: "What color is it? It's... | What shape is it? It's a...",
         teachingProcess: "1. Rainbow song warm-up (5 min)\n2. Color & shape flashcard drill (10 min)\n3. Art activity: Draw and color shapes (12 min)\n4. Describe each other's artwork (8 min)\n5. Digital quiz on screen (5 min)\n6. Wrap-up (2 min)",
         materialsLink: "https://drive.google.com/ff1-session4",
+        foreignContent: "- Review colours & shapes flashcards\n- Drill: What colour is it? / What shape is it?\n- Mini-game (7 mins): I-spy with colour+shape\n- Wrap up with Rainbow Song.",
+        foreignMaterialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW007", type: "quizizz", title: "Colors & shapes quiz", description: "Complete the Quizizz about colors and shapes.", externalLink: "https://quizizz.com/join?gc=654321" },
           { id: "HW008", type: "writing", title: "My colorful drawing", description: "Draw a picture and write 5 sentences describing the colors and shapes." }
@@ -1274,6 +1373,8 @@ export const syllabuses: Syllabus[] = [
         grammar: "I like... / I don't like... | Do you like...? Yes, I do / No, I don't",
         teachingProcess: "1. Food bingo warm-up (5 min)\n2. Food vocabulary with real pictures (10 min)\n3. Like/Don't like sorting activity (10 min)\n4. Interview a classmate about food (10 min)\n5. Share results (5 min)\n6. Homework (2 min)",
         materialsLink: "https://drive.google.com/ff1-session5",
+        foreignContent: "- Warm-up: miming food items\n- Drill: Do you like ___? Yes/No\n- Pair interview (5 mins): ask 3 friends\n- Report back: 'Lan likes banana, she doesn't like fish.'",
+        foreignMaterialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW009", type: "video_speaking", title: "My favourite food", description: "Record a 45-second video talking about your favourite food." },
           { id: "HW010", type: "quizizz", title: "Food vocabulary practice", description: "Complete the Quizizz on food vocabulary.", externalLink: "https://quizizz.com/join?gc=789012" }
@@ -1286,6 +1387,8 @@ export const syllabuses: Syllabus[] = [
         grammar: "I have two... | Touch your... | Body part commands",
         teachingProcess: "1. Head Shoulders Knees & Toes song (5 min)\n2. Body parts flashcard labeling (8 min)\n3. Simon Says game (10 min)\n4. Draw & label a body (10 min)\n5. TPR activity with music (7 min)\n6. Homework (2 min)",
         materialsLink: "https://drive.google.com/ff1-session6",
+        foreignContent: "- Warm-up: 'Head, Shoulders, Knees & Toes' fast-tempo song (3 mins)\n- Drill body-part vocab with TPR — touch your nose / clap your hands (5 mins)\n- Simon Says game (5 mins) — focus on listening & pronunciation\n- Wrap-up: ask 3 students 'How many fingers do you have?'",
+        foreignMaterialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW011", type: "video_speaking", title: "Sing the body parts song", description: "Record yourself singing and acting out 'Head, Shoulders, Knees and Toes'." },
           { id: "HW012", type: "writing", title: "Body drawing homework", description: "Draw and label 8 body parts in English." }
@@ -1298,6 +1401,8 @@ export const syllabuses: Syllabus[] = [
         grammar: "It's a... | It can... (jump, fly, swim, run) | I like animals.",
         teachingProcess: "1. Animal sound warm-up (5 min)\n2. Introduce animals with flashcards (10 min)\n3. Animal can/can't chart activity (10 min)\n4. Animal riddle game (10 min)\n5. Mini project: My favourite animal (5 min)\n6. Homework (2 min)",
         materialsLink: "https://drive.google.com/ff1-session7",
+        foreignContent: "- Animal sound game: GVNN makes sound, kids guess (3 mins)\n- Drill: 'It can ___' — fly / swim / run / jump (5 mins)\n- Pair speaking: 'My favourite animal is ___ because it can ___' (5 mins)\n- Closing: animal riddle — 'I'm big, I'm grey, I have a long nose. What am I?'",
+        foreignMaterialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW013", type: "video_speaking", title: "My favourite animal", description: "Record a video about your favourite animal: what it looks like and what it can do." },
           { id: "HW014", type: "quizizz", title: "Animal vocabulary quiz", description: "Complete the Quizizz on animals.", externalLink: "https://quizizz.com/join?gc=345678" }
@@ -1310,6 +1415,8 @@ export const syllabuses: Syllabus[] = [
         grammar: "There is a... / There are... | Where is the...? It's on/in/under...",
         teachingProcess: "1. Classroom scavenger hunt (7 min)\n2. School vocab flashcards (8 min)\n3. Preposition practice with classroom objects (10 min)\n4. Listening: find the object (8 min)\n5. Group activity: describe our classroom (7 min)\n6. Homework (2 min)",
         materialsLink: "https://drive.google.com/ff1-session8",
+        foreignContent: "- Quick scavenger hunt: GVNN says 'Find me a pencil!' kids race (4 mins)\n- Preposition drill with realia: 'Where is the book? On / in / under' (5 mins)\n- Speaking pairs: describe partner's desk using there is/are (5 mins)\n- Wrap up: chant 'In, on, under, next to'",
+        foreignMaterialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW015", type: "video_speaking", title: "Tour of my school bag", description: "Record a video showing what's in your school bag and describing each item." },
           { id: "HW016", type: "writing", title: "My classroom description", description: "Write 5 sentences describing your classroom using there is/there are." }
@@ -1322,6 +1429,8 @@ export const syllabuses: Syllabus[] = [
         grammar: "How many...are there? There are... | Ordinal numbers: 1st, 2nd, 3rd",
         teachingProcess: "1. Number song warm-up 1-20 (5 min)\n2. Counting flashcard drill (8 min)\n3. Number line activity on board (8 min)\n4. Ordinal number game (racing) (10 min)\n5. Math in English mini worksheet (9 min)\n6. Homework (2 min)",
         materialsLink: "https://drive.google.com/ff1-session9",
+        foreignContent: "- Counting chant 1-20 with claps (3 mins)\n- 'How many ___?' drill using flashcards (5 mins)\n- Ordinal race: 'Who's first/second/third?' (5 mins)\n- Mini math: 'Two plus three is ___?' speaking activity (4 mins)",
+        foreignMaterialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW017", type: "video_speaking", title: "Count 1-20 challenge", description: "Record yourself counting from 1-20 and pointing to 5 objects, saying how many." },
           { id: "HW018", type: "quizizz", title: "Numbers quiz", description: "Complete the Quizizz on numbers 1-20.", externalLink: "https://quizizz.com/join?gc=901234" }
@@ -1334,6 +1443,8 @@ export const syllabuses: Syllabus[] = [
         grammar: "Review all grammar points from Unit 1-9",
         teachingProcess: "1. Kahoot review game covering all units (15 min)\n2. Student presentations (from HW) (15 min)\n3. Certificates & celebration (10 min)",
         materialsLink: "https://drive.google.com/ff1-session10",
+        foreignContent: "- Open ceremony: 'Congratulations everyone!' (2 mins)\n- Free-talk Q&A: 'Tell me about your family/favourite food/animal' (8 mins)\n- Award certificate ceremony — GVNN reads each name aloud (5 mins)\n- Group photo & cheer 'See you next term!' (5 mins)",
+        foreignMaterialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW019", type: "video_speaking", title: "Final speaking showcase", description: "Record a 1-minute video: introduce yourself, talk about your family, favourite food, and favourite animal." }
         ]
@@ -1356,6 +1467,8 @@ export const syllabuses: Syllabus[] = [
         grammar: "There is/are... | Prepositions: in, on, under, next to, behind, in front of",
         teachingProcess: "1. House tour video warm-up (5 min)\n2. Room vocabulary flashcards (10 min)\n3. Preposition practice with toy house (10 min)\n4. Describe your dream home (10 min)\n5. Listening activity (5 min)\n6. Homework (2 min)",
         materialsLink: "https://drive.google.com/ff2-session1",
+        foreignContent: "- Warm-up: 'Where do you live?' Q&A (3 mins)\n- Drill room vocab with flashcards: bedroom, kitchen, bathroom (5 mins)\n- Pair speaking: 'My favourite room is ___ because ___' (5 mins)\n- Wrap-up: 'Tell me one thing in your bedroom'",
+        foreignMaterialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW101", type: "video_speaking", title: "Tour of my home", description: "Record a video giving a tour of your home in English." },
           { id: "HW102", type: "quizizz", title: "Home vocabulary quiz", description: "Complete the Quizizz on home vocabulary.", externalLink: "https://quizizz.com/join?gc=111222" }
@@ -1368,6 +1481,8 @@ export const syllabuses: Syllabus[] = [
         grammar: "Present simple for routines: I wake up at... | Frequency adverbs: always, usually, sometimes, never",
         teachingProcess: "1. Daily routine timeline warm-up (5 min)\n2. Vocabulary presentation with pictures (10 min)\n3. Adverb of frequency ranking (8 min)\n4. My day writing activity (10 min)\n5. Share routines in pairs (7 min)\n6. Homework (2 min)",
         materialsLink: "https://drive.google.com/ff2-session2",
+        foreignContent: "- Warm-up: GVNN mimes routines, kids guess (3 mins)\n- Drill: 'I always / usually / sometimes / never ___' (5 mins)\n- Pair interview: 'What time do you wake up?' / 'Do you do homework every day?' (5 mins)\n- Closing: each kid says one routine sentence",
+        foreignMaterialsLink: "/unit 1_lesson 1&2.pptx",
         homeworks: [
           { id: "HW103", type: "video_speaking", title: "My morning routine", description: "Record a video describing your morning routine from wake up to going to school." },
           { id: "HW104", type: "writing", title: "My daily schedule", description: "Write a paragraph about your daily routine using frequency adverbs." }
@@ -1384,6 +1499,9 @@ export const classSchedules: ClassSchedule[] = [
     syllabusId: "SYL001", syllabusSessionId: "SS004",
     teacherId: "USR001", teacherName: "Ms. Thu Trang",
     taId: "USR003", taName: "Ms. Linh Chi",
+    foreignTeacherId: "FT001", foreignTeacherName: "Mr. James Wilson",
+    foreignStartTime: "09:15", foreignEndTime: "09:30", foreignShift: "ca1",
+    studentCount: 11, ageRange: "Kinder - 1st Grade", branchId: "BR001",
     date: "2026-04-22", startTime: "08:00", endTime: "09:30",
     room: "Phòng A1", status: "in_progress",
     kind: "regular", progressStatus: "planned",
@@ -1393,6 +1511,9 @@ export const classSchedules: ClassSchedule[] = [
     syllabusId: "SYL001", syllabusSessionId: "SS003",
     teacherId: "USR001", teacherName: "Ms. Thu Trang",
     taId: "USR003", taName: "Ms. Linh Chi",
+    foreignTeacherId: "FT001", foreignTeacherName: "Mr. James Wilson",
+    foreignStartTime: "09:15", foreignEndTime: "09:30", foreignShift: "ca1",
+    studentCount: 11, ageRange: "Kinder - 1st Grade", branchId: "BR001",
     date: "2026-04-19", startTime: "08:00", endTime: "09:30",
     room: "Phòng A1", status: "completed",
     kind: "regular", progressStatus: "completed-full", progressPercent: 100,
@@ -1403,6 +1524,9 @@ export const classSchedules: ClassSchedule[] = [
     syllabusId: "SYL001", syllabusSessionId: "SS002",
     teacherId: "USR001", teacherName: "Ms. Thu Trang",
     taId: "USR003", taName: "Ms. Linh Chi",
+    foreignTeacherId: "FT002", foreignTeacherName: "Ms. Emily Carter",
+    foreignStartTime: "09:15", foreignEndTime: "09:30", foreignShift: "ca1",
+    studentCount: 11, ageRange: "Kinder - 1st Grade", branchId: "BR001",
     date: "2026-04-15", startTime: "08:00", endTime: "09:30",
     room: "Phòng A1", status: "completed",
     kind: "split-a", progressStatus: "completed-partial", progressPercent: 60,
@@ -1413,6 +1537,9 @@ export const classSchedules: ClassSchedule[] = [
     syllabusId: "SYL001", syllabusSessionId: "SS002",
     teacherId: "USR001", teacherName: "Ms. Thu Trang",
     taId: "USR003", taName: "Ms. Linh Chi",
+    foreignTeacherId: "FT002", foreignTeacherName: "Ms. Emily Carter",
+    foreignStartTime: "09:15", foreignEndTime: "09:30", foreignShift: "ca1",
+    studentCount: 11, ageRange: "Kinder - 1st Grade", branchId: "BR001",
     date: "2026-04-17", startTime: "08:00", endTime: "09:30",
     room: "Phòng A1", status: "completed",
     kind: "split-b", parentScheduleId: "CS003",
@@ -1424,6 +1551,9 @@ export const classSchedules: ClassSchedule[] = [
     syllabusId: "SYL001", syllabusSessionId: "SS001",
     teacherId: "USR001", teacherName: "Ms. Thu Trang",
     taId: "USR003", taName: "Ms. Linh Chi",
+    foreignTeacherId: "FT003", foreignTeacherName: "Mr. David Brown",
+    foreignStartTime: "09:15", foreignEndTime: "09:30", foreignShift: "ca1",
+    studentCount: 11, ageRange: "Kinder - 1st Grade", branchId: "BR001",
     date: "2026-04-10", startTime: "08:00", endTime: "09:30",
     room: "Phòng A1", status: "completed",
     kind: "regular", progressStatus: "completed-full", progressPercent: 100,
@@ -1433,10 +1563,104 @@ export const classSchedules: ClassSchedule[] = [
     syllabusId: "SYL001", syllabusSessionId: "SS005",
     teacherId: "USR001", teacherName: "Ms. Thu Trang",
     taId: "USR003", taName: "Ms. Linh Chi",
+    foreignTeacherId: "FT001", foreignTeacherName: "Mr. James Wilson",
+    foreignStartTime: "09:15", foreignEndTime: "09:30", foreignShift: "ca1",
+    studentCount: 11, ageRange: "Kinder - 1st Grade", branchId: "BR001",
     date: "2026-04-26", startTime: "08:00", endTime: "09:30",
     room: "Phòng A1", status: "upcoming",
     kind: "regular", progressStatus: "planned",
   },
+  // ─── Lịch lớp tối cho GVNN: 5 tuần (06/04 → 10/05/2026) ───
+  ...((): ClassSchedule[] => {
+    // Mỗi entry: 1 lớp tối lặp lại theo các thứ trong tuần (Mon=1..Sat=6, Sun=0)
+    // GV VN: USR001 (BR001), USR002 (BR002), USR007 (BR003), USR008 (BR004)
+    const evenings: Array<{
+      classId: string; className: string; teacherId: string; teacherName: string;
+      branch: string; branchId: string; room: string; days: number[]; startTime: string; endTime: string;
+      syllabusId: string; studentCount: number; ageRange: string;
+    }> = [
+      // BR001 - Cầu Giấy (Ms. Thu Trang)
+      { classId: "CLS101", className: "Kindy 7 (CG)", teacherId: "USR001", teacherName: "Ms. Thu Trang", branch: "CG", branchId: "BR001", room: "P.301", days: [1, 4], startTime: "18:00", endTime: "19:30", syllabusId: "SYL001", studentCount: 10, ageRange: "Kinder - 1st Grade" },
+      { classId: "CLS102", className: "Cam 31 (CG)",  teacherId: "USR001", teacherName: "Ms. Thu Trang", branch: "CG", branchId: "BR001", room: "P.302", days: [2, 5], startTime: "18:00", endTime: "19:30", syllabusId: "SYL001", studentCount: 12, ageRange: "1st - 3rd Grade" },
+      { classId: "CLS103", className: "Cam 22 (CG)",  teacherId: "USR001", teacherName: "Ms. Thu Trang", branch: "CG", branchId: "BR001", room: "P.303", days: [3, 5], startTime: "19:30", endTime: "21:00", syllabusId: "SYL001", studentCount: 11, ageRange: "2nd - 4th Grade" },
+      // BR002 - Quận 1 (Sarah Johnson)
+      { classId: "CLS201", className: "Movers Q1",    teacherId: "USR002", teacherName: "Sarah Johnson",  branch: "Q1", branchId: "BR002", room: "P.A1",  days: [1, 4], startTime: "18:00", endTime: "19:30", syllabusId: "SYL001", studentCount: 9,  ageRange: "3rd - 5th Grade" },
+      { classId: "CLS202", className: "Flyers Q1",    teacherId: "USR002", teacherName: "Sarah Johnson",  branch: "Q1", branchId: "BR002", room: "P.A2",  days: [2, 5], startTime: "18:00", endTime: "19:30", syllabusId: "SYL001", studentCount: 10, ageRange: "4th - 6th Grade" },
+      { classId: "CLS203", className: "KET Q1",       teacherId: "USR002", teacherName: "Sarah Johnson",  branch: "Q1", branchId: "BR002", room: "P.A3",  days: [3, 6], startTime: "19:30", endTime: "21:00", syllabusId: "SYL001", studentCount: 8,  ageRange: "5th - 7th Grade" },
+      // BR003 - Online (Ms. Hà My)
+      { classId: "CLS301", className: "IELTS Junior Online", teacherId: "USR007", teacherName: "Ms. Ngô Hà My", branch: "ON", branchId: "BR003", room: "Zoom-1", days: [2, 4, 6], startTime: "18:00", endTime: "19:30", syllabusId: "SYL001", studentCount: 7, ageRange: "6th - 8th Grade" },
+      { classId: "CLS302", className: "Conversation Online", teacherId: "USR007", teacherName: "Ms. Ngô Hà My", branch: "ON", branchId: "BR003", room: "Zoom-2", days: [1, 3, 5], startTime: "19:30", endTime: "21:00", syllabusId: "SYL001", studentCount: 6, ageRange: "5th - 7th Grade" },
+      // BR004 - Ba Đình (Mr. Quang Huy)
+      { classId: "CLS401", className: "Cam 15 (BĐ)",  teacherId: "USR008", teacherName: "Mr. Lê Quang Huy", branch: "BD", branchId: "BR004", room: "P.201", days: [1, 4], startTime: "18:00", endTime: "19:30", syllabusId: "SYL001", studentCount: 12, ageRange: "1st - 3rd Grade" },
+      { classId: "CLS402", className: "Cam 21 (BĐ)",  teacherId: "USR008", teacherName: "Mr. Lê Quang Huy", branch: "BD", branchId: "BR004", room: "P.202", days: [2, 5], startTime: "18:00", endTime: "19:30", syllabusId: "SYL001", studentCount: 11, ageRange: "2nd - 4th Grade" },
+      { classId: "CLS403", className: "Kindy 10 (BĐ)",teacherId: "USR008", teacherName: "Mr. Lê Quang Huy", branch: "BD", branchId: "BR004", room: "P.203", days: [3, 6], startTime: "19:30", endTime: "21:00", syllabusId: "SYL001", studentCount: 9,  ageRange: "Kinder - 1st Grade" },
+    ];
+
+    const sessionIds = ["SS001", "SS002", "SS003", "SS004", "SS005"];
+    const out: ClassSchedule[] = [];
+    const startMonday = new Date("2026-04-06"); // T2 tuần -2
+    const today = new Date("2026-04-24");
+
+    // GVNN theo branch code
+    const ftByBranch: Record<string, Array<{ id: string; name: string }>> = {
+      CG: [{ id: "FT001", name: "Mr. James Wilson" }, { id: "FT002", name: "Ms. Emily Carter" }, { id: "FT003", name: "Mr. David Brown" }],
+      Q1: [{ id: "FT004", name: "Ms. Olivia Martinez" }, { id: "FT005", name: "Mr. Liam Thompson" }, { id: "FT006", name: "Ms. Sophia Lee" }],
+      ON: [{ id: "FT007", name: "Mr. Noah Anderson" }, { id: "FT008", name: "Ms. Ava Robinson" }],
+      BD: [{ id: "FT009", name: "Mr. Ethan Walker" }, { id: "FT010", name: "Ms. Mia Harris" }],
+    };
+
+    let counter = 1;
+    for (let weekIdx = 0; weekIdx < 5; weekIdx++) {
+      for (const ev of evenings) {
+        for (const dow of ev.days) {
+          const d = new Date(startMonday);
+          d.setDate(startMonday.getDate() + weekIdx * 7 + (dow - 1));
+          const dateStr = d.toISOString().slice(0, 10);
+          const status: ClassSchedule["status"] =
+            d < today ? "completed" : d.toDateString() === today.toDateString() ? "in_progress" : "upcoming";
+          const sessionId = sessionIds[(weekIdx * 2 + ev.days.indexOf(dow)) % sessionIds.length];
+
+          // Pre-assign GVNN round-robin theo branch + day + classId
+          const pool = ftByBranch[ev.branch] ?? [];
+          const ft = pool[(counter + weekIdx) % pool.length];
+
+          // Giờ GVNN: 15 phút cuối buổi
+          const [eh, em] = ev.endTime.split(":").map(Number);
+          const startM = eh * 60 + em - 15;
+          const foreignStart = `${String(Math.floor(startM / 60)).padStart(2, "0")}:${String(startM % 60).padStart(2, "0")}`;
+          const foreignShift: "ca1" | "ca2" = eh * 60 + em <= 19 * 60 + 30 ? "ca1" : "ca2";
+
+          out.push({
+            id: `EVE${String(counter).padStart(4, "0")}`,
+            classId: ev.classId,
+            className: ev.className,
+            syllabusId: ev.syllabusId,
+            syllabusSessionId: sessionId,
+            teacherId: ev.teacherId,
+            teacherName: ev.teacherName,
+            branchId: ev.branchId,
+            studentCount: ev.studentCount,
+            ageRange: ev.ageRange,
+            foreignTeacherId: ft?.id,
+            foreignTeacherName: ft?.name,
+            foreignStartTime: foreignStart,
+            foreignEndTime: ev.endTime,
+            foreignShift,
+            date: dateStr,
+            startTime: ev.startTime,
+            endTime: ev.endTime,
+            room: ev.room,
+            status,
+            kind: "regular",
+            progressStatus: status === "completed" ? "completed-full" : "planned",
+            progressPercent: status === "completed" ? 100 : undefined,
+          });
+          counter++;
+        }
+      }
+    }
+    return out;
+  })(),
 ];
 
 // --- Mock Daily Reports ---
@@ -1546,3 +1770,233 @@ export const homeworkSubmissions: HomeworkSubmission[] = [
     submittedAt: "2026-04-22T13:30:00", status: "submitted",
   },
 ];
+
+// ============================================================
+// FOREIGN TEACHING NOTES — bridge giao tiếp GV Việt ↔ GVNN
+// ============================================================
+/**
+ * GV Việt gửi note/dặn dò cho GVNN về nội dung buổi học.
+ * GVNN xem note trên lịch của mình → tự động mark-as-read khi mở.
+ */
+export interface ForeignTeachingNote {
+  id: string;
+  /** Lớp nào (để filter theo class) */
+  classId: string;
+  className: string;
+  /** Ngày của buổi cụ thể — note gắn với 1 buổi */
+  date: string;
+  /** Tham chiếu tới schedule instance (optional) */
+  classScheduleId?: string;
+  /** Session syllabus (optional) */
+  sessionId?: string;
+  /** Ai gửi */
+  vnTeacherId: string;
+  vnTeacherName: string;
+  /** Gửi cho GVNN nào */
+  foreignTeacherId: string;
+  foreignTeacherName: string;
+  /** Nội dung note */
+  content: string;
+  /** Mức độ quan trọng — "important" sẽ hiển thị nổi bật */
+  priority: "normal" | "important";
+  /** Các topic highlight cần nhấn mạnh */
+  highlightTopics?: string[];
+  /** Link đính kèm (slide/ảnh) */
+  attachmentUrl?: string;
+  createdAt: string;
+  /** null/undefined = chưa đọc */
+  readAt?: string;
+}
+
+export const foreignTeachingNotes: ForeignTeachingNote[] = (() => {
+  const out: ForeignTeachingNote[] = [];
+
+  // Pool template note phong phú để tránh trùng lặp
+  const templates: Array<{
+    content: string;
+    priority: "normal" | "important";
+    highlights?: string[];
+    attachment?: string;
+  }> = [
+    {
+      content:
+        "Hi! Practice these warm-up Q&A với các bé:\n• How was your weekend?\n• What did you eat for breakfast?\n• What's your favorite color and why?\n\nFocus pronunciation /θ/ — em Minh hay nhầm thành /t/.",
+      priority: "important",
+      highlights: ["Warm-up Q&A", "Pronunciation /θ/"],
+      attachment: "/unit 1_lesson 1&2.pptx",
+    },
+    {
+      content:
+        "Buổi này lớp đang ôn vocab Colors & Shapes. Em cần anh play game 'I spy with my little eye, something + color' với các bé. Tốc độ chậm vì các bé mới làm quen vocab.",
+      priority: "normal",
+      highlights: ["I spy game", "Colors review"],
+    },
+    {
+      content:
+        "Hôm nay focus speaking past simple. Một số em hay quên -ed ending, anh hỏi 'What did you do yesterday?' để trigger các em dùng past tense đúng.",
+      priority: "important",
+      highlights: ["Past simple", "-ed ending"],
+    },
+    {
+      content:
+        "SLB hơi lệch — GV VN mới dạy đến Lesson 2, chưa tới Lesson 3 như syllabus. Em điều chỉnh nội dung speaking về daily routines thôi, đừng đụng part shopping nhé.",
+      priority: "important",
+      highlights: ["SLB lệch", "Daily routines only"],
+    },
+    {
+      content:
+        "Buổi này có 2 bé mới enroll, hơi nhút nhát. Em start nhẹ nhàng bằng game 'Name chain' để các bé làm quen rồi vào lesson.",
+      priority: "normal",
+      highlights: ["New students", "Name chain"],
+    },
+    {
+      content:
+        "Anh play game 'Simon Says' với các màu để reinforce vocabulary. Tốc độ nói chậm vì các bé mới 5-6 tuổi nhé.",
+      priority: "normal",
+      highlights: ["Simon Says", "Slow pace"],
+    },
+    {
+      content:
+        "Hôm nay em Hà Anh vắng nên còn ít bé hơn. Anh start luôn phần speaking, bỏ qua warm-up vì GV VN đã làm rồi. Focus 10 phút cuối cho mỗi bé nói 2-3 câu.",
+      priority: "normal",
+      highlights: ["Skip warm-up", "Speaking focus"],
+    },
+    {
+      content:
+        "Reminder: lớp này có 1 bé phát âm 'l' và 'r' chưa rõ. Anh chú ý correct gently. Practice cặp từ 'lice/rice', 'light/right'.",
+      priority: "important",
+      highlights: ["Pronunciation l/r", "Minimal pairs"],
+    },
+    {
+      content:
+        "Buổi này GV VN dạy về family — em ôn lại vocab cuối buổi qua câu hỏi 'Tell me about your family' theo turn-taking.",
+      priority: "normal",
+      highlights: ["Family vocab", "Turn-taking"],
+    },
+    {
+      content:
+        "Thanks! Buổi vừa rồi các bé participate rất nhiều. Buổi tới tiếp tục pattern question-answer như vậy nhé.",
+      priority: "normal",
+    },
+    {
+      content:
+        "Hi! Em Minh cuối buổi cần thêm time speaking individual — bé hơi shy nhưng pronunciation rất tốt. Anh khuyến khích bé volunteer trả lời.",
+      priority: "normal",
+      highlights: ["Individual speaking", "Encourage Minh"],
+    },
+    {
+      content:
+        "Lớp đang học chủ đề 'My toys'. Em mang theo 1-2 món đồ chơi yêu thích để các bé describe (size, color, shape) — kéo dài tối đa 10 phút thôi nhé.",
+      priority: "normal",
+      highlights: ["Show & tell", "Describe toys"],
+      attachment: "/unit 1_lesson 1&2.pptx",
+    },
+  ];
+
+  // ─── Phần 1: Note cho 5 buổi 4CLC 2 sáng (CS001-CS005 + CS003B) ───
+  const morning4CLC = classSchedules.filter((s) => s.classId === "CLS001" && s.foreignTeacherId);
+  morning4CLC.forEach((s, idx) => {
+    const tpl = templates[idx % templates.length];
+    // 1 note chính
+    const dateObj = new Date(s.date + "T07:30:00");
+    out.push({
+      id: `FNM${String(idx + 1).padStart(3, "0")}`,
+      classId: s.classId,
+      className: s.className,
+      date: s.date,
+      classScheduleId: s.id,
+      sessionId: s.syllabusSessionId,
+      vnTeacherId: s.teacherId,
+      vnTeacherName: s.teacherName,
+      foreignTeacherId: s.foreignTeacherId!,
+      foreignTeacherName: s.foreignTeacherName!,
+      content: tpl.content,
+      priority: tpl.priority,
+      highlightTopics: tpl.highlights,
+      attachmentUrl: tpl.attachment,
+      createdAt: dateObj.toISOString(),
+      // Buổi đã completed → mark read; in_progress / upcoming → unread
+      readAt: s.status === "completed" ? new Date(s.date + "T08:30:00").toISOString() : undefined,
+    });
+
+    // 30% buổi có 2 note (note bổ sung từ GV Việt)
+    if (idx % 3 === 0) {
+      out.push({
+        id: `FNM${String(idx + 1).padStart(3, "0")}B`,
+        classId: s.classId,
+        className: s.className,
+        date: s.date,
+        classScheduleId: s.id,
+        sessionId: s.syllabusSessionId,
+        vnTeacherId: s.teacherId,
+        vnTeacherName: s.teacherName,
+        foreignTeacherId: s.foreignTeacherId!,
+        foreignTeacherName: s.foreignTeacherName!,
+        content:
+          "À thêm 1 note nữa: bé Hà Anh hay nhầm 'orange' với 'yellow'. Anh chú ý correct riêng cho bé nhé!",
+        priority: "normal",
+        createdAt: new Date(s.date + "T08:15:00").toISOString(),
+        readAt: s.status === "completed" ? new Date(s.date + "T08:45:00").toISOString() : undefined,
+      });
+    }
+  });
+
+  // ─── Phần 2: Note cho TẤT CẢ buổi tối (EVE####) có GVNN ───
+  const eveningSchedules = classSchedules.filter((s) => s.id.startsWith("EVE") && s.foreignTeacherId);
+  eveningSchedules.forEach((s, idx) => {
+    const tpl = templates[(idx + 2) % templates.length];
+    // Note tạo trước buổi học vài giờ
+    const noteHour = ["07:30", "12:00", "16:45", "20:15", "22:00"][idx % 5];
+    const noteDate = new Date(s.date + "T" + noteHour + ":00");
+    // Note buổi đã qua → có thể chưa kịp gửi; ngẫu nhiên 1 vài note backdated
+    out.push({
+      id: `FNE${String(idx + 1).padStart(4, "0")}`,
+      classId: s.classId,
+      className: s.className,
+      date: s.date,
+      classScheduleId: s.id,
+      sessionId: s.syllabusSessionId,
+      vnTeacherId: s.teacherId,
+      vnTeacherName: s.teacherName,
+      foreignTeacherId: s.foreignTeacherId!,
+      foreignTeacherName: s.foreignTeacherName!,
+      content: tpl.content,
+      priority: tpl.priority,
+      highlightTopics: tpl.highlights,
+      attachmentUrl: tpl.attachment,
+      createdAt: noteDate.toISOString(),
+      // Buổi completed → đã đọc; còn lại → unread (để demo badge)
+      readAt:
+        s.status === "completed"
+          ? new Date(s.date + "T22:00:00").toISOString()
+          : undefined,
+    });
+
+    // 25% buổi có note bổ sung (priority normal)
+    if (idx % 4 === 0) {
+      out.push({
+        id: `FNE${String(idx + 1).padStart(4, "0")}B`,
+        classId: s.classId,
+        className: s.className,
+        date: s.date,
+        classScheduleId: s.id,
+        sessionId: s.syllabusSessionId,
+        vnTeacherId: s.teacherId,
+        vnTeacherName: s.teacherName,
+        foreignTeacherId: s.foreignTeacherId!,
+        foreignTeacherName: s.foreignTeacherName!,
+        content:
+          "Update thêm: hôm nay nghỉ 1-2 bé báo trước. Sĩ số còn ít, anh có thể tăng thời gian individual practice.",
+        priority: "normal",
+        createdAt: new Date(noteDate.getTime() + 30 * 60 * 1000).toISOString(),
+        readAt:
+          s.status === "completed"
+            ? new Date(s.date + "T22:30:00").toISOString()
+            : undefined,
+      });
+    }
+  });
+
+  return out;
+})();
+

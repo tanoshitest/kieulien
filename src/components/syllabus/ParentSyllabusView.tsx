@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   BookOpen, Video, Zap, FileText,
-  Upload, Link2, ExternalLink, Award, MessageSquare, Eye, Star
+  Upload, Link2, ExternalLink, Award, MessageSquare, Eye, Star, BookMarked
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +60,7 @@ function buildStudentHomeworks(submissions: HomeworkSubmission[]) {
 
 const ParentSyllabusView: React.FC = () => {
   const [submissions, setSubmissions] = useState<HomeworkSubmission[]>(initialSubmissions);
-  const [activeTab, setActiveTab] = useState<"homework" | "reports">("homework");
+  const [activeTab, setActiveTab] = useState<"homework" | "reports" | "vocab">("homework");
   const [activeNavItem, setActiveNavItem] = useState<NavItem>("syllabus");
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
@@ -79,6 +79,16 @@ const ParentSyllabusView: React.FC = () => {
   // Class info
   const mySchedules = classSchedules;
   void mySchedules;
+
+  // Selected session content for vocab view
+  const selectedSession = useMemo(() => {
+    if (!selectedSessionId) return null;
+    for (const syl of syllabuses) {
+      const s = syl.sessions.find(s => s.id === selectedSessionId);
+      if (s) return s;
+    }
+    return null;
+  }, [selectedSessionId]);
 
   const allHWs = buildStudentHomeworks(submissions);
   const pendingHWs = allHWs.filter(h => !h.submission);
@@ -128,7 +138,7 @@ const ParentSyllabusView: React.FC = () => {
       syllabus={parentSyllabus}
       classSchedules={classSchedules}
       selectedSessionId={selectedSessionId}
-      onSessionSelect={setSelectedSessionId}
+      onSessionSelect={(id) => { setSelectedSessionId(id); setActiveTab("vocab"); }}
       activeNavItem={activeNavItem}
       onNavItemChange={setActiveNavItem}
       teacherName="Ms. Thu Trang"
@@ -143,6 +153,7 @@ const ParentSyllabusView: React.FC = () => {
       {/* Tabs */}
       <div className="flex gap-1 bg-muted/50 rounded-xl p-1 mb-6">
         {[
+          { id: "vocab", label: "Từ vựng buổi học", icon: BookMarked },
           { id: "homework", label: `Bài tập${pendingHWs.length > 0 ? ` (${pendingHWs.length} chờ)` : ""}`, icon: FileText },
           { id: "reports", label: "Báo cáo lớp", icon: MessageSquare },
         ].map(t => (
@@ -155,6 +166,69 @@ const ParentSyllabusView: React.FC = () => {
           </button>
         ))}
       </div>
+
+      {/* VOCAB TAB */}
+      {activeTab === "vocab" && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          {!selectedSession ? (
+            <div className="text-center py-16 text-muted-foreground border-2 border-dashed border-border rounded-xl">
+              <BookMarked className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">Chọn một buổi học từ danh sách bên trái</p>
+              <p className="text-sm mt-1">để xem từ vựng của buổi đó</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <BookMarked className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-semibold text-base">Buổi {selectedSession.order}: {selectedSession.title}</h3>
+              </div>
+
+              {/* Vocabulary */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-3">Từ vựng buổi học</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedSession.vocab.split(",").map((word, i) => (
+                    <span key={i} className="bg-white border border-emerald-300 text-emerald-800 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm">
+                      {word.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Grammar */}
+              {selectedSession.grammar && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">Ngữ pháp</p>
+                  <p className="text-sm text-blue-900 leading-relaxed">{selectedSession.grammar}</p>
+                </div>
+              )}
+
+              {/* Homeworks for this session */}
+              {selectedSession.homeworks.length > 0 && (
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-3">Bài tập về nhà</p>
+                  <div className="space-y-2">
+                    {selectedSession.homeworks.map((hw) => {
+                      const Icon = hwTypeIcon[hw.type as HomeworkType] ?? FileText;
+                      return (
+                        <div key={hw.id} className="flex items-start gap-2 bg-white rounded-lg p-2.5 border border-purple-100">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${hwTypeColor[hw.type as HomeworkType]}`}>
+                            <Icon className="w-3 h-3" />{hwTypeLabel[hw.type as HomeworkType]}
+                          </span>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{hw.title}</p>
+                            <p className="text-xs text-muted-foreground">{hw.description}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* HOMEWORK TAB */}
       {activeTab === "homework" && (
