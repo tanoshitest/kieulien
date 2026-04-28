@@ -3,10 +3,17 @@ import {
   Settings, Shield, Building, Bell, GraduationCap, 
   DollarSign, BarChart, Package, MessageSquare, 
   FileCheck, MapPin, Phone, Mail, Save, Plus, X,
-  Trash2, PlusCircle, CheckCircle2, AlertTriangle, Layers
+  Trash2, PlusCircle, CheckCircle2, AlertTriangle, Layers,
+  Building2, Percent, CalendarClock, ChevronRight, Settings2,
+  ShieldCheck, History, Briefcase, AlertCircle, Users
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { branches } from "@/data/mockData";
+
+const formatVND = (n: number) =>
+  new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(n) + "đ";
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState("general");
@@ -14,6 +21,7 @@ const SettingsPage = () => {
   const tabs = [
     { id: "general", label: "Thông tin chung", icon: Building },
     { id: "academic", label: "Học thuật", icon: GraduationCap },
+    { id: "operations", label: "Vận hành", icon: Building2 },
     { id: "finance", label: "Tài chính", icon: DollarSign },
     { id: "crm", label: "CRM & Tuyển sinh", icon: MessageSquare },
     { id: "inventory", label: "Kho hàng", icon: Package },
@@ -81,6 +89,7 @@ const SettingsPage = () => {
             >
               {activeTab === "general" && <GeneralConfig />}
               {activeTab === "academic" && <AcademicConfig />}
+              {activeTab === "operations" && <OperationsConfig />}
               {activeTab === "finance" && <FinanceConfig />}
               {activeTab === "crm" && <CRMConfig />}
               {activeTab === "inventory" && <InventoryConfig />}
@@ -186,6 +195,191 @@ const AcademicConfig = () => (
   </div>
 );
 
+const OperationsConfig = () => {
+  const [activeSubSection, setActiveSubSection] = useState<"pricing" | "discounts" | "cycles" | "branches">("pricing");
+
+  const subSections = [
+    { id: "pricing", label: "Biểu phí", icon: DollarSign },
+    { id: "discounts", label: "Ưu đãi", icon: Percent },
+    { id: "cycles", label: "Chu kỳ", icon: CalendarClock },
+    { id: "branches", label: "Chi nhánh", icon: Building2 },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <SectionTitle title="Quản lý Vận hành" description="Cấu hình biểu phí, chính sách tài chính và hệ thống chi nhánh." />
+      
+      <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl w-fit">
+        {subSections.map(s => (
+          <button
+            key={s.id}
+            onClick={() => setActiveSubSection(s.id as any)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+              activeSubSection === s.id 
+                ? "bg-white text-slate-900 shadow-sm" 
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <s.icon className="w-3.5 h-3.5" />
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeSubSection}
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          {activeSubSection === "pricing" && <PricingMatrix />}
+          {activeSubSection === "discounts" && <DiscountPolicies />}
+          {activeSubSection === "cycles" && <PaymentCycles />}
+          {activeSubSection === "branches" && <BranchManagement />}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const PricingMatrix = () => (
+  <div className="space-y-6">
+    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+       <table className="w-full text-left border-separate border-spacing-0">
+          <thead className="bg-slate-50 border-b border-slate-200">
+             <tr>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Khóa học / Cấp độ</th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Buổi</th>
+                {branches.map(b => (
+                  <th key={b.id} className="px-6 py-4 text-[10px] font-black uppercase text-slate-600 tracking-widest text-center bg-slate-100/30">
+                    {b.name.replace("MENGLISH - ", "")}
+                  </th>
+                ))}
+             </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+             {[
+               { name: "Tiếng Anh Kindy (4-6 tuổi)", sessions: 24, prices: [2800000, 3200000, 2800000] },
+               { name: "Tiếng Anh Kids (7-11 tuổi)", sessions: 36, prices: [4500000, 4800000, 4500000] },
+               { name: "IELTS Intensive", sessions: 48, prices: [8500000, 9200000, 8500000] },
+               { name: "Cambridge Starters", sessions: 24, prices: [3500000, 3800000, 3500000] },
+             ].map((course, idx) => (
+               <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-6 py-5">
+                     <p className="font-bold text-slate-800 text-sm">{course.name}</p>
+                  </td>
+                  <td className="px-6 py-5 text-center text-xs font-bold text-slate-500">{course.sessions}</td>
+                  {course.prices.map((p, i) => (
+                    <td key={i} className="px-6 py-5 text-center">
+                       <input 
+                         type="text" 
+                         defaultValue={formatVND(p)}
+                         className="w-28 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-black text-slate-700 text-center focus:ring-2 focus:ring-primary focus:bg-white outline-none transition-all"
+                       />
+                    </td>
+                  ))}
+               </tr>
+             ))}
+          </tbody>
+       </table>
+    </div>
+    <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex gap-3">
+        <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
+        <p className="text-xs text-amber-700 leading-relaxed font-medium">Giá phí sẽ được tự động cập nhật cho các học sinh **đăng ký mới** từ thời điểm lưu cấu hình.</p>
+    </div>
+  </div>
+);
+
+const DiscountPolicies = () => (
+  <div className="grid grid-cols-2 gap-4">
+     {[
+       { title: "Ưu đãi Anh/Chị/Em", type: "Tỉ lệ (%)", value: "5%", condition: "Cùng hộ khẩu", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+       { title: "Học bổng Tiềm năng", type: "Cố định (VNĐ)", value: "500k", condition: "Entrance Test > 8.0", icon: GraduationCap, color: "text-purple-600", bg: "bg-purple-50" },
+       { title: "Ưu đãi Học sinh cũ", type: "Tỉ lệ (%)", value: "10%", condition: "Đóng phí sớm 15 ngày", icon: History, color: "text-emerald-600", bg: "bg-emerald-50" },
+       { title: "Đăng ký nhóm (3+)", type: "Cố định (VNĐ)", value: "300k", condition: "Nhóm từ 3 bạn", icon: Briefcase, color: "text-amber-600", bg: "bg-amber-50" },
+     ].map((policy, idx) => (
+       <div key={idx} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
+          <div className="flex justify-between items-start mb-3">
+             <div className={`p-2 rounded-xl ${policy.bg} ${policy.color}`}>
+                {React.createElement(policy.icon, { className: "w-5 h-5" })}
+             </div>
+             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{policy.type}</span>
+          </div>
+          <h3 className="text-sm font-black text-slate-800 mb-1">{policy.title}</h3>
+          <p className="text-[10px] text-slate-400 font-bold uppercase mb-4 italic">ĐK: {policy.condition}</p>
+          
+          <div className="flex items-center justify-between border-t border-slate-50 pt-3">
+             <span className={`text-lg font-black ${policy.color}`}>{policy.value}</span>
+             <div className="flex gap-1">
+                <button className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-blue-50 hover:text-blue-500 transition-all"><Settings2 className="w-3.5 h-3.5" /></button>
+                <button className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-50 hover:text-rose-500 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+             </div>
+          </div>
+       </div>
+     ))}
+     <button className="border-2 border-dashed border-slate-200 rounded-3xl p-5 flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-primary hover:border-primary/50 transition-all">
+        <Plus className="w-5 h-5" />
+        <span className="text-[10px] font-black uppercase tracking-widest">Thêm chính sách</span>
+     </button>
+  </div>
+);
+
+const PaymentCycles = () => (
+  <div className="space-y-4">
+     {[
+       { name: "Đóng toàn khóa", desc: "Học sinh đóng phí 1 lần cho toàn bộ khóa.", bonus: "Ưu đãi 10-15%", active: true },
+       { name: "Đóng theo Kỳ", desc: "Chia khóa học thành 2-3 kỳ đóng phí.", bonus: "Linh hoạt", active: true },
+       { name: "Đóng hàng tháng", desc: "Thu học phí cố định vào ngày 05 hàng tháng.", bonus: "Khóa dài hạn", active: false },
+     ].map((cycle, idx) => (
+       <div key={idx} className={`p-5 rounded-3xl border transition-all flex items-center justify-between ${
+         cycle.active ? "bg-white border-slate-200 shadow-sm" : "bg-slate-50/50 border-dashed border-slate-200 opacity-60"
+       }`}>
+          <div className="flex items-center gap-4">
+             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${cycle.active ? "bg-amber-50 text-amber-500" : "bg-slate-200 text-slate-400"}`}>
+                <CalendarClock className="w-6 h-6" />
+             </div>
+             <div>
+                <h4 className="text-sm font-black text-slate-800">{cycle.name}</h4>
+                <p className="text-[10px] text-slate-500 font-medium">{cycle.desc}</p>
+                <span className="text-[9px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full inline-block mt-1 tracking-widest">{cycle.bonus}</span>
+             </div>
+          </div>
+          <div className={`w-10 h-5 rounded-full relative cursor-pointer ${cycle.active ? "bg-primary" : "bg-slate-300"}`}>
+             <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${cycle.active ? "right-0.5" : "left-0.5"}`} />
+          </div>
+       </div>
+     ))}
+  </div>
+);
+
+const BranchManagement = () => (
+  <div className="grid grid-cols-2 gap-4">
+     {branches.map(b => (
+       <div key={b.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:border-primary/50 transition-all">
+          <div className="p-4 bg-slate-900 flex items-center justify-between">
+              <h3 className="text-white font-black text-[11px] uppercase truncate">{b.name.replace("MENGLISH - ", "")}</h3>
+              <MapPin className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <div className="p-4 space-y-3">
+             <div className="flex items-center justify-between text-[10px]">
+                <span className="font-bold text-slate-400">Học sinh:</span>
+                <span className="font-black text-slate-700">142</span>
+             </div>
+             <div className="flex items-center justify-between text-[10px]">
+                <span className="font-bold text-slate-400">Doanh thu:</span>
+                <span className="font-black text-emerald-600">{formatVND(385000000)}</span>
+             </div>
+             <Button variant="outline" className="w-full h-8 rounded-xl border-slate-100 font-bold text-[9px] uppercase tracking-widest">
+                Chi tiết
+             </Button>
+          </div>
+       </div>
+     ))}
+  </div>
+);
+
 const FinanceConfig = () => (
   <div className="space-y-6">
     <SectionTitle title="Cấu hình tài chính" description="Cài đặt ngân hàng, thuế và danh mục thu chi hệ thống." />
@@ -246,7 +440,7 @@ const FinanceConfig = () => (
       </div>
     </div>
 
-    {/* Tuition Reminders Config - NEW SECTION */}
+    {/* Tuition Reminders Config */}
     <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
       <div className="p-6 border-b border-slate-100 bg-slate-50/50">
         <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
@@ -321,7 +515,7 @@ const CRMConfig = () => (
         <MessageSquare className="w-4 h-4 text-purple-500" /> Nguồn khách hàng (Sources)
       </h3>
       <div className="flex flex-wrap gap-3">
-        {["Facebook Ads", "Zalo OA", "Website", "Walk-in (Vãng lai)", "Giới thiệu (Referral)", "Hotline"].map(source => (
+        {["Facebook Ads", "Zalo OA", "Website", "Walk-in", "Giới thiệu", "Hotline"].map(source => (
           <div key={source} className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-100 font-bold text-slate-600 text-sm hover:bg-purple-50 hover:text-purple-700 transition-colors cursor-pointer group">
             {source}
             <Trash2 className="w-3.5 h-3.5 text-slate-300 group-hover:text-rose-500 opacity-0 group-hover:opacity-100" />
@@ -370,7 +564,7 @@ const InventoryConfig = () => (
               <span className="text-sm font-bold text-rose-900">Mức tồn ngưỡng đỏ</span>
               <input type="number" defaultValue={10} className="w-16 bg-white border border-rose-200 rounded-lg text-center font-bold p-1 text-sm text-rose-900" />
             </div>
-            <p className="text-xs text-rose-700/70 leading-relaxed font-medium">Hệ thống sẽ gửi thông báo khẩn cấp và đánh dấu đỏ sản phẩm khi số lượng dưới mức này.</p>
+            <p className="text-xs text-rose-700/70 leading-relaxed font-medium">Cảnh báo khẩn cấp khi số lượng dưới mức này.</p>
           </div>
           
           <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 space-y-3">
@@ -378,7 +572,7 @@ const InventoryConfig = () => (
               <span className="text-sm font-bold text-orange-900">Mức tồn ngưỡng vàng</span>
               <input type="number" defaultValue={25} className="w-16 bg-white border border-orange-200 rounded-lg text-center font-bold p-1 text-sm text-orange-900" />
             </div>
-            <p className="text-xs text-orange-700/70 leading-relaxed font-medium">Cảnh báo "Sắp hết hàng" khi số lượng trong kho chạm ngưỡng này.</p>
+            <p className="text-xs text-orange-700/70 leading-relaxed font-medium">Cảnh báo "Sắp hết hàng".</p>
           </div>
         </div>
       </div>

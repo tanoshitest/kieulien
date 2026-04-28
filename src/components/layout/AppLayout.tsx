@@ -12,7 +12,7 @@ import {
   Users2, Clock, BellRing, UserMinus, ShieldAlert, LineChart, LogOut, Mic,
   BookMarked
 } from "lucide-react";
-import CenterOperationPage from "./pages/CenterOperationPage";
+
 import { notifications, foreignTeachers } from "@/data/mockData";
 import { useClassSchedules } from "@/contexts/ClassScheduleContext";
 import { useForeignNotes } from "@/contexts/ForeignNoteContext";
@@ -43,10 +43,10 @@ const navItems: NavItem[] = [
   { label: "Quản lý người dùng", path: "/users", icon: UserCog, adminOnly: true },
   { label: "Syllabus", path: "/syllabus", icon: BookMarked },
   { label: "Lịch dạy", path: "/schedule", icon: Calendar },
+  { label: "Báo cáo học phí", path: "/admin-reports?tab=tuition", icon: CircleDollarSign, adminOnly: true },
   { label: "Quản lý hàng hoá", path: "/inventory", icon: Layers, adminOnly: true },
   { label: "Phân công công việc", path: "/tasks", icon: ClipboardList },
   { label: "Ghi chú chấm công", path: "/timekeeping", icon: Fingerprint },
-  { label: "Báo cáo học phí", path: "/admin-reports?tab=tuition", icon: CircleDollarSign, adminOnly: true },
   { label: "Báo cáo chấm công", path: "/admin-reports?tab=attendance", icon: Clock, adminOnly: true },
   { label: "Báo cáo lương", path: "/admin-reports?tab=payroll", icon: Wallet, adminOnly: true },
   { label: "Khảo sát", path: "/admin-reports?tab=survey", icon: ClipboardCheck, adminOnly: true },
@@ -137,20 +137,6 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </button>
             )}
 
-            {isAdmin && (
-              <button
-                onClick={() => navigate("/operations")}
-                title={isCollapsed ? "Quản lý vận hành" : ""}
-                className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-md font-bold text-sm transition-colors ${
-                  location.pathname.startsWith("/operations")
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                }`}
-              >
-                <Building2 className="w-4 h-4 flex-shrink-0" />
-                {!isCollapsed && <span>Quản lý vận hành</span>}
-              </button>
-            )}
 
             {filteredNav.map((item) => {
               const active = item.path.includes('?') 
@@ -170,35 +156,23 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 : item.path === "/timekeeping"
                 ? (isAdmin ? "Quản lý chấm công" : "Chấm công của tôi")
                 : item.label;
+              const isHighlighted = ["/users", "/syllabus", "/schedule", "/admin-reports?tab=tuition", "/settings"].includes(item.path);
+              
               return (
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
                   title={isCollapsed ? label : ""}
-                  className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-md text-sm transition-colors ${
+                  className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-md text-sm transition-all ${
                     isTrulyActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-bold shadow-sm"
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-black shadow-sm"
+                      : isHighlighted 
+                      ? "text-rose-600 font-black hover:bg-rose-50"
                       : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                   }`}
                 >
-                  <item.icon className="w-4 h-4 flex-shrink-0" />
+                  <item.icon className={`w-4 h-4 flex-shrink-0 ${isHighlighted && !isTrulyActive ? "text-rose-600" : ""}`} />
                   {!isCollapsed && <span className="flex-1 text-left">{label}</span>}
-                  {!isCollapsed && isAdmin && item.path === "/syllabus" && pendingCount > 0 && (
-                    <span className="bg-amber-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
-                      {pendingCount}
-                    </span>
-                  )}
-                  {!isCollapsed && item.path === "/schedule" && foreignNoteUnread > 0 && (
-                    <span
-                      title={isForeignTeacher ? `${foreignNoteUnread} note mới từ GV Việt` : `${foreignNoteUnread} note GVNN chưa đọc`}
-                      className="bg-rose-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center animate-pulse"
-                    >
-                      {foreignNoteUnread}
-                    </span>
-                  )}
-                  {isCollapsed && item.path === "/schedule" && foreignNoteUnread > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
-                  )}
                 </button>
               );
             })}
@@ -264,24 +238,28 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
                 {filteredNav.map((item) => {
                   const active = location.pathname === item.path;
-                      const label = item.path === "/tasks"
-                        ? (isAdmin ? "Phân công công việc" : "Công việc của tôi")
-                      : item.path === "/schedule"
-                        ? (isAdmin || isTA ? "Lịch dạy" : "Lịch dạy của tôi")
-                      : item.path === "/users"
-                        ? "Quản lý User"
-                      : item.label;
+                  const label = item.path === "/tasks"
+                    ? (isAdmin ? "Phân công công việc" : "Công việc của tôi")
+                  : item.path === "/schedule"
+                    ? (isAdmin || isTA ? "Lịch dạy" : "Lịch dạy của tôi")
+                  : item.path === "/users"
+                    ? "Quản lý User"
+                  : item.label;
+                  const isHighlighted = ["/users", "/syllabus", "/schedule", "/admin-reports?tab=tuition", "/settings"].includes(item.path);
+
                   return (
                     <button
                       key={item.path}
                       onClick={() => { navigate(item.path); setSidebarOpen(false); }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${
                         active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-bold"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-black"
+                          : isHighlighted
+                          ? "text-rose-600 font-black"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
                     >
-                      <item.icon className="w-4 h-4" />
+                      <item.icon className={`w-4 h-4 ${isHighlighted && !active ? "text-rose-600" : ""}`} />
                       {label}
                     </button>
                   );
