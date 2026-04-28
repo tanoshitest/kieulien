@@ -156,7 +156,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 : item.path === "/timekeeping"
                 ? (isAdmin ? "Quản lý chấm công" : "Chấm công của tôi")
                 : item.label;
-              const isHighlighted = ["/users", "/syllabus", "/schedule", "/admin-reports?tab=tuition", "/inventory", "/settings"].includes(item.path);
+              const isHighlighted = ["/users", "/syllabus", "/schedule", "/admin-reports?tab=tuition", "/inventory", "/admin-reports?tab=survey", "/settings"].includes(item.path);
               
               return (
                 <button
@@ -245,7 +245,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   : item.path === "/users"
                     ? "Quản lý User"
                   : item.label;
-                  const isHighlighted = ["/users", "/syllabus", "/schedule", "/admin-reports?tab=tuition", "/inventory", "/settings"].includes(item.path);
+                  const isHighlighted = ["/users", "/syllabus", "/schedule", "/admin-reports?tab=tuition", "/inventory", "/admin-reports?tab=survey", "/settings"].includes(item.path);
 
                   return (
                     <button
