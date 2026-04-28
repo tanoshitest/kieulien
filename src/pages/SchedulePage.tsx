@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, 
   MapPin, Clock, Users, School, Info, Plus,
   Filter, Search, LayoutGrid, List, ChevronDown, Monitor,
-  Loader2, CheckCircle2, X, Check
+  Loader2, CheckCircle2, X, Check, CalendarDays, AlertTriangle 
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -108,6 +108,12 @@ const SchedulePage = () => {
   const [pendingCell, setPendingCell] = useState<{clsId: string, day: string, slotId: string} | null>(null);
   const [selectedTeacherId, setSelectedTeacherId] = useState("TCH001");
   const [selectedRoom, setSelectedRoom] = useState("Room A1");
+  const [isHolidayOpen, setIsHolidayOpen] = useState(false);
+  const [holidayForm, setHolidayForm] = useState({
+    startDate: "2026-04-30",
+    endDate: "2026-05-03",
+    reason: "Giải phóng miền Nam & Quốc tế Lao động",
+  });
 
   const teachers = users.filter(u => u.role === "teacher");
 
@@ -212,6 +218,13 @@ const SchedulePage = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsHolidayOpen(true)}
+            className="rounded-2xl border-amber-200 bg-amber-50 text-amber-700 font-black text-[10px] uppercase tracking-widest h-10 px-6 hover:bg-amber-100 transition-all flex items-center gap-2 shadow-sm"
+          >
+            <CalendarDays className="w-4 h-4" /> Cấu hình nghỉ lễ
+          </Button>
           <Button variant="outline" className="rounded-2xl border-slate-200 font-black text-[10px] uppercase tracking-widest h-10 px-6 hover:bg-slate-50">Hôm nay</Button>
           <Button className="rounded-2xl font-black text-[10px] uppercase tracking-widest h-10 px-6 shadow-lg shadow-primary/20">+ Xếp lịch mới</Button>
         </div>
@@ -378,6 +391,77 @@ const SchedulePage = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ============ HOLIDAY CONFIG DIALOG - Demo UI ============ */}
+      <Dialog open={isHolidayOpen} onOpenChange={setIsHolidayOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black flex items-center gap-2">
+               <CalendarDays className="w-5 h-5 text-amber-500" />
+               Cấu hình Nghỉ lễ / Sự cố
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5 py-4">
+             <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl space-y-3">
+                <div className="flex items-center gap-2 text-amber-700">
+                   <AlertTriangle className="w-4 h-4" />
+                   <p className="text-[11px] font-black uppercase">Tác vụ hệ thống quan trọng</p>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                   Thiết lập ngày nghỉ sẽ tự động <b>lùi lịch học</b> cho tất cả các lớp có buổi học trùng trong khoảng thời gian này.
+                </p>
+             </div>
+
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                   <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Ngày bắt đầu</Label>
+                   <Input 
+                      type="date" 
+                      value={holidayForm.startDate} 
+                      onChange={e => setHolidayForm({...holidayForm, startDate: e.target.value})}
+                      className="h-10 rounded-xl" 
+                   />
+                </div>
+                <div className="space-y-1.5">
+                   <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Ngày kết thúc</Label>
+                   <Input 
+                      type="date" 
+                      value={holidayForm.endDate} 
+                      onChange={e => setHolidayForm({...holidayForm, endDate: e.target.value})}
+                      className="h-10 rounded-xl" 
+                   />
+                </div>
+             </div>
+
+             <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Lý do nghỉ</Label>
+                <Input 
+                  value={holidayForm.reason} 
+                  onChange={e => setHolidayForm({...holidayForm, reason: e.target.value})}
+                  placeholder="VD: Nghỉ Tết Nguyên Đán" 
+                  className="h-10 rounded-xl" 
+                />
+             </div>
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+             <Button variant="ghost" onClick={() => setIsHolidayOpen(false)} className="rounded-xl font-bold uppercase tracking-widest text-[10px]">Hủy</Button>
+             <Button 
+                onClick={() => {
+                   toast.success("Đã thiết lập lịch nghỉ lễ thành công!", {
+                      description: `Hệ thống đã tự động đẩy lùi lịch học cho 42 lớp bị ảnh hưởng.`,
+                      icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                   });
+                   setIsHolidayOpen(false);
+                }}
+                className="rounded-xl bg-amber-500 text-white font-black uppercase tracking-widest text-[10px] px-6 shadow-lg shadow-amber-200"
+             >
+                Xác nhận lùi lịch học
+             </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

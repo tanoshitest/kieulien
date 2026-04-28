@@ -43,6 +43,7 @@ const AdminSyllabusView: React.FC = () => {
   const [selectedSyllabus, setSelectedSyllabus] = useState<Syllabus | null>(null);
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
   const [adminTab, setAdminTab] = useState<"sessions" | "design" | "progress">("sessions");
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Lắng nghe event "syllabus:apply-edit" từ panel duyệt đề xuất sửa
   React.useEffect(() => {
@@ -85,7 +86,7 @@ const AdminSyllabusView: React.FC = () => {
   const [editingSession, setEditingSession] = useState<SyllabusSession | null>(null);
 
   // Syllabus form
-  const [syllabusForm, setSyllabusForm] = useState({ name: "", description: "", level: "" });
+  const [syllabusForm, setSyllabusForm] = useState({ name: "", description: "", level: "", totalSessions: 0 });
 
   // Stage config form (sử dụng khi sửa syllabus đã có session)
   const [stageCount, setStageCount] = useState(2);
@@ -100,13 +101,13 @@ const AdminSyllabusView: React.FC = () => {
   // ── Syllabus CRUD ────────────────────────────────────────────
   const openCreateSyllabus = () => {
     setEditingSyllabus(null);
-    setSyllabusForm({ name: "", description: "", level: "" });
+    setSyllabusForm({ name: "", description: "", level: "", totalSessions: 24 });
     setShowSyllabusDialog(true);
   };
 
   const openEditSyllabus = (s: Syllabus) => {
     setEditingSyllabus(s);
-    setSyllabusForm({ name: s.name, description: s.description, level: s.level });
+    setSyllabusForm({ name: s.name, description: s.description, level: s.level, totalSessions: s.totalSessions });
     // Pre-fill stage config từ stages hiện tại (nếu có)
     const existing = getStagesBySyllabus(s.id);
     if (existing.length > 0) {
@@ -122,27 +123,24 @@ const AdminSyllabusView: React.FC = () => {
   const saveSyllabus = () => {
     if (!syllabusForm.name.trim()) { toast.error("Vui lòng nhập tên syllabus"); return; }
     if (editingSyllabus) {
-      setSyllabuses(prev => prev.map(s => s.id === editingSyllabus.id
+      const updatedSyllabuses = syllabuses.map(s => s.id === editingSyllabus.id
         ? { ...s, ...syllabusForm, updatedAt: new Date().toISOString().split("T")[0] }
-        : s));
+        : s);
+      setSyllabuses(updatedSyllabuses);
       if (selectedSyllabus?.id === editingSyllabus.id) {
-        setSelectedSyllabus(prev => prev ? { ...prev, ...syllabusForm } : prev);
+        setSelectedSyllabus({ ...selectedSyllabus, ...syllabusForm });
       }
-      // Áp dụng cấu hình stages nếu syllabus đã có session
-      if (editingSyllabus.sessions.length > 0 && stageCount > 0) {
-        const sessionIds = editingSyllabus.sessions.map(s => s.id);
-        configureSyllabusStages(editingSyllabus.id, sessionIds, stageCount, stageNames.slice(0, stageCount));
-      }
-      toast.success("Đã cập nhật syllabus" + (editingSyllabus.sessions.length > 0 ? ` & cấu hình ${stageCount} chặng` : ""));
+      toast.success("Đã cập nhật thông tin syllabus");
     } else {
       const newS: Syllabus = {
-        id: `SYL${Date.now()}`, ...syllabusForm, totalSessions: 0,
+        id: `SYL${Date.now()}`, 
+        ...syllabusForm, 
         createdAt: new Date().toISOString().split("T")[0],
         updatedAt: new Date().toISOString().split("T")[0],
         sessions: []
       };
       setSyllabuses(prev => [...prev, newS]);
-      toast.success("Đã tạo syllabus mới — thêm session rồi mới cấu hình được chặng");
+      toast.success("Đã tạo Syllabus mới");
     }
     setShowSyllabusDialog(false);
   };
@@ -248,35 +246,47 @@ const AdminSyllabusView: React.FC = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {syllabuses.map((s, i) => (
             <motion.div key={s.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-              className="bg-card border border-border rounded-xl p-5 hover:border-primary/50 hover:shadow-md transition-all group cursor-pointer"
+              className="bg-card border border-border rounded-xl p-6 hover:border-violet-300 hover:shadow-lg transition-all group cursor-pointer relative"
               onClick={() => setSelectedSyllabus(s)}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <BookOpen className="w-5 h-5 text-primary" />
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="w-14 h-14 rounded-2xl bg-violet-50 flex items-center justify-center flex-shrink-0 border border-violet-100">
+                    <BookOpen className="w-7 h-7 text-violet-600" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{s.name}</h3>
-                    <p className="text-xs text-muted-foreground">{s.level}</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-lg text-foreground group-hover:text-violet-600 transition-colors truncate">{s.name}</h3>
+                      <Badge variant="outline" className="text-[10px] font-black uppercase border-violet-200 text-violet-600">{s.level}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-1">{s.description || "Chưa có mô tả giáo trình."}</p>
                   </div>
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditSyllabus(s)}><Edit2 className="w-3.5 h-3.5" /></Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive" onClick={() => deleteSyllabus(s.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+
+                <div className="flex items-center gap-8 px-6 border-l border-border/50 hidden md:flex">
+                  <div className="text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Tiến độ</p>
+                    <p className="text-sm font-bold text-slate-700">{s.sessions.length} / {s.totalSessions || "--"} buổi</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cập nhật</p>
+                    <p className="text-sm font-bold text-slate-700">{s.updatedAt}</p>
+                  </div>
                 </div>
-              </div>
-              <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{s.description}</p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">{s.sessions.length} sessions</span>
+
+                <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                  <Button size="icon" variant="ghost" className="h-9 w-9 text-slate-400 hover:text-violet-600 hover:bg-violet-50" onClick={() => openEditSyllabus(s)}>
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-9 w-9 text-slate-400 hover:text-rose-600 hover:bg-rose-50" onClick={() => deleteSyllabus(s.id)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                  <Button variant="outline" className="h-9 gap-1.5 text-xs font-bold border-violet-200 text-violet-600 hover:bg-violet-50 ml-2" onClick={() => setSelectedSyllabus(s)}>
+                    <Eye className="w-3.5 h-3.5" /> Xem chi tiết
+                  </Button>
                 </div>
-                <Button size="sm" variant="ghost" className="h-7 text-xs gap-1.5 text-primary" onClick={() => setSelectedSyllabus(s)}>
-                  <Eye className="w-3 h-3" /> Xem chi tiết
-                </Button>
               </div>
             </motion.div>
           ))}
@@ -297,76 +307,14 @@ const AdminSyllabusView: React.FC = () => {
             <div className="space-y-3 py-2">
               <div><label className="text-sm font-medium mb-1 block">Tên Syllabus *</label>
                 <Input placeholder="VD: Family & Friends 1" value={syllabusForm.name} onChange={e => setSyllabusForm(p => ({ ...p, name: e.target.value }))} /></div>
-              <div><label className="text-sm font-medium mb-1 block">Cấp độ / Level</label>
-                <Input placeholder="VD: 4CLC 1, IELTS..." value={syllabusForm.level} onChange={e => setSyllabusForm(p => ({ ...p, level: e.target.value }))} /></div>
-              <div><label className="text-sm font-medium mb-1 block">Mô tả</label>
-                <Textarea rows={3} placeholder="Mô tả ngắn về syllabus này..." value={syllabusForm.description} onChange={e => setSyllabusForm(p => ({ ...p, description: e.target.value }))} /></div>
-
-              {/* Stage config — chỉ hiện khi edit syllabus đã có session */}
-              {editingSyllabus && editingSyllabus.sessions.length > 0 && (
-                <div className="p-3 rounded-lg border border-violet-200 bg-violet-50/40 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-violet-600" />
-                    <label className="text-sm font-semibold text-violet-900">Cấu hình Chặng (Stages)</label>
-                  </div>
-                  <p className="text-[11px] text-violet-800">
-                    Syllabus này có <strong>{editingSyllabus.sessions.length} buổi</strong>. Chia thành các chặng — buổi cuối mỗi chặng sẽ thành Big Test, HS phải hoàn tất mới mở được chặng sau.
-                  </p>
-
-                  <div>
-                    <label className="text-xs font-medium mb-1 block">Số chặng</label>
-                    <Select value={String(stageCount)} onValueChange={v => {
-                      const n = Number(v);
-                      setStageCount(n);
-                      setStageNames(prev => {
-                        const next = [...prev];
-                        while (next.length < n) next.push(`Chặng ${next.length + 1}`);
-                        return next.slice(0, n);
-                      });
-                    }}>
-                      <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5].map(n => (
-                          <SelectItem key={n} value={String(n)} disabled={n > editingSyllabus.sessions.length}>
-                            {n} chặng
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium block">Tên từng chặng</label>
-                    {Array.from({ length: stageCount }).map((_, idx) => {
-                      const per = Math.ceil(editingSyllabus.sessions.length / stageCount);
-                      const start = idx * per;
-                      const end = Math.min(start + per, editingSyllabus.sessions.length);
-                      const bigTest = editingSyllabus.sessions[end - 1];
-                      return (
-                        <div key={idx} className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-violet-700 w-8">#{idx + 1}</span>
-                          <Input
-                            className="h-8 text-xs"
-                            value={stageNames[idx] ?? ""}
-                            onChange={e => setStageNames(prev => {
-                              const next = [...prev];
-                              next[idx] = e.target.value;
-                              return next;
-                            })}
-                            placeholder={`Chặng ${idx + 1}`}
-                          />
-                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                            B{start + 1}–B{end} · BigTest: B{end}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="text-[10px] italic text-violet-700/70">
-                    Chặng sẽ được chia đều theo thứ tự buổi. Big Test = buổi cuối mỗi chặng.
-                  </p>
-                </div>
-              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="text-sm font-medium mb-1 block">Cấp độ / Level</label>
+                  <Input placeholder="VD: 4CLC 1..." value={syllabusForm.level} onChange={e => setSyllabusForm(p => ({ ...p, level: e.target.value }))} /></div>
+                <div><label className="text-sm font-medium mb-1 block">Số buổi học (Dự kiến)</label>
+                  <Input type="number" placeholder="24" value={syllabusForm.totalSessions} onChange={e => setSyllabusForm(p => ({ ...p, totalSessions: Number(e.target.value) }))} /></div>
+              </div>
+              <div><label className="text-sm font-medium mb-1 block">Mô tả giáo trình</label>
+                <Textarea rows={3} placeholder="Mô tả ngắn gọn mục tiêu, đối tượng..." value={syllabusForm.description} onChange={e => setSyllabusForm(p => ({ ...p, description: e.target.value }))} /></div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowSyllabusDialog(false)}>Hủy</Button>
@@ -410,129 +358,171 @@ const AdminSyllabusView: React.FC = () => {
       </div>
 
       {adminTab === "sessions" ? (
-        /* Render Teacher view với full tabs (Admin chỉ xem, không sửa) */
-        <TeacherSyllabusView showStaffReport hideCourseSelect readOnly />
+        <div className="relative">
+          {/* View/Edit Toggle for Admin */}
+          <div className="absolute top-4 right-6 z-40 flex items-center gap-2 bg-white/90 backdrop-blur shadow-sm border border-border p-1 rounded-full">
+            <button
+              onClick={() => setIsEditMode(false)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${!isEditMode ? "bg-violet-600 text-white" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              <Eye className="w-3.5 h-3.5" /> Xem Preview
+            </button>
+            <button
+              onClick={() => setIsEditMode(true)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${isEditMode ? "bg-violet-600 text-white" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              <Settings className="w-3.5 h-3.5" /> Chỉnh sửa
+            </button>
+          </div>
+
+          {!isEditMode ? (
+            /* PREVIEW MODE: Giống bản cũ (Teacher view) */
+            <TeacherSyllabusView showStaffReport hideCourseSelect readOnly syllabus={selectedSyllabus} />
+          ) : (
+            /* BUILDER MODE: Giao diện sửa từng buổi học */
+            <div className="p-6 pt-16">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-lg font-bold text-foreground uppercase tracking-tight">Cấu trúc giáo trình: {selectedSyllabus.name}</h2>
+                  <p className="text-xs text-muted-foreground">Kéo thả để sắp xếp, bấm Sửa để cập nhật nội dung từng buổi</p>
+                </div>
+                <Button onClick={openCreateSession} className="bg-violet-600 hover:bg-violet-700 h-9">
+                  <Plus className="w-4 h-4 mr-2" /> Thêm buổi học mới
+                </Button>
+              </div>
+
+              <DragDropContext onDragEnd={onDragEnd}>
+                <Droppable droppableId="sessions">
+                  {(provided) => (
+                    <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                      {selectedSyllabus.sessions.length === 0 ? (
+                        <div className="text-center py-20 border-2 border-dashed border-border rounded-2xl">
+                          <div className="w-12 h-12 bg-violet-50 text-violet-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <BookOpen className="w-6 h-6" />
+                          </div>
+                          <h3 className="text-sm font-bold text-foreground mb-1">Chưa có buổi học nào</h3>
+                          <p className="text-xs text-muted-foreground mb-6">Hãy bắt đầu xây dựng giáo trình bằng cách thêm buổi học đầu tiên</p>
+                          <Button onClick={openCreateSession} variant="outline" className="border-violet-200 text-violet-600 hover:bg-violet-50">
+                            Thêm buổi học đầu tiên
+                          </Button>
+                        </div>
+                      ) : (
+                        selectedSyllabus.sessions.map((sess, index) => (
+                          <Draggable key={sess.id} draggableId={sess.id} index={index}>
+                            {(drag, snapshot) => (
+                              <div ref={drag.innerRef} {...drag.draggableProps}
+                                className={`bg-card border border-border rounded-xl transition-all ${snapshot.isDragging ? "shadow-xl border-violet-500 scale-[1.02]" : "hover:border-violet-200 shadow-sm"}`}>
+                                {/* Session header */}
+                                <div className="flex items-center gap-3 px-4 py-4">
+                                  <div {...drag.dragHandleProps} className="text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 p-1 hover:bg-muted rounded">
+                                    <GripVertical className="w-4 h-4" />
+                                  </div>
+                                  <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center flex-shrink-0 border border-violet-100">
+                                    <span className="text-xs font-black text-violet-600">{sess.order}</span>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-sm text-foreground truncate">{sess.title}</span>
+                                      {sess.homeworks.length > 0 && (
+                                        <Badge variant="secondary" className="text-[10px] font-black uppercase bg-indigo-50 text-indigo-600 border-indigo-100">{sess.homeworks.length} BÀI TẬP</Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground truncate mt-0.5 font-medium uppercase tracking-wider">{sess.vocab || "Chưa có từ vựng"}</p>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs font-bold text-slate-500 hover:text-violet-600" onClick={() => openEditSession(sess)}>
+                                      <Edit2 className="w-3.5 h-3.5" /> Sửa
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50" onClick={() => deleteSession(sess.id)}>
+                                      <Trash2 className="w-3.5 h-3.5" /> Xóa
+                                    </Button>
+                                    <button onClick={() => toggleExpand(sess.id)} className="text-muted-foreground p-1.5 hover:bg-muted rounded-lg transition-colors ml-1">
+                                      {expandedSessions.has(sess.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Session expanded content */}
+                                <AnimatePresence>
+                                  {expandedSessions.has(sess.id) && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden bg-slate-50/30">
+                                      <div className="border-t border-border px-6 py-6 space-y-6">
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                          <div className="space-y-2">
+                                            <div className="flex items-center gap-2 text-violet-700">
+                                              <BookOpen className="w-3.5 h-3.5" />
+                                              <span className="text-[10px] font-black uppercase tracking-widest">Nội dung học tập</span>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-3">
+                                              <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1 italic">Từ vựng</p>
+                                                <p className="text-xs font-bold text-slate-700 leading-relaxed">{sess.vocab || "Trống"}</p>
+                                              </div>
+                                              <div className="pt-2 border-t border-slate-50">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1 italic">Ngữ pháp</p>
+                                                <p className="text-xs font-bold text-slate-700 leading-relaxed">{sess.grammar || "Trống"}</p>
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div className="space-y-2">
+                                            <div className="flex items-center gap-2 text-indigo-700">
+                                              <FileText className="w-3.5 h-3.5" />
+                                              <span className="text-[10px] font-black uppercase tracking-widest">Tài liệu buổi học</span>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm min-h-[100px] flex flex-col items-center justify-center text-center">
+                                              {sess.materialsLink ? (
+                                                <MaterialsViewer url={sess.materialsLink} title={sess.title} watermark="Admin" />
+                                              ) : (
+                                                <>
+                                                  <Link2 className="w-6 h-6 text-slate-200 mb-2" />
+                                                  <p className="text-[10px] font-bold text-slate-400 uppercase italic">Chưa gắn tài liệu giảng dạy</p>
+                                                </>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="space-y-2">
+                                          <div className="flex items-center gap-2 text-slate-700">
+                                            <LayoutGrid className="w-3.5 h-3.5" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Quy trình giảng dạy (Teaching Process)</span>
+                                          </div>
+                                          <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
+                                            <pre className="text-xs font-medium text-slate-600 font-sans whitespace-pre-wrap leading-loose">
+                                              {sess.teachingProcess || "Chưa có quy trình chi tiết."}
+                                            </pre>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))
+                      )}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+            </div>
+          )}
+        </div>
       ) : (
         <div className="p-6">
           <ClassScheduleManager syllabus={selectedSyllabus} />
         </div>
       )}
 
-      {/* Back to syllabus list — minimal floating button cho admin */}
+      {/* Back to syllabus list — floating button for admin */}
       <button
         onClick={() => setSelectedSyllabus(null)}
-        className="fixed bottom-6 right-6 z-20 flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-full shadow-lg hover:bg-violet-700 transition-colors text-sm font-medium"
+        className="fixed bottom-8 right-8 z-50 flex items-center gap-2 px-5 py-2.5 bg-violet-600 text-white rounded-full shadow-2xl hover:bg-violet-700 hover:scale-105 transition-all text-sm font-bold border-2 border-white/20"
       >
         <ArrowLeft className="w-4 h-4" /> Về danh sách Syllabus
       </button>
-
-      {false && (<>
-
-      {/* Drag-and-drop sessions */}
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="sessions">
-          {(provided) => (
-            <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-              {selectedSyllabus.sessions.map((sess, index) => (
-                <Draggable key={sess.id} draggableId={sess.id} index={index}>
-                  {(drag, snapshot) => (
-                    <div ref={drag.innerRef} {...drag.draggableProps}
-                      className={`bg-card border border-border rounded-xl transition-all ${snapshot.isDragging ? "shadow-xl border-primary" : "hover:border-border/80"}`}>
-                      {/* Session header */}
-                      <div className="flex items-center gap-3 px-4 py-3">
-                        <div {...drag.dragHandleProps} className="text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0">
-                          <GripVertical className="w-4 h-4" />
-                        </div>
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-bold text-primary">{sess.order}</span>
-                        </div>
-                        <button onClick={() => toggleExpand(sess.id)} className="flex-1 min-w-0 text-left">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm text-foreground truncate">{sess.title}</span>
-                            {sess.homeworks.length > 0 && (
-                              <Badge variant="secondary" className="text-xs">{sess.homeworks.length} BT</Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">{sess.vocab.split(",").slice(0, 4).join(", ")}...</p>
-                        </button>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEditSession(sess)}><Edit2 className="w-3.5 h-3.5" /></Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 hover:text-destructive" onClick={() => deleteSession(sess.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                          <button onClick={() => toggleExpand(sess.id)} className="text-muted-foreground p-1">
-                            {expandedSessions.has(sess.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Session expanded content */}
-                      <AnimatePresence>
-                        {expandedSessions.has(sess.id) && (
-                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                            <div className="border-t border-border px-4 py-4 space-y-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Từ vựng</p>
-                                  <p className="text-sm text-foreground leading-relaxed">{sess.vocab}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Ngữ pháp</p>
-                                  <p className="text-sm text-foreground leading-relaxed">{sess.grammar}</p>
-                                </div>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Quy trình dạy</p>
-                                <pre className="text-sm text-foreground font-sans whitespace-pre-wrap leading-relaxed bg-muted/50 p-3 rounded-lg">{sess.teachingProcess}</pre>
-                              </div>
-                              {sess.materialsLink && (
-                                <div>
-                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Tài liệu giảng dạy</p>
-                                  <MaterialsViewer url={sess.materialsLink} title={sess.title} watermark="Admin" />
-                                </div>
-                              )}
-                              {sess.homeworks.length > 0 && (
-                                <div>
-                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Bài tập</p>
-                                  <div className="space-y-2">
-                                    {sess.homeworks.map(hw => {
-                                      const Icon = hwTypeIcon[hw.type];
-                                      return (
-                                        <div key={hw.id} className="flex items-start gap-3 p-2.5 bg-muted/30 rounded-lg">
-                                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium flex-shrink-0 ${hwTypeColor[hw.type]}`}>
-                                            <Icon className="w-3 h-3" />{hwTypeLabel[hw.type]}
-                                          </div>
-                                          <div className="min-w-0">
-                                            <p className="text-sm font-medium text-foreground">{hw.title}</p>
-                                            <p className="text-xs text-muted-foreground mt-0.5">{hw.description}</p>
-                                            {hw.externalLink && <a href={hw.externalLink} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline mt-0.5 flex items-center gap-1"><Link2 className="w-3 h-3" />Mở link</a>}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      </DragDropContext>
-
-      {selectedSyllabus.sessions.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground border-2 border-dashed border-border rounded-xl">
-          <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">Chưa có session nào</p>
-          <p className="text-sm mt-1">Bấm "Thêm Session" để bắt đầu xây dựng giáo trình</p>
-        </div>
-      )}
-      </>)}
 
       {/* Session Dialog */}
       <Dialog open={showSessionDialog} onOpenChange={setShowSessionDialog}>

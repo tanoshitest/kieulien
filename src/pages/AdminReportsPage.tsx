@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useRole } from "@/contexts/RoleContext";
+import { useSearchParams } from "react-router-dom";
 import { 
   financeRecords, 
   timekeepingRecords,
@@ -11,19 +12,27 @@ import {
   students
 } from "@/data/mockData";
 import { 
-  DollarSign, Fingerprint, CircleDollarSign, 
-  Search, Filter, Download, Calendar, 
+  DollarSign, Fingerprint, Search, Filter, Download, Calendar, 
   TrendingUp, Clock, CheckCircle2, AlertCircle,
   FileText, ArrowDownRight, ArrowUpRight, Plus, X,
   School, Laptop, Timer, ChevronLeft, ChevronRight,
   ArrowLeft, MapPin, BarChart3, Mail, Phone, GraduationCap,
   CheckCircle, XCircle, Paperclip, Loader2, UploadCloud, Pencil,
-  CalendarCheck, ClipboardCheck
+  CalendarCheck, ClipboardCheck, HandCoins, Repeat, Wallet, CircleDollarSign
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { AdminSurveyDashboard } from "@/components/survey/AdminSurveyDashboard";
 import { admissionsStore, useEnrollments } from "@/lib/admissionsStore";
 
@@ -32,9 +41,34 @@ const formatVND = (n: number) =>
 
 const AdminReportsPage = () => {
   const { isAdmin } = useRole();
-  const [activeTab, setActiveTab] = useState<"tuition" | "attendance" | "payroll" | "training" | "attendance_report" | "survey">("tuition");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get("tab") as "tuition" | "attendance" | "payroll" | "survey") || "tuition";
 
   // ---- TUITION STATES ----
+  const [tuitionRecords, setTuitionRecords] = useState(financeRecords.filter(r => r.type === "income" && r.category === "Học phí"));
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [isVoidModalOpen, setIsVoidModalOpen] = useState(false);
+  const [isReconModalOpen, setIsReconModalOpen] = useState(false);
+  
+  const [receiptForm, setReceiptForm] = useState({
+    studentId: "",
+    classId: "",
+    amount: 0,
+    method: "transfer" as "cash" | "transfer",
+    invoiceNum: "",
+    note: ""
+  });
+
+  const [selectedVoidRecord, setSelectedVoidRecord] = useState<any>(null);
+  const [voidReason, setVoidReason] = useState("");
+  
+  // Invoice Range State (VD: 001-050)
+  const [invoiceRange, setInvoiceRange] = useState({
+    start: 1,
+    end: 50,
+    current: 12, // Đã dùng đến số 11
+  });
+
   const [tuitionSearch, setTuitionSearch] = useState("");
   const [tuitionStatusFilter, setTuitionStatusFilter] = useState<"all" | FinanceRecord["status"]>("all");
   const [tuitionBranchFilter, setTuitionBranchFilter] = useState<string>("all");
@@ -160,7 +194,7 @@ const AdminReportsPage = () => {
   // Bridge từ CRM: lắng nghe enrollment events
   const allEnrollments = useEnrollments();
   // Tháng hiện tại để filter (YYYY-MM)
-  const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const currentMonthKey = `${new Date().getFullYear(  )}-${String(new Date().getMonth() + 1).padStart(2, "0"  )}`;
   // Đề xuất doanh số cho học vụ đang mở modal
   const suggestedFromCRM = React.useMemo(() => {
     if (!selectedStaffForAction || selectedStaffForAction.role !== "FULL_TIME") return [];
@@ -213,19 +247,71 @@ const AdminReportsPage = () => {
   }
 
   // ---- FINANCIAL VIEW HELPERS ----
-  const tuitionRecordsFiltered = financeRecords.filter(
-    (r) => r.type === "income" && r.category === "Học phí"
-  ).filter((r) => {
-    const matchSearch = r.description.toLowerCase().includes(tuitionSearch.toLowerCase());
+  const tuitionRecordsFiltered = tuitionRecords.filter((r) => {
+    const matchSearch = r.description.toLowerCase().includes(tuitionSearch.toLowerCase()) || r.id.toLowerCase().includes(tuitionSearch.toLowerCase());
     const matchStatus = tuitionStatusFilter === "all" || r.status === tuitionStatusFilter;
     const matchBranch = tuitionBranchFilter === "all" || r.branchId === tuitionBranchFilter;
     const matchClass = tuitionClassFilter === "all" || r.classId === tuitionClassFilter;
     return matchSearch && matchStatus && matchBranch && matchClass;
   });
 
-  const totalTuitionCollected = tuitionRecordsFiltered.filter((r) => r.status === "paid").reduce((s, r) => s + r.amount, 0);
-  const totalTuitionPending = tuitionRecordsFiltered.filter((r) => r.status === "pending").reduce((s, r) => s + r.amount, 0);
-  const totalTuitionOverdue = tuitionRecordsFiltered.filter((r) => r.status === "overdue").reduce((s, r) => s + r.amount, 0);
+  const handleCreateReceipt = () => {
+    if (!receiptForm.studentId || receiptForm.amount <= 0) {
+      toast.error("Vui lòng nhập đầy đủ thông tin!");
+      return;
+    }
+
+    if (receiptForm.method === "cash") {
+      if (invoiceRange.current > invoiceRange.end) {
+        toast.error("Hết dải số hóa đơn! Vui lòng cấp thêm dải mới.");
+        return;
+      }
+    }
+
+    const student = students.find(s => s.id === receiptForm.studentId);
+    const newRecord: any = {
+      id: receiptForm.method === "cash" ? `INV-${String(invoiceRange.current).padStart(3, '0'  )}` : `TRF-${Date.now().toString().slice(-6  )}`,
+      type: "income",
+      category: "Học phí",
+      amount: receiptForm.amount,
+      date: new Date().toISOString().split("T")[0],
+      status: "paid",
+      description: `Thu học phí: ${student?.name || "Học viên"}`,
+      branchId: tuitionBranchFilter === "all" ? "BR001" : tuitionBranchFilter,
+      classId: receiptForm.classId || "CLS001",
+      paymentMethod: receiptForm.method,
+      invoiceNum: receiptForm.method === "cash" ? String(invoiceRange.current).padStart(3, '0') : null
+    };
+
+    setTuitionRecords(prev => [newRecord, ...prev]);
+    if (receiptForm.method === "cash") {
+      setInvoiceRange(prev => ({ ...prev, current: prev.current + 1 }));
+    }
+    
+    setIsReceiptModalOpen(false);
+    toast.success("Đã tạo phiếu thu thành công!");
+    setReceiptForm({ studentId: "", classId: "", amount: 0, method: "transfer", invoiceNum: "", note: "" });
+  };
+
+  const handleVoidReceipt = () => {
+    if (!voidReason) {
+      toast.error("Vui lòng nhập lý do hủy!");
+      return;
+    }
+    
+    setTuitionRecords(prev => prev.map(r => 
+      r.id === selectedVoidRecord.id ? { ...r, status: "overdue", voided: true, voidReason, voidedAt: new Date().toISOString() } : r
+    ));
+    
+    setIsVoidModalOpen(false);
+    setSelectedVoidRecord(null);
+    setVoidReason("");
+    toast.success("Đã hủy hóa đơn và lưu lịch sử.");
+  };
+
+  const totalTuitionCollected = tuitionRecordsFiltered.filter((r) => r.status === "paid" && !(r as any).voided).reduce((s, r) => s + r.amount, 0);
+  const totalTuitionPending = tuitionRecordsFiltered.filter((r) => r.status === "pending" && !(r as any).voided).reduce((s, r) => s + r.amount, 0);
+  const totalTuitionOverdue = tuitionRecordsFiltered.filter((r) => r.status === "overdue" && !(r as any).voided).reduce((s, r) => s + r.amount, 0);
 
   // ---- ATTENDANCE VIEW HELPERS ----
   const calculateDuration = (inTime: string | null, outTime: string | null) => {
@@ -245,68 +331,28 @@ const AdminReportsPage = () => {
     <div className="flex flex-col h-full bg-[#f8fafc] overflow-hidden">
       {/* Header & Tabs - CRM Style Sync */}
       <div className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <div className="flex bg-slate-100 p-1 rounded-lg">
-          <button 
-            onClick={() => setActiveTab("tuition")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all ${
-              activeTab === "tuition" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <DollarSign className="w-3.5 h-3.5" />
-            Học phí
-          </button>
-          <button 
-            onClick={() => setActiveTab("attendance")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all ${
-              activeTab === "attendance" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <Fingerprint className="w-3.5 h-3.5" />
-            Chấm công
-          </button>
-          <button 
-            onClick={() => setActiveTab("payroll")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all ${
-              activeTab === "payroll" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <CircleDollarSign className="w-3.5 h-3.5" />
-            Báo cáo lương
-          </button>
-          <button 
-            onClick={() => setActiveTab("attendance_report")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all ${
-              activeTab === "attendance_report" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <CalendarCheck className="w-3.5 h-3.5" />
-            Báo cáo chuyên cần
-          </button>
-          <button 
-            onClick={() => setActiveTab("training")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all ${
-              activeTab === "training" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <GraduationCap className="w-3.5 h-3.5" />
-            Kết quả đào tạo
-          </button>
-          <button 
-            onClick={() => setActiveTab("survey")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all ${
-              activeTab === "survey" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <ClipboardCheck className="w-3.5 h-3.5" />
-            Khảo sát
-          </button>
+        <div>
+          <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+            {activeTab === "tuition" && <><DollarSign className="w-5 h-5 text-emerald-500" /> Báo cáo học phí</>}
+            {activeTab === "attendance" && <><Fingerprint className="w-5 h-5 text-blue-500" /> Báo cáo chấm công</>}
+            {activeTab === "payroll" && <><CircleDollarSign className="w-5 h-5 text-amber-500" /> Báo cáo lương</>}
+            {activeTab === "survey" && <><ClipboardCheck className="w-5 h-5 text-purple-500" /> Khảo sát & Đánh giá</>}
+          </h2>
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="rounded-xl border-slate-200 text-xs font-bold h-10 px-5">
-            <Calendar className="w-4 h-4 mr-2" /> Tháng 03/2026
+          {activeTab === "tuition" && (
+            <Button 
+              onClick={() => setIsReceiptModalOpen(true  )}
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-black h-10 px-5 shadow-lg shadow-emerald-200 uppercase tracking-wider"
+            >
+              <Plus className="w-4 h-4 mr-2" /> Tạo phiếu thu
+            </Button>
+            )}
+          <Button variant="outline" onClick={() => setIsReconModalOpen(true  )} className="rounded-xl border-slate-200 text-xs font-bold h-10 px-5">
+            <CalendarCheck className="w-4 h-4 mr-2" /> Đối soát
           </Button>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-black uppercase tracking-wider hover:opacity-90 transition-all shadow-md shadow-primary/20">
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-lg text-sm font-black uppercase tracking-wider hover:opacity-90 transition-all shadow-md shadow-slate-200">
             <Download className="w-4 h-4" />
             Xuất Excel
           </button>
@@ -333,7 +379,7 @@ const AdminReportsPage = () => {
                             </span>
                         </div>
                         <p className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Đã xác nhận thanh toán</p>
-                        <p className="text-2xl font-black text-slate-800 tracking-tight">{formatVND(totalTuitionCollected)}</p>
+                        <p className="text-2xl font-black text-slate-800 tracking-tight">{formatVND(totalTuitionCollected  )}</p>
                         <div className="mt-4 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div className="h-full bg-emerald-500 w-[75%] rounded-full shadow-sm shadow-emerald-200" />
                         </div>
@@ -349,7 +395,7 @@ const AdminReportsPage = () => {
                             </div>
                         </div>
                         <p className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Đang chờ phụ huynh đóng</p>
-                        <p className="text-2xl font-black text-slate-800 tracking-tight">{formatVND(totalTuitionPending)}</p>
+                        <p className="text-2xl font-black text-slate-800 tracking-tight">{formatVND(totalTuitionPending  )}</p>
                         <div className="mt-4 flex items-center gap-2">
                              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                 <div className="h-full bg-amber-500 w-[20%] rounded-full" />
@@ -367,11 +413,69 @@ const AdminReportsPage = () => {
                             </button>
                         </div>
                         <p className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Chưa đóng / Quá hạn</p>
-                        <p className="text-2xl font-black text-rose-600 tracking-tight">{formatVND(totalTuitionOverdue)}</p>
+                        <p className="text-2xl font-black text-rose-600 tracking-tight">{formatVND(totalTuitionOverdue  )}</p>
                         <div className="mt-4 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div className="h-full bg-rose-500 w-[12%] rounded-full shadow-sm shadow-rose-200" />
                         </div>
                     </div>
+                </div>
+
+                {/* NEW: REVENUE RECOGNITION CHART DEMO */}
+                <div className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm">
+                   <div className="flex items-center justify-between mb-8">
+                      <div>
+                         <h3 className="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-emerald-500" />
+                            Phân bổ doanh thu theo buổi dạy (Earned Revenue)
+                         </h3>
+                         <p className="text-xs text-slate-400 font-medium mt-1 uppercase tracking-widest italic">Doanh thu được ghi nhận dựa trên số buổi giáo viên đã dạy thực tế.</p>
+                      </div>
+                      <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                         <span className="text-[10px] font-black text-slate-400 px-3 py-1">Tầm nhìn:</span>
+                         <button className="text-[10px] font-black text-slate-600 px-3 py-1 bg-white shadow-sm rounded-lg border">6 THÁNG</button>
+                         <button className="text-[10px] font-black text-slate-400 px-3 py-1 hover:text-slate-600 transition-colors">12 THÁNG</button>
+                      </div>
+                   </div>
+
+                   <div className="flex items-end justify-between h-48 gap-4 px-4 border-b border-slate-100 pb-2">
+                      {[
+                        { month: "Jan", earned: 240, collected: 380 },
+                        { month: "Feb", earned: 310, collected: 320 },
+                        { month: "Mar", earned: 420, collected: 450 },
+                        { month: "Apr", earned: 485, collected: 520 },
+                        { month: "May", earned: 460, collected: 410 },
+                        { month: "Jun", earned: 520, collected: 580 }
+                      ].map((d, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-2 group cursor-help relative">
+                           {/* Tooltip demo */}
+                           <div className="absolute -top-12 bg-slate-900 text-white text-[9px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-10 whitespace-nowrap">
+                              Dạy: {formatVND(d.earned * 1000000  )} | Thu: {formatVND(d.collected * 1000000  )}
+                           </div>
+                           <div className="w-full flex gap-1 justify-center items-end h-full">
+                              <div 
+                                className="w-4 bg-emerald-500 rounded-t-lg transition-all group-hover:brightness-110" 
+                                style={{ height: `${(d.earned/600)*100}%` }}
+                              />
+                              <div 
+                                className="w-4 bg-slate-200 rounded-t-lg transition-all group-hover:bg-slate-300" 
+                                style={{ height: `${(d.collected/600)*100}%` }}
+                              />
+                           </div>
+                           <span className="text-[10px] font-black text-slate-400 uppercase">{d.month}</span>
+                        </div>
+                      )  )}
+                   </div>
+                   
+                   <div className="flex gap-8 mt-6 px-4">
+                      <div className="flex items-center gap-2">
+                         <div className="w-3 h-3 bg-emerald-500 rounded-sm" />
+                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Doanh thu ghi nhận (Đã dạy)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                         <div className="w-3 h-3 bg-slate-200 rounded-sm" />
+                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tiền mặt thu được (Cashflow)</span>
+                      </div>
+                   </div>
                 </div>
 
                 {/* Filters - CRM Layout Sync */}
@@ -382,7 +486,7 @@ const AdminReportsPage = () => {
                           <Input 
                             placeholder="Tìm tên học viên hoặc mã đóng phí..." 
                             value={tuitionSearch} 
-                            onChange={(e) => setTuitionSearch(e.target.value)}
+                            onChange={(e) => setTuitionSearch(e.target.value  )}
                             className="pl-10 bg-slate-50 border-slate-200 h-10 rounded-lg text-xs font-bold"
                           />
                         </div>
@@ -390,26 +494,26 @@ const AdminReportsPage = () => {
                         <div className="md:col-span-3">
                             <select 
                                 value={tuitionBranchFilter}
-                                onChange={(e) => setTuitionBranchFilter(e.target.value)}
+                                onChange={(e) => setTuitionBranchFilter(e.target.value  )}
                                 className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/10"
                             >
                                 <option value="all">Tất cả chi nhánh</option>
                                 {branches.map(b => (
-                                    <option key={b.id} value={b.id}>{b.name.replace("MENGLISH - ", "")}</option>
-                                ))}
+                                    <option key={b.id} value={b.id}>{b.name.replace("MENGLISH - ", ""  )}</option>
+                                )  )}
                             </select>
                         </div>
 
                         <div className="md:col-span-4">
                             <select 
                                 value={tuitionClassFilter}
-                                onChange={(e) => setTuitionClassFilter(e.target.value)}
+                                onChange={(e) => setTuitionClassFilter(e.target.value  )}
                                 className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/10"
                             >
                                 <option value="all">Tất cả lớp học</option>
                                 {classes.map(c => (
                                     <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
+                                )  )}
                             </select>
                         </div>
                     </div>
@@ -418,14 +522,14 @@ const AdminReportsPage = () => {
                         <div className="flex bg-slate-100 p-1 rounded-lg">
                           {(["all", "paid", "pending", "overdue"] as const).map(s => (
                             <button 
-                              key={s} onClick={() => setTuitionStatusFilter(s)}
+                              key={s} onClick={() => setTuitionStatusFilter(s  )}
                               className={`px-4 py-1.5 text-[10px] font-black uppercase transition-all rounded-md ${
                                 tuitionStatusFilter === s ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-600"
                               }`}
                             >
                               {s === "all" ? "Tất cả" : s === "paid" ? "Đã nộp" : s === "pending" ? "Chờ" : "Nợ"}
                             </button>
-                          ))}
+                          )  )}
                         </div>
                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
                             Hiển thị {tuitionRecordsFiltered.length} kết quả
@@ -454,20 +558,34 @@ const AdminReportsPage = () => {
                         return (
                           <tr key={r.id} className="hover:bg-slate-50/80 transition-colors group">
                             <td className="px-6 py-4">
-                              <p className="font-bold text-slate-800 group-hover:text-primary transition-colors text-xs uppercase tracking-tight">{r.description}</p>
-                              <p className="text-[9px] font-black text-slate-300 mt-0.5 italic tracking-widest lowercase opacity-60">Invoice: {r.id}</p>
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                  (r as any).paymentMethod === "cash" ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"
+                                }`}>
+                                  {(r as any).paymentMethod === "cash" ? <HandCoins className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-bold text-slate-800 group-hover:text-primary transition-colors text-xs uppercase tracking-tight truncate">{r.description}</p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <p className="text-[9px] font-black text-slate-300 italic tracking-widest lowercase opacity-60">ID: {r.id}</p>
+                                    {(r as any).invoiceNum && (
+                                      <Badge className="bg-amber-100 text-amber-700 text-[8px] font-black h-3.5 px-1 tracking-tighter border-none">HD-{(r as any).invoiceNum}</Badge>
+                                      )}
+                                  </div>
+                                </div>
+                              </div>
                             </td>
                             <td className="px-6 py-4">
                               <div className="space-y-1 text-[10px] font-black uppercase">
                                 <div className="flex items-center gap-2 text-slate-500">
                                   {branch?.name === "MENGLISH - Online" ? <Laptop className="w-3 h-3 text-blue-500" /> : <School className="w-3 h-3 text-primary" />}
-                                  {branch?.name.replace("MENGLISH - ", "")}
+                                  {branch?.name.replace("MENGLISH - ", ""  )}
                                 </div>
                                 {cls && (
                                   <div className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full w-fit border border-primary/10 tracking-widest">
                                     {cls.name}
                                   </div>
-                                )}
+                                  )}
                               </div>
                             </td>
                             <td className="px-6 py-4 text-center text-[10px] font-bold text-slate-400 italic">{r.date}</td>
@@ -482,34 +600,45 @@ const AdminReportsPage = () => {
                             </td>
                             <td className={`px-6 py-4 text-right text-base font-black tracking-tight ${
                               r.status === "paid" ? "text-emerald-600" : "text-rose-600"
-                            }`}>{formatVND(r.amount)}</td>
+                            }`}>{formatVND(r.amount  )}</td>
                             <td className="px-6 py-4 text-right">
-                              {(r.status === "pending" || r.status === "overdue") && (
+                              {r.status === "paid" && !(r as any).voided && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedVoidRecord(r);
+                                    setIsVoidModalOpen(true);
+                                  }}
+                                  className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase tracking-tight hover:bg-rose-100 transition-all border border-rose-100"
+                                >
+                                  Hủy hóa đơn
+                                </button>
+                                )}
+                              {(r as any).voided && (
+                                <div className="text-[9px] font-bold text-rose-500 italic">Đã hủy: {(r as any).voidReason}</div>
+                                )}
+                              {(r.status === "pending" || r.status === "overdue") && !(r as any).voided && (
                                 <button
                                   onClick={() => {
                                     toast.success(`Đã gửi yêu cầu nhắc nợ qua Zalo cho phụ huynh học sinh!`, {
-                                      description: `Thông báo học phí ${formatVND(r.amount)} đang được gửi đi...`,
+                                      description: `Thông báo học phí ${formatVND(r.amount  )} đang được gửi đi...`,
                                       icon: <div className="p-1 bg-blue-500 rounded-full"><Plus className="w-3 h-3 text-white" /></div>
                                     });
                                   }}
                                   className="px-3 py-1.5 bg-[#0068ff] text-white rounded-lg text-[10px] font-black uppercase tracking-tight hover:opacity-90 transition-all shadow-sm shadow-blue-200 flex items-center gap-1.5 ml-auto"
                                 >
-                                  <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                                  </div>
                                   Nhắc Nợ Zalo
                                 </button>
-                              )}
+                                )}
                             </td>
                           </tr>
                         );
-                      })}
+                      }  )}
                     </tbody>
                   </table>
                   </div>
                 </div>
             </motion.div>
-          )}
+          ) }
 
           {activeTab === "attendance" && (
             <motion.div 
@@ -521,7 +650,7 @@ const AdminReportsPage = () => {
                    <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm space-y-6">
                        <div className="flex items-center justify-between border-b border-slate-50 pb-6">
                            <div className="flex items-center gap-4">
-                              <button onClick={() => setSelectedTeacherId(null)} className="p-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition-all">
+                              <button onClick={() => setSelectedTeacherId(null  )} className="p-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition-all">
                                  <ArrowLeft className="w-4 h-4 text-slate-600" />
                               </button>
                               <div>
@@ -530,9 +659,9 @@ const AdminReportsPage = () => {
                               </div>
                            </div>
                            <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-100">
-                              <button onClick={() => setReportDate(new Date(reportDate.getFullYear(), reportDate.getMonth() - 1, 1))} className="p-1.5 hover:bg-white rounded-md transition-shadow"><ChevronLeft className="w-3.5 h-3.5" /></button>
-                              <span className="text-[10px] font-black uppercase tracking-widest min-w-[100px] text-center italic">THÁNG {reportDate.getMonth() + 1} / {reportDate.getFullYear()}</span>
-                              <button onClick={() => setReportDate(new Date(reportDate.getFullYear(), reportDate.getMonth() + 1, 1))} className="p-1.5 hover:bg-white rounded-md transition-shadow"><ChevronRight className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => setReportDate(new Date(reportDate.getFullYear(), reportDate.getMonth() - 1, 1)  )} className="p-1.5 hover:bg-white rounded-md transition-shadow"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                              <span className="text-[10px] font-black uppercase tracking-widest min-w-[100px] text-center italic">THÁNG {reportDate.getMonth() + 1} / {reportDate.getFullYear(  )}</span>
+                              <button onClick={() => setReportDate(new Date(reportDate.getFullYear(), reportDate.getMonth() + 1, 1)  )} className="p-1.5 hover:bg-white rounded-md transition-shadow"><ChevronRight className="w-3.5 h-3.5" /></button>
                            </div>
                        </div>
 
@@ -551,7 +680,7 @@ const AdminReportsPage = () => {
                                    <p className={`text-lg font-black ${s.color}`}>{s.val}</p>
                                 </div>
                              </div>
-                          ))}
+                          )  )}
                        </div>
 
                        <div className="border border-slate-100 rounded-xl overflow-hidden">
@@ -571,7 +700,7 @@ const AdminReportsPage = () => {
                                        <td className="px-6 py-4 text-xs font-bold text-slate-700">{r.date}</td>
                                        <td className={`px-6 py-4 text-center font-black ${calculateLateMinutes(r.checkInTime) > 0 ? 'text-amber-500' : 'text-primary'}`}>{r.checkInTime || "--:--"}</td>
                                        <td className="px-6 py-4 text-center font-bold text-slate-600">{r.checkOutTime || "--:--"}</td>
-                                       <td className="px-6 py-4 text-center font-bold text-slate-400 text-[10px] italic">{calculateDuration(r.checkInTime, r.checkOutTime).toFixed(1)}h</td>
+                                       <td className="px-6 py-4 text-center font-bold text-slate-400 text-[10px] italic">{calculateDuration(r.checkInTime, r.checkOutTime).toFixed(1  )}h</td>
                                        <td className="px-6 py-4 text-center">
                                           <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${
                                             r.status === 'on-time' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
@@ -580,7 +709,7 @@ const AdminReportsPage = () => {
                                           </span>
                                        </td>
                                     </tr>
-                                 ))}
+                                 )  )}
                               </tbody>
                            </table>
                        </div>
@@ -607,7 +736,7 @@ const AdminReportsPage = () => {
                                     <p className="text-[10px] font-bold text-slate-400 mb-1.5 uppercase">{k.sub}</p>
                                  </div>
                               </div>
-                           ))}
+                           )  )}
                         </div>
 
                         <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden p-0">
@@ -644,7 +773,7 @@ const AdminReportsPage = () => {
                                                <td className="px-6 py-4">
                                                   <div className="flex items-center gap-3">
                                                       <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-black text-[10px] text-slate-500 uppercase">
-                                                         {teacher?.name.charAt(0)}
+                                                         {teacher?.name.charAt(0  )}
                                                       </div>
                                                       <div>
                                                          <p className="text-xs font-bold text-slate-700 group-hover:text-primary transition-colors">{teacher?.name}</p>
@@ -664,7 +793,7 @@ const AdminReportsPage = () => {
                                                </td>
                                                <td className="px-6 py-4 text-right">
                                                   <button
-                                                    onClick={() => setSelectedTeacherId(record.teacherId)} 
+                                                    onClick={() => setSelectedTeacherId(record.teacherId  )} 
                                                     className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[9px] font-black uppercase text-slate-500 hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm"
                                                   >
                                                      Chi tiết
@@ -672,15 +801,15 @@ const AdminReportsPage = () => {
                                                </td>
                                             </tr>
                                          );
-                                      })}
+                                      }  )}
                                   </tbody>
                               </table>
                           </div>
                        </div>
                    </div>
-                )}
+                  )}
             </motion.div>
-          )}
+          ) }
 
           {activeTab === "payroll" && (
             <motion.div 
@@ -692,7 +821,7 @@ const AdminReportsPage = () => {
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <button 
-                                onClick={() => setSelectedStaffForPayroll(null)}
+                                onClick={() => setSelectedStaffForPayroll(null  )}
                                 className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-500 hover:bg-slate-50 transition-all shadow-sm"
                             >
                                 <ArrowLeft className="w-3.5 h-3.5" /> Trở về danh sách
@@ -705,7 +834,7 @@ const AdminReportsPage = () => {
                                 <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden p-6 text-center relative">
                                     <div className="absolute top-0 left-0 w-full h-1 bg-primary" />
                                     <div className="w-20 h-20 rounded-full bg-slate-50 border-4 border-white shadow-sm mx-auto flex items-center justify-center text-xl font-black text-slate-400 mb-4">
-                                       {selectedStaffForPayroll.name.split(' ').map((n: string) => n[0]).join('')}
+                                       {selectedStaffForPayroll.name.split(' ').map((n: string) => n[0]).join(''  )}
                                     </div>
                                     <h3 className="text-lg font-black text-slate-800 tracking-tight mb-0.5">{selectedStaffForPayroll.name}</h3>
                                     <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-6 px-3 py-1 bg-primary/5 rounded-full w-fit mx-auto border border-primary/10 italic">BỘ PHẬN VẬN HÀNH</p>
@@ -724,7 +853,7 @@ const AdminReportsPage = () => {
                                     <div className="space-y-3 text-left border-t border-slate-50 pt-6">
                                         <div className="flex items-center gap-3">
                                             <Mail className="w-3.5 h-3.5 text-slate-400" />
-                                            <p className="text-[11px] font-medium text-slate-600">{selectedStaffForPayroll.name.toLowerCase().replace(/ /g, '')}@menglish.edu.vn</p>
+                                            <p className="text-[11px] font-medium text-slate-600">{selectedStaffForPayroll.name.toLowerCase().replace(/ /g, ''  )}@menglish.edu.vn</p>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <Phone className="w-3.5 h-3.5 text-slate-400" />
@@ -767,7 +896,7 @@ const AdminReportsPage = () => {
                                                 ].map((row, idx) => (
                                                     <tr 
                                                         key={idx} 
-                                                        onClick={() => setSelectedMonthPayroll(row)}
+                                                        onClick={() => setSelectedMonthPayroll(row  )}
                                                         className="hover:bg-slate-50/80 transition-all group cursor-pointer"
                                                     >
                                                         <td className="px-6 py-4">
@@ -781,16 +910,16 @@ const AdminReportsPage = () => {
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-4 text-center text-xs font-medium text-slate-500">{formatVND(row.base)}</td>
-                                                        <td className="px-6 py-4 text-center text-xs font-bold text-emerald-500">+{formatVND(row.e)}</td>
-                                                        <td className="px-6 py-4 text-center text-sm font-black text-primary tracking-tight">{formatVND(row.net)}</td>
+                                                        <td className="px-6 py-4 text-center text-xs font-medium text-slate-500">{formatVND(row.base  )}</td>
+                                                        <td className="px-6 py-4 text-center text-xs font-bold text-emerald-500">+{formatVND(row.e  )}</td>
+                                                        <td className="px-6 py-4 text-center text-sm font-black text-primary tracking-tight">{formatVND(row.net  )}</td>
                                                         <td className="px-6 py-4 text-right">
                                                             <button className="p-2 text-slate-400 hover:text-primary transition-colors hover:bg-slate-50 rounded-lg">
                                                                 <Download className="w-3.5 h-3.5" />
                                                             </button>
                                                         </td>
                                                     </tr>
-                                                ))}
+                                                )  )}
                                             </tbody>
                                         </table>
                                     </div>
@@ -804,7 +933,7 @@ const AdminReportsPage = () => {
                         <div className="px-6 py-5 flex items-center justify-between border-b border-slate-50">
                            <div>
                               <h3 className="text-sm font-black text-slate-800 tracking-tight italic uppercase">Bảng lương toàn hệ thống</h3>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Dữ liệu thanh toán kỳ tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Dữ liệu thanh toán kỳ tháng {new Date().getMonth() + 1}/{new Date().getFullYear(  )}</p>
                            </div>
                            <Button className="bg-primary rounded-lg font-black text-[10px] px-4 h-9 shadow-md shadow-primary/20 uppercase tracking-wider">
                               <Download className="w-3.5 h-3.5 mr-2" /> Xuất báo cáo tổng
@@ -837,9 +966,9 @@ const AdminReportsPage = () => {
                                              key={p.id}
                                              className="hover:bg-slate-50/80 transition-all group"
                                           >
-                                              <td className="px-6 py-5" onClick={() => setSelectedStaffForPayroll(p)}>
+                                              <td className="px-6 py-5" onClick={() => setSelectedStaffForPayroll(p  )}>
                                                  <div className="flex items-center gap-3 cursor-pointer">
-                                                     <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary uppercase">{p.name.charAt(0)}</div>
+                                                     <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center font-black text-[10px] text-primary uppercase">{p.name.charAt(0  )}</div>
                                                      <div>
                                                          <p className="text-xs font-black text-slate-700 group-hover:text-primary transition-colors uppercase tracking-tight">{p.name}</p>
                                                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{p.id}</p>
@@ -862,16 +991,16 @@ const AdminReportsPage = () => {
                                                     )
                                                  ) : (
                                                     <span className="text-[10px] font-black text-slate-300">—</span>
-                                                 )}
+                                                   )}
                                               </td>
                                               <td className="px-4 py-5 text-right text-xs font-bold text-slate-500">
                                                  {p.role === "FULL_TIME" && renewalCount > 0 ? formatVND(renewalIncludedRevenue) : <span className="text-slate-300">—</span>}
                                               </td>
                                               <td className="px-4 py-5 text-right text-xs font-black text-emerald-600">
-                                                 {p.role === "FULL_TIME" && renewalCount > 0 ? `+${formatVND(renewalCommission)}` : <span className="text-slate-300">—</span>}
+                                                 {p.role === "FULL_TIME" && renewalCount > 0 ? `+${formatVND(renewalCommission  )}` : <span className="text-slate-300">—</span>}
                                               </td>
                                               <td className="px-6 py-5 text-right font-black text-primary text-sm tracking-tight">
-                                                 {formatVND(p.net)}
+                                                 {formatVND(p.net  )}
                                               </td>
                                               <td className="px-6 py-5 text-right">
                                                  <div className="flex items-center justify-end gap-2">
@@ -887,399 +1016,37 @@ const AdminReportsPage = () => {
                                                          <Pencil className="w-3.5 h-3.5" />
                                                      </button>
                                                      <button 
-                                                       onClick={(e) => {
-                                                           e.stopPropagation();
-                                                           setSelectedStaffForAction(p);
-                                                           setIsPayslipModalOpen(true);
-                                                       }}
-                                                       className="w-8 h-8 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-emerald-500 hover:border-emerald-500 transition-all shadow-sm flex items-center justify-center"
-                                                       title="Phiếu lương"
-                                                     >
-                                                         <FileText className="w-3.5 h-3.5" />
-                                                     </button>
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedStaffForAction(p);
+                                                            setIsPayslipModalOpen(true);
+                                                        }}
+                                                        className="w-8 h-8 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-emerald-500 hover:border-emerald-500 transition-all shadow-sm flex items-center justify-center"
+                                                        title="Phiếu lương"
+                                                      >
+                                                          <FileText className="w-3.5 h-3.5" />
+                                                      </button>
                                                  </div>
                                               </td>
                                           </tr>
                                        );
-                                    })}
+                                    }  )}
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                )}
+                  )}
             </motion.div>
-          )}
+          ) }
 
-          {activeTab === "attendance_report" && (
+          {activeTab === "survey" && (
             <motion.div 
-               key="attendance_report" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+               key="survey" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                className="h-full flex flex-col max-w-7xl mx-auto"
             >
-                {selectedClassForAttendanceReport ? (
-                   // ATTENDANCE REPORT DETAIL VIEW
-                   <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col relative">
-                       {/* Top Banner - Sticky relative to main page scroll */}
-                       <div className="flex-none flex items-center justify-between border-b border-slate-50 p-6 bg-white z-[70] sticky top-[-2rem] rounded-t-xl shadow-sm">
-                           <div className="flex items-center gap-4">
-                              <button onClick={() => setSelectedClassForAttendanceReport(null)} className="p-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition-all">
-                                 <ArrowLeft className="w-4 h-4 text-slate-600" />
-                              </button>
-                              <div>
-                                 <h2 className="text-lg font-black text-slate-800 tracking-tight leading-none">Chi tiết điểm danh: {classes.find(c => c.id === selectedClassForAttendanceReport)?.name}</h2>
-                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 italic">Báo cáo Ma trận Chuyên cần (20 Buổi học - Toàn khoá)</p>
-                              </div>
-                           </div>
-                       </div>
-
-                       <div className="p-6 pt-4">
-                           <div className="bg-white border border-slate-100/50 rounded-xl relative overflow-x-auto no-scrollbar custom-scrollbar">
-                               <table className="w-full text-left border-separate border-spacing-0 min-w-[1400px]">
-                                  <thead className="relative z-50">
-                                     <tr className="bg-slate-50/80">
-                                        <th className="px-4 py-4 text-center w-12 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 sticky top-[48px] bg-[#f8fafc] z-50">STT</th>
-                                        <th className="px-4 py-4 sticky top-[48px] left-0 bg-[#f8fafc] z-[55] w-56 border-b border-r border-slate-100 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
-                                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Học viên / Mã ID</span>
-                                        </th>
-                                        <th className="px-4 py-4 text-center w-24 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 sticky top-[48px] bg-[#f8fafc] z-50">% Có mặt</th>
-                                        {Array.from({ length: 20 }).map((_, i) => (
-                                           <th key={i} className="px-2 py-4 text-center w-12 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-r border-slate-100/50 sticky top-[48px] bg-[#f8fafc] z-50">B{i + 1}</th>
-                                        ))}
-                                     </tr>
-                                  </thead>
-                                  <tbody className="bg-white">
-                                     {students.filter(s => s.classIds.includes(selectedClassForAttendanceReport!)).map((stu, idx) => {
-                                        const attendanceRate = 85 + (idx % 3) * 5; 
-                                        return (
-                                           <tr key={stu.id} className="hover:bg-slate-50/50 transition-colors group">
-                                              <td className="px-4 py-4 border-b border-slate-50 text-center font-black text-slate-200 text-[10px]">{idx + 1}</td>
-                                              <td className="px-4 py-4 sticky left-0 bg-white group-hover:bg-slate-50 z-40 border-b border-r border-slate-50 transition-colors shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
-                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center font-black text-[9px] uppercase border border-slate-100 shrink-0">
-                                                       {stu.avatar[0]}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                       <p className="font-bold text-slate-700 uppercase tracking-tight text-[10px] truncate">{stu.name}</p>
-                                                       <p className="text-[7px] font-black text-slate-300 tracking-widest uppercase truncate">{stu.id}</p>
-                                                    </div>
-                                                 </div>
-                                              </td>
-                                              <td className="px-4 py-4 text-center border-b border-r border-slate-100/50 bg-white/50">
-                                                 <span className={`text-[10px] font-black px-2 py-1 rounded-md ${attendanceRate >= 90 ? 'text-emerald-500 bg-emerald-50' : attendanceRate >= 80 ? 'text-amber-500 bg-amber-50' : 'text-rose-500 bg-rose-50'}`}>
-                                                    {attendanceRate}%
-                                                 </span>
-                                              </td>
-                                              {Array.from({ length: 20 }).map((_, i) => {
-                                                 const seed = (i + idx) % 15;
-                                                 const status = seed === 0 ? "Vắng" : seed === 5 ? "Muộn" : "OK";
-                                                 return (
-                                                    <td key={i} className="px-1 py-4 text-center border-b border-r border-slate-100/50">
-                                                       <div className="flex justify-center">
-                                                          {status === "OK" ? (
-                                                             <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" title="Đúng giờ" />
-                                                          ) : status === "Muộn" ? (
-                                                             <div className="w-2 h-2 rounded-full bg-amber-500" title="Đi muộn" />
-                                                          ) : (
-                                                             <div className="w-2 h-2 rounded-full bg-rose-500" title="Vắng mặt" />
-                                                          )}
-                                                       </div>
-                                                    </td>
-                                                 );
-                                              })}
-                                           </tr>
-                                        );
-                                     })}
-                                  </tbody>
-                               </table>
-                           </div>
-                       </div>
-                   </div>
-                ) : (
-                   <div className="space-y-6">
-                        <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <div className="space-y-1.5">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Lọc theo lớp học</label>
-                              <select 
-                                 value={attendanceReportClassFilter}
-                                 onChange={(e) => setAttendanceReportClassFilter(e.target.value)}
-                                 className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-600 focus:outline-none"
-                              >
-                                 <option value="all">Tất cả lớp học</option>
-                                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                              </select>
-                           </div>
-                           <div className="space-y-1.5">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Lọc theo giáo viên</label>
-                              <select 
-                                 value={attendanceReportTeacherFilter}
-                                 onChange={(e) => setAttendanceReportTeacherFilter(e.target.value)}
-                                 className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-600 focus:outline-none"
-                              >
-                                 <option value="all">Tất cả giáo viên</option>
-                                 {users.filter(u => u.role === 'teacher').map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                              </select>
-                           </div>
-                        </div>
-
-                        <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
-                           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                              <h3 className="text-xs font-black text-slate-800 uppercase tracking-tight">Báo cáo chuyên cần theo lớp</h3>
-                           </div>
-                           <table className="w-full text-left border-collapse">
-                              <thead className="bg-[#f1f3f5] text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">
-                                 <tr>
-                                    <th className="px-6 py-4">Lớp học</th>
-                                    <th className="px-6 py-4 text-center">Sĩ số</th>
-                                    <th className="px-6 py-4 text-center">Đúng giờ TB</th>
-                                    <th className="px-6 py-4 text-center">Vắng mặt TB</th>
-                                    <th className="px-6 py-4 text-right">Chi tiết</th>
-                                 </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-50">
-                                 {classes.filter(c => 
-                                    (attendanceReportClassFilter === 'all' || c.id === attendanceReportClassFilter) &&
-                                    (attendanceReportTeacherFilter === 'all' || c.teacherId === attendanceReportTeacherFilter)
-                                 ).map(cls => (
-                                    <tr key={cls.id} className="hover:bg-slate-50/80 transition-colors">
-                                       <td className="px-6 py-4">
-                                          <p className="font-bold text-slate-800 uppercase text-[11px]">{cls.name}</p>
-                                          <p className="text-[9px] font-black text-slate-300 uppercase italic mt-0.5">GV: {users.find(u => u.id === cls.teacherId)?.name}</p>
-                                       </td>
-                                       <td className="px-6 py-4 text-center text-[11px] font-bold text-slate-500">{cls.studentCount} HV</td>
-                                       <td className="px-6 py-4 text-center">
-                                          <span className="text-emerald-600 font-black text-xs">92%</span>
-                                       </td>
-                                       <td className="px-6 py-4 text-center">
-                                          <span className="text-rose-500 font-black text-xs">4%</span>
-                                       </td>
-                                       <td className="px-6 py-4 text-right">
-                                          <button 
-                                             onClick={() => setSelectedClassForAttendanceReport(cls.id)}
-                                             className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[9px] font-black uppercase text-slate-500 hover:bg-primary hover:text-white transition-all shadow-sm"
-                                          >
-                                             Chi tiết
-                                          </button>
-                                       </td>
-                                    </tr>
-                                 ))}
-                              </tbody>
-                           </table>
-                        </div>
-                   </div>
-                )}
+              <AdminSurveyDashboard />
             </motion.div>
-          )}
-
-          {activeTab === "training" && (
-            <motion.div 
-               key="training" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-               className="space-y-8 max-w-7xl mx-auto"
-            >
-                {selectedClassForTraining ? (
-                   <div className="bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col relative">
-                       <div className="flex-none flex items-center justify-between border-b border-slate-50 p-6 bg-white z-[70] sticky top-[-32px] rounded-t-xl shadow-sm">
-                           <div className="flex items-center gap-4">
-                              <button onClick={() => setSelectedClassForTraining(null)} className="p-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition-all">
-                                 <ArrowLeft className="w-4 h-4 text-slate-600" />
-                              </button>
-                              <div>
-                                 <h2 className="text-lg font-black text-slate-800 tracking-tight leading-none">Chi tiết kết quả: {classes.find(c => c.id === selectedClassForTraining)?.name}</h2>
-                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 italic">Giáo viên: {users.find(u => u.id === classes.find(c => c.id === selectedClassForTraining)?.teacherId)?.name}</p>
-                              </div>
-                           </div>
-                           <div className="flex items-center gap-3">
-                              <span className="text-[10px] font-black uppercase text-slate-400">Chọn ngày học:</span>
-                              <select 
-                                 value={selectedSession}
-                                 onChange={(e) => setSelectedSession(Number(e.target.value))}
-                                 className="h-10 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-600 focus:outline-none"
-                              >
-                                 {[
-                                    { s: 1, d: "22/03/2026" },
-                                    { s: 2, d: "24/03/2026" },
-                                    { s: 3, d: "26/03/2026" },
-                                    { s: 4, d: "29/03/2026" },
-                                    { s: 5, d: "31/03/2026" },
-                                 ].map(item => (
-                                    <option key={item.s} value={item.s}>Buổi {item.s} - {item.d}</option>
-                                 ))}
-                              </select>
-                           </div>
-                       </div>
-
-                       <div className="p-6 pt-4">
-                           <div className="bg-white border border-slate-100 rounded-xl shadow-2xl overflow-x-auto no-scrollbar relative transition-all">
-                               <table className="w-full text-left border-collapse bg-white">
-                                  <thead className="bg-[#f8fafc] border-b border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-400 sticky top-[80px] z-50">
-                                 <tr>
-                                    <th className="px-6 py-4 text-center w-12 text-slate-300">STT</th>
-                                    <th className="px-6 py-4 min-w-[200px]">Học viên</th>
-                                    <th className="px-6 py-4 text-center w-32">Trạng thái</th>
-                                    <th className="px-3 py-4 text-center w-16">TFL</th>
-                                    <th className="px-3 py-4 text-center w-16">B2</th>
-                                    <th className="px-3 py-4 text-center w-16">BGD</th>
-                                    <th className="px-4 py-4 text-center w-32">BÀI TẬP NỘP</th>
-                                    <th className="px-3 py-4 text-center w-16 bg-slate-100/30">HW/43</th>
-                                    <th className="px-3 py-4 text-center w-16 bg-slate-100/30">L/28</th>
-                                    <th className="px-3 py-4 text-center w-16 bg-primary/5 text-primary border-r border-slate-100 italic">MINI</th>
-                                    <th className="px-6 py-4 min-w-[400px]">Nhận xét buổi {selectedSession}</th>
-                                 </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100">
-                                 {students.filter(s => s.classIds.includes(selectedClassForTraining!)).map((stu, idx) => {
-                                    const seed = (selectedSession + idx) % 10;
-                                    const status = seed === 0 ? "Vắng mặt" : seed === 5 ? "Đi muộn" : "Đúng giờ";
-                                    const feedbackSamples: Record<number, string> = {
-                                      1: "Hôm nay con tiếp thu bài rất nhanh, nắm vững kiến thức về Unit 01. Trong giờ con hăng hái phát biểu và tương tác tốt với giáo viên. Phần bài tập về nhà con hoàn thành đầy đủ, trình bày sạch đẹp và không sai lỗi chính tả nào. Tuy nhiên con cần chú ý hơn về phần phát âm các âm đuôi (ending sounds) để hoàn thiện kỹ năng Speaking. Ba mẹ hãy tiếp tục động viên con duy trì tinh thần học tập tuyệt vời này nhé!",
-                                      2: "Buổi học hôm nay tập trung vào ngữ pháp Unit 18, con đã hiểu bản chất vấn đề và áp dụng tốt vào các bài tập thực hành trên lớp. Con rất tích cực trong các hoạt động đội nhóm và dẫn dắt các bạn hoàn thành nhiệm vụ. Về nhà ba mẹ hãy nhắc con làm bài tập Quiz Online để củng cố lại kiến thức thì hiện tại hoàn thành. Chúc mừng con đã có một buổi học xuất sắc!",
-                                      3: "Hôm nay lớp học về chủ đề Speaking: Pets, con rất tự tin khi chia sẻ về thú cưng của mình trước cả lớp. Vốn từ vựng của con ngày càng phong phú và cách diễn đạt tự nhiên hơn trước rất nhiều. Con đã biết cách sử dụng các từ nối để câu văn thêm sinh động. Phần bài tập ghi âm (Record Story) ba mẹ hãy giúp con quay video để giáo viên có thể nhận xét kỹ hơn về ngôn ngữ cơ thể. Con hãy tiếp tục phát huy sự tự tin này nhé!",
-                                      4: "Trong buổi học Reading hôm nay, con đã thực hiện rất tốt các kỹ năng Skimming và Scanning để tìm thông tin nhanh trong đoạn văn. Tuy nhiên có một số từ vựng mới về chủ đề Fun Fair con còn hơi lúng túng, giáo viên đã hướng dẫn con cách đoán nghĩa từ ngữ cảnh. Con cần dành thời gian ôn lại danh sách từ vựng Unit 4 ở trang 12. Về nhà con hãy đọc lại bài khóa 3 lần để rèn luyện tốc độ đọc.",
-                                      5: "Buổi học Writing về chủ đề My Day đã giúp con hệ thống lại cách viết về các hoạt động hàng ngày một cách logic. Con đã biết cách sử dụng các trạng từ chỉ tần suất (always, usually, sometimes) rất chính xác. Bài viết của con có độ dài vừa đủ, ý tưởng phong phú và có sự sáng tạo cá nhân. Con chỉ cần lưu ý thêm về cách dùng mạo từ 'a, an, the' để câu văn hoàn hảo hơn."
-                                    };
-                                    return (
-                                       <tr key={stu.id} className="hover:bg-slate-50/50 transition-colors">
-                                          <td className="px-6 py-5 border-r border-slate-50 text-center font-bold text-slate-300 text-[11px]">{idx + 1}</td>
-                                          <td className="px-6 py-5 border-r border-slate-50">
-                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center font-black text-[11px] uppercase border border-slate-200 shadow-sm shrink-0">
-                                                   {stu.avatar[0]}
-                                                </div>
-                                                <div className="flex flex-col gap-0.5">
-                                                   <span className="font-black text-slate-700 uppercase tracking-tight text-[11px] whitespace-nowrap">{stu.name}</span>
-                                                   <span className="text-[8px] text-slate-300 font-black tracking-widest uppercase italic">[ ID: {stu.id} ]</span>
-                                                </div>
-                                             </div>
-                                          </td>
-                                          <td className="px-6 py-5 border-r border-slate-50 text-center">
-                                             <span className={`px-3 py-1 whitespace-nowrap font-black uppercase text-[9px] border tracking-widest rounded-full ${
-                                                status === 'Vắng mặt' ? 'bg-rose-50 text-rose-500 border-rose-100' : 
-                                                status === 'Đi muộn' ? 'bg-amber-50 text-amber-500 border-amber-100' : 
-                                                'bg-emerald-50 text-emerald-500 border-emerald-100'
-                                             }`}>
-                                                {status}
-                                             </span>
-                                          </td>
-                                          <td className="px-3 py-5 border-r border-slate-50 text-center">
-                                             {seed % 2 === 0 ? <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto" /> : <XCircle className="w-4 h-4 text-slate-200 mx-auto" />}
-                                          </td>
-                                          <td className="px-3 py-5 border-r border-slate-50 text-center">
-                                             {seed % 3 !== 0 ? <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto" /> : <XCircle className="w-4 h-4 text-slate-200 mx-auto" />}
-                                          </td>
-                                          <td className="px-3 py-5 border-r border-slate-50 text-center">
-                                             {seed % 4 === 0 ? <CheckCircle className="w-4 h-4 text-emerald-500 mx-auto" /> : <XCircle className="w-4 h-4 text-slate-200 mx-auto" />}
-                                          </td>
-                                          <td className="px-4 py-5 border-r border-slate-50 text-center">
-                                             {seed % 2 === 0 ? (
-                                               <div className="inline-flex items-center gap-2 px-2 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-primary transition-all cursor-pointer group/file">
-                                                  <Paperclip className="w-3 h-3 text-slate-400 group-hover:text-primary transition-colors" />
-                                                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-600 group-hover:text-primary transition-colors">ATTACH_B{selectedSession}</span>
-                                               </div>
-                                             ) : (
-                                               <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">N/A</span>
-                                             )}
-                                          </td>
-                                          <td className="px-3 py-5 border-r border-slate-50 text-center font-black text-slate-500 bg-slate-50/50 text-[11px] font-mono">{43 - (seed % 5)}</td>
-                                          <td className="px-3 py-5 border-r border-slate-50 text-center font-black text-slate-500 bg-slate-50/50 text-[11px] font-mono">{28 - (seed % 3)}</td>
-                                          <td className="px-3 py-5 border-r border-slate-100 text-center font-black text-primary bg-primary/5 uppercase tracking-widest text-[11px]">{seed > 5 ? 'A+' : 'B'}</td>
-                                          <td className="px-8 py-5 text-slate-600 leading-relaxed font-bold relative group bg-white">
-                                             <div className="flex items-start justify-between gap-6 py-1">
-                                                <span className="text-[10px] uppercase font-bold text-slate-600 leading-[1.6] text-justify">
-                                                   {feedbackSamples[selectedSession] || feedbackSamples[1]}
-                                                </span>
-                                             </div>
-                                          </td>
-                                       </tr>
-                                    );
-                                 })}
-                              </tbody>
-                           </table>
-                       </div>
-                    </div>
-                   </div>
-                ) : (
-                   // MAIN TRAINING LIST VIEW
-                   <div className="space-y-6">
-                        {/* Filters */}
-                        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <div className="space-y-1.5">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Lọc theo lớp học</label>
-                              <select 
-                                 value={trainingClassFilter}
-                                 onChange={(e) => setTrainingClassFilter(e.target.value)}
-                                 className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/10"
-                              >
-                                 <option value="all">Tất cả lớp học</option>
-                                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                              </select>
-                           </div>
-                           <div className="space-y-1.5">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Lọc theo giáo viên</label>
-                              <select 
-                                 value={trainingTeacherFilter}
-                                 onChange={(e) => setTrainingTeacherFilter(e.target.value)}
-                                 className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/10"
-                              >
-                                 <option value="all">Tất cả giáo viên</option>
-                                 {users.filter(u => u.role === 'teacher').map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                              </select>
-                           </div>
-                        </div>
-
-                        {/* List Table */}
-                        <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
-                           <div className="px-6 py-4 border-b border-slate-50 bg-[#f8fafc]/50">
-                              <h3 className="text-xs font-black text-slate-800 uppercase tracking-tight italic">Danh sách tổng quan kết quả đào tạo</h3>
-                           </div>
-                           <div className="overflow-x-auto">
-                              <table className="w-full text-left border-collapse">
-                                 <thead className="bg-[#f1f3f5] text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100">
-                                    <tr>
-                                       <th className="px-6 py-3.5">Thông tin lớp học</th>
-                                       <th className="px-6 py-3.5 text-center">Sĩ số</th>
-                                       <th className="px-6 py-3.5 text-center">GPA Lớp</th>
-                                       <th className="px-6 py-3.5 text-center">Trạng thái</th>
-                                       <th className="px-6 py-3.5 text-right">Hành động</th>
-                                    </tr>
-                                 </thead>
-                                 <tbody className="divide-y divide-slate-50">
-                                    {classes.filter(c => 
-                                       (trainingClassFilter === 'all' || c.id === trainingClassFilter) &&
-                                       (trainingTeacherFilter === 'all' || c.teacherId === trainingTeacherFilter)
-                                    ).map(cls => (
-                                       <tr key={cls.id} className="hover:bg-slate-50/80 transition-colors group">
-                                          <td className="px-6 py-4">
-                                             <p className="font-bold text-slate-800 group-hover:text-primary transition-colors text-xs uppercase uppercase">{cls.name}</p>
-                                             <p className="text-[9px] font-black text-slate-300 mt-0.5 uppercase">GV: {users.find(u => u.id === cls.teacherId)?.name}</p>
-                                          </td>
-                                          <td className="px-6 py-4 text-center text-xs font-bold text-slate-500">{cls.studentCount}/{cls.maxStudents}</td>
-                                          <td className="px-6 py-4 text-center">
-                                             <div className="flex flex-col items-center gap-1">
-                                                <span className="text-sm font-black text-emerald-600">8.2</span>
-                                                <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
-                                                   <div className="h-full bg-emerald-500 w-[82%] rounded-full" />
-                                                </div>
-                                             </div>
-                                          </td>
-                                          <td className="px-6 py-4 text-center">
-                                             <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-blue-50 text-blue-600 border border-blue-100">Đang triển khai</span>
-                                          </td>
-                                          <td className="px-6 py-4 text-right">
-                                             <button 
-                                                onClick={() => setSelectedClassForTraining(cls.id)}
-                                                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[9px] font-black uppercase text-slate-500 hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm"
-                                             >
-                                                Xem chi tiết
-                                             </button>
-                                          </td>
-                                       </tr>
-                                    ))}
-                                 </tbody>
-                              </table>
-                           </div>
-                        </div>
-                   </div>
-                )}
-            </motion.div>
-          )}
+          ) }
         </AnimatePresence>
       </div>
 
@@ -1291,7 +1058,7 @@ const AdminReportsPage = () => {
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
-               onClick={() => setSelectedMonthPayroll(null)}
+               onClick={() => setSelectedMonthPayroll(null  )}
                className="absolute inset-0 bg-slate-900/80 backdrop-blur-md"
              />
              <motion.div 
@@ -1322,15 +1089,15 @@ const AdminReportsPage = () => {
                         <div className="space-y-2.5">
                             <div className="flex justify-between items-center text-[11px]">
                                 <span className="font-medium text-slate-500">Lương cơ bản</span>
-                                <span className="font-bold text-slate-700">{formatVND(selectedMonthPayroll.base)}</span>
+                                <span className="font-bold text-slate-700">{formatVND(selectedMonthPayroll.base  )}</span>
                             </div>
                             <div className="flex justify-between items-center text-[11px]">
                                 <span className="font-medium text-slate-500">Thưởng giảng dạy (42h)</span>
-                                <span className="font-bold text-slate-700">{formatVND(1200000)}</span>
+                                <span className="font-bold text-slate-700">{formatVND(1200000  )}</span>
                             </div>
                             <div className="flex justify-between items-center text-[11px]">
                                 <span className="font-medium text-slate-500">KPI / Hiệu suất</span>
-                                <span className="font-bold text-slate-700">{formatVND(800000)}</span>
+                                <span className="font-bold text-slate-700">{formatVND(800000  )}</span>
                             </div>
                         </div>
                     </div>
@@ -1344,11 +1111,11 @@ const AdminReportsPage = () => {
                         <div className="space-y-2.5">
                             <div className="flex justify-between items-center text-[11px]">
                                 <span className="font-medium text-slate-500">Bảo hiểm & Phí Công đoàn</span>
-                                <span className="font-bold text-rose-500">-{formatVND(800000)}</span>
+                                <span className="font-bold text-rose-500">-{formatVND(800000  )}</span>
                             </div>
                             <div className="flex justify-between items-center text-[11px]">
                                 <span className="font-medium text-slate-500">Thuế (Tạm tính)</span>
-                                <span className="font-bold text-rose-500">-{formatVND(400000)}</span>
+                                <span className="font-bold text-rose-500">-{formatVND(400000  )}</span>
                             </div>
                         </div>
                     </div>
@@ -1361,7 +1128,7 @@ const AdminReportsPage = () => {
                                 <p className="text-sm font-bold text-slate-600 uppercase">ĐÃ THANH TOÁN</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-2xl font-black text-primary tracking-tight">{formatVND(selectedMonthPayroll.net)}</p>
+                                <p className="text-2xl font-black text-primary tracking-tight">{formatVND(selectedMonthPayroll.net  )}</p>
                             </div>
                         </div>
                     </div>
@@ -1371,7 +1138,7 @@ const AdminReportsPage = () => {
                             <Download className="w-3.5 h-3.5 mr-2" /> Tải PDF
                         </Button>
                         <Button 
-                          onClick={() => setSelectedMonthPayroll(null)}
+                          onClick={() => setSelectedMonthPayroll(null  )}
                           variant="outline" className="flex-1 rounded-lg h-10 font-black text-[10px] uppercase tracking-wider border-slate-200"
                         >
                             Đóng
@@ -1380,15 +1147,16 @@ const AdminReportsPage = () => {
                 </div>
              </motion.div>
           </div>
-        )}
+        ) }
+      </AnimatePresence>
 
-        {/* Payroll Entry Modal (Dynamic Form) */}
+      {/* Payroll Entry Modal (Dynamic Form) */}
         <AnimatePresence>
           {isEntryModalOpen && selectedStaffForAction && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
               <motion.div 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={() => setIsEntryModalOpen(false)}
+                onClick={() => setIsEntryModalOpen(false  )}
                 className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
               />
               <motion.div 
@@ -1409,9 +1177,9 @@ const AdminReportsPage = () => {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="bg-primary/5 text-primary px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-primary/10">
-                      Kỳ lương: Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}
+                      Kỳ lương: Tháng {new Date().getMonth() + 1}/{new Date().getFullYear(  )}
                     </div>
-                    <button onClick={() => setIsEntryModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors relative z-10 w-8 h-8 flex items-center justify-center">
+                    <button onClick={() => setIsEntryModalOpen(false  )} className="p-2 hover:bg-slate-200 rounded-full transition-colors relative z-10 w-8 h-8 flex items-center justify-center">
                       <X className="w-4 h-4 text-slate-400" />
                     </button>
                   </div>
@@ -1534,7 +1302,7 @@ const AdminReportsPage = () => {
                               </div>
                               <div className="flex flex-col gap-1">
                                 <label className="text-[8px] font-black text-primary uppercase tracking-tighter ml-1">Tổng số ca dạy</label>
-                                <Input name="displayTotalSessions" readOnly type="number" defaultValue={(selectedStaffForAction.details?.mainSessions || 0) + (selectedStaffForAction.details?.intlSessions || 0)} className="h-9 px-2 rounded-lg border-primary/20 bg-primary/5 text-primary font-black text-xs cursor-not-allowed outline-none" tabIndex={-1} />
+                                <Input name="displayTotalSessions" readOnly type="number" defaultValue={(selectedStaffForAction.details?.mainSessions || 0) + (selectedStaffForAction.details?.intlSessions || 0  )} className="h-9 px-2 rounded-lg border-primary/20 bg-primary/5 text-primary font-black text-xs cursor-not-allowed outline-none" tabIndex={-1} />
                               </div>
                               <div className="flex flex-col gap-1">
                                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Tổng số lớp dạy</label>
@@ -1549,19 +1317,19 @@ const AdminReportsPage = () => {
                             <div className="grid grid-cols-4 gap-4">
                               <div className="flex flex-col gap-1">
                                 <label className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter ml-1">Đơn giá dạy chính</label>
-                                <Input name="mainRate" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.mainRate || 250000)} className="h-9 px-2 rounded-lg border-emerald-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
+                                <Input name="mainRate" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.mainRate || 250000  )} className="h-9 px-2 rounded-lg border-emerald-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
                               </div>
                               <div className="flex flex-col gap-1">
                                 <label className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter ml-1">Đơn giá có GNVN</label>
-                                <Input name="intlRate" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.intlRate || 350000)} className="h-9 px-2 rounded-lg border-emerald-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
+                                <Input name="intlRate" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.intlRate || 350000  )} className="h-9 px-2 rounded-lg border-emerald-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
                               </div>
                               <div className="flex flex-col gap-1">
                                 <label className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter ml-1">Hỗ trợ khác</label>
-                                <Input name="otherSupport" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.otherSupport || 0)} className="h-9 px-2 rounded-lg border-emerald-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
+                                <Input name="otherSupport" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.otherSupport || 0  )} className="h-9 px-2 rounded-lg border-emerald-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
                               </div>
                               <div className="flex flex-col gap-1">
                                 <label className="text-[8px] font-black text-emerald-600 uppercase tracking-tighter ml-1">Phụ cấp gửi xe</label>
-                                <Input name="parking" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.parking || 100000)} className="h-9 px-2 rounded-lg border-emerald-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
+                                <Input name="parking" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.parking || 100000  )} className="h-9 px-2 rounded-lg border-emerald-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
                               </div>
                             </div>
                           </div>
@@ -1576,15 +1344,15 @@ const AdminReportsPage = () => {
                               </div>
                               <div className="flex flex-col gap-1">
                                 <label className="text-[8px] font-black text-blue-600 uppercase tracking-tighter ml-1">Mức Thưởng</label>
-                                <Input name="reEnrollRewardRate" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.reEnrollRewardRate || 50000)} className="h-9 px-2 rounded-lg border-blue-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; const f=e.currentTarget.form; if(f && f.elements.namedItem('displayReEnrollTotal')){ const count = Number((f.elements.namedItem('reEnrollCount') as HTMLInputElement).value||0); (f.elements.namedItem('displayReEnrollTotal') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(count * Number(v)); } }} />
+                                <Input name="reEnrollRewardRate" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.reEnrollRewardRate || 50000  )} className="h-9 px-2 rounded-lg border-blue-200 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; const f=e.currentTarget.form; if(f && f.elements.namedItem('displayReEnrollTotal')){ const count = Number((f.elements.namedItem('reEnrollCount') as HTMLInputElement).value||0); (f.elements.namedItem('displayReEnrollTotal') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(count * Number(v)); } }} />
                               </div>
                               <div className="flex flex-col gap-1">
                                 <label className="text-[8px] font-black text-blue-600 uppercase tracking-tighter ml-1">T.Tiền thưởng</label>
-                                <Input name="displayReEnrollTotal" readOnly type="text" defaultValue={new Intl.NumberFormat("vi-VN").format((selectedStaffForAction.details?.reEnrollCount || 0) * (selectedStaffForAction.details?.reEnrollRewardRate || 50000))} className="h-9 px-2 rounded-lg border-blue-200 bg-blue-100/50 font-black text-blue-700 text-xs cursor-not-allowed outline-none" tabIndex={-1} />
+                                <Input name="displayReEnrollTotal" readOnly type="text" defaultValue={new Intl.NumberFormat("vi-VN").format((selectedStaffForAction.details?.reEnrollCount || 0) * (selectedStaffForAction.details?.reEnrollRewardRate || 50000)  )} className="h-9 px-2 rounded-lg border-blue-200 bg-blue-100/50 font-black text-blue-700 text-xs cursor-not-allowed outline-none" tabIndex={-1} />
                               </div>
                               <div className="flex flex-col gap-1">
                                 <label className="text-[8px] font-black text-rose-600 uppercase tracking-tighter ml-1">Khoản phạt</label>
-                                <Input name="penalty" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.penalty || 0)} className="h-9 px-2 rounded-lg border-rose-200 font-bold text-rose-600 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
+                                <Input name="penalty" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.penalty || 0  )} className="h-9 px-2 rounded-lg border-rose-200 font-bold text-rose-600 text-xs" onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }} />
                               </div>
                             </div>
                           </div>
@@ -1606,7 +1374,7 @@ const AdminReportsPage = () => {
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-indigo-600 uppercase tracking-tighter ml-1">Đơn giá / giờ</label>
-                                  <Input name="hourlyRate" type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.details?.hourlyRate || 30000)} className="h-9 px-2 rounded-lg border-indigo-200 text-indigo-700 font-bold text-xs" onChange={(e) => { const raw=e.target.value.replace(/\./g,''); e.target.value=raw?new Intl.NumberFormat('vi-VN').format(Number(raw)):''; const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number((f.elements.namedItem('totalHours') as HTMLInputElement).value||0); const t=Number((f.elements.namedItem('taTransport') as HTMLInputElement).value.replace(/\./g,'')||0); const c=Number((f.elements.namedItem('taCommitment') as HTMLInputElement).value.replace(/\./g,'')||0); const o=Number((f.elements.namedItem('taOther') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*Number(raw||0)+t-c-o)); } }} />
+                                  <Input name="hourlyRate" type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.details?.hourlyRate || 30000  )} className="h-9 px-2 rounded-lg border-indigo-200 text-indigo-700 font-bold text-xs" onChange={(e) => { const raw=e.target.value.replace(/\./g,''); e.target.value=raw?new Intl.NumberFormat('vi-VN').format(Number(raw)):''; const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number((f.elements.namedItem('totalHours') as HTMLInputElement).value||0); const t=Number((f.elements.namedItem('taTransport') as HTMLInputElement).value.replace(/\./g,'')||0); const c=Number((f.elements.namedItem('taCommitment') as HTMLInputElement).value.replace(/\./g,'')||0); const o=Number((f.elements.namedItem('taOther') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*Number(raw||0)+t-c-o)); } }} />
                                 </div>
                             </div>
 
@@ -1615,7 +1383,7 @@ const AdminReportsPage = () => {
                                 <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest border-b border-emerald-100 pb-1">2. Hỗ trợ & Phụ cấp</div>
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Hỗ trợ đi lại</label>
-                                  <Input name="taTransport" type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.details?.taTransport || 0)} className="h-9 px-2 rounded-lg border-emerald-200 text-emerald-700 font-bold text-xs" onChange={(e) => { const raw=e.target.value.replace(/\./g,''); e.target.value=raw?new Intl.NumberFormat('vi-VN').format(Number(raw)):''; const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number((f.elements.namedItem('totalHours') as HTMLInputElement).value||0); const r=Number((f.elements.namedItem('hourlyRate') as HTMLInputElement).value.replace(/\./g,'')||0); const c=Number((f.elements.namedItem('taCommitment') as HTMLInputElement).value.replace(/\./g,'')||0); const o=Number((f.elements.namedItem('taOther') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*r+Number(raw||0)-c-o)); } }} />
+                                  <Input name="taTransport" type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.details?.taTransport || 0  )} className="h-9 px-2 rounded-lg border-emerald-200 text-emerald-700 font-bold text-xs" onChange={(e) => { const raw=e.target.value.replace(/\./g,''); e.target.value=raw?new Intl.NumberFormat('vi-VN').format(Number(raw)):''; const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number((f.elements.namedItem('totalHours') as HTMLInputElement).value||0); const r=Number((f.elements.namedItem('hourlyRate') as HTMLInputElement).value.replace(/\./g,'')||0); const c=Number((f.elements.namedItem('taCommitment') as HTMLInputElement).value.replace(/\./g,'')||0); const o=Number((f.elements.namedItem('taOther') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*r+Number(raw||0)-c-o)); } }} />
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Lương theo giờ chuẩn</label>
@@ -1628,15 +1396,15 @@ const AdminReportsPage = () => {
                                 <div className="text-[10px] font-black text-rose-600 uppercase tracking-widest border-b border-rose-100 pb-1">3. Giảm trừ</div>
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-rose-500 uppercase tracking-tighter ml-1">Cam kết làm việc</label>
-                                  <Input name="taCommitment" type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.details?.taCommitment || 0)} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw=e.target.value.replace(/\./g,''); e.target.value=raw?new Intl.NumberFormat('vi-VN').format(Number(raw)):''; const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number((f.elements.namedItem('totalHours') as HTMLInputElement).value||0); const r=Number((f.elements.namedItem('hourlyRate') as HTMLInputElement).value.replace(/\./g,'')||0); const t=Number((f.elements.namedItem('taTransport') as HTMLInputElement).value.replace(/\./g,'')||0); const o=Number((f.elements.namedItem('taOther') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*r+t-Number(raw||0)-o)); } }} />
+                                  <Input name="taCommitment" type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.details?.taCommitment || 0  )} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw=e.target.value.replace(/\./g,''); e.target.value=raw?new Intl.NumberFormat('vi-VN').format(Number(raw)):''; const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number((f.elements.namedItem('totalHours') as HTMLInputElement).value||0); const r=Number((f.elements.namedItem('hourlyRate') as HTMLInputElement).value.replace(/\./g,'')||0); const t=Number((f.elements.namedItem('taTransport') as HTMLInputElement).value.replace(/\./g,'')||0); const o=Number((f.elements.namedItem('taOther') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*r+t-Number(raw||0)-o)); } }} />
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-rose-500 uppercase tracking-tighter ml-1">Khác</label>
-                                  <Input name="taOther" type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.details?.taOther || 0)} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw=e.target.value.replace(/\./g,''); e.target.value=raw?new Intl.NumberFormat('vi-VN').format(Number(raw)):''; const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number((f.elements.namedItem('totalHours') as HTMLInputElement).value||0); const r=Number((f.elements.namedItem('hourlyRate') as HTMLInputElement).value.replace(/\./g,'')||0); const t=Number((f.elements.namedItem('taTransport') as HTMLInputElement).value.replace(/\./g,'')||0); const c=Number((f.elements.namedItem('taCommitment') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*r+t-c-Number(raw||0))); } }} />
+                                  <Input name="taOther" type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.details?.taOther || 0  )} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw=e.target.value.replace(/\./g,''); e.target.value=raw?new Intl.NumberFormat('vi-VN').format(Number(raw)):''; const f=e.target.form; if(f && f.elements.namedItem('taNetDisplay')){ const h=Number((f.elements.namedItem('totalHours') as HTMLInputElement).value||0); const r=Number((f.elements.namedItem('hourlyRate') as HTMLInputElement).value.replace(/\./g,'')||0); const t=Number((f.elements.namedItem('taTransport') as HTMLInputElement).value.replace(/\./g,'')||0); const c=Number((f.elements.namedItem('taCommitment') as HTMLInputElement).value.replace(/\./g,'')||0); (f.elements.namedItem('taNetDisplay') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(h*r+t-c-Number(raw||0))); } }} />
                                 </div>
                                 <div className="pt-2 border-t border-rose-100">
                                   <label className="text-[8px] font-black text-rose-400 uppercase tracking-tighter ml-1">Tổng giảm trừ</label>
-                                  <Input name="taTotalDeduction" readOnly type="text" defaultValue={new Intl.NumberFormat('vi-VN').format((selectedStaffForAction.details?.taCommitment || 0) + (selectedStaffForAction.details?.taOther || 0))} className="h-9 px-2 rounded-lg border-rose-100 bg-rose-50/80 text-rose-600 text-xs font-black cursor-not-allowed mt-1 outline-none" tabIndex={-1} />
+                                  <Input name="taTotalDeduction" readOnly type="text" defaultValue={new Intl.NumberFormat('vi-VN').format((selectedStaffForAction.details?.taCommitment || 0) + (selectedStaffForAction.details?.taOther || 0)  )} className="h-9 px-2 rounded-lg border-rose-100 bg-rose-50/80 text-rose-600 text-xs font-black cursor-not-allowed mt-1 outline-none" tabIndex={-1} />
                                 </div>
                             </div>
                           </div>
@@ -1649,7 +1417,7 @@ const AdminReportsPage = () => {
                             </div>
                             <div className="text-right">
                               <div className="text-[8px] font-black text-indigo-500 uppercase tracking-widest mb-1">Thực nhận</div>
-                              <Input name="taNetDisplay" readOnly type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(Math.round((selectedStaffForAction.details?.totalHours || 0) * (selectedStaffForAction.details?.hourlyRate || 30000) + (selectedStaffForAction.details?.taTransport || 0) - (selectedStaffForAction.details?.taCommitment || 0) - (selectedStaffForAction.details?.taOther || 0)))} className="h-10 px-3 rounded-xl border-indigo-200 bg-white font-black text-indigo-600 text-sm cursor-not-allowed text-right w-44" tabIndex={-1} />
+                              <Input name="taNetDisplay" readOnly type="text" defaultValue={new Intl.NumberFormat('vi-VN').format(Math.round((selectedStaffForAction.details?.totalHours || 0) * (selectedStaffForAction.details?.hourlyRate || 30000) + (selectedStaffForAction.details?.taTransport || 0) - (selectedStaffForAction.details?.taCommitment || 0) - (selectedStaffForAction.details?.taOther || 0))  )} className="h-10 px-3 rounded-xl border-indigo-200 bg-white font-black text-indigo-600 text-sm cursor-not-allowed text-right w-44" tabIndex={-1} />
                             </div>
                           </div>
                         </div>
@@ -1662,7 +1430,7 @@ const AdminReportsPage = () => {
                               <div className="grid grid-cols-3 gap-2">
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1 truncate">Lương HĐ</label>
-                                  <Input name="baseSalary" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.baseSalary || 15000000)} className="h-9 px-2 rounded-lg border-slate-200 focus:ring-primary/20 text-xs" required  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                  <Input name="baseSalary" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.baseSalary || 15000000  )} className="h-9 px-2 rounded-lg border-slate-200 focus:ring-primary/20 text-xs" required  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1 truncate">Công chuẩn</label>
@@ -1677,7 +1445,7 @@ const AdminReportsPage = () => {
                               <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 grid grid-cols-3 gap-2">
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1 italic text-primary/60 truncate">Lương lễ</label>
-                                  <Input name="policyBase" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.policyBase || 15000000)} className="h-9 px-2 rounded-lg border-slate-200 focus:ring-primary/20 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                  <Input name="policyBase" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.policyBase || 15000000  )} className="h-9 px-2 rounded-lg border-slate-200 focus:ring-primary/20 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1 italic text-primary/60 truncate">Chuẩn lễ</label>
@@ -1692,15 +1460,15 @@ const AdminReportsPage = () => {
                               <div className="grid grid-cols-3 gap-2 pt-1">
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Gửi xe</label>
-                                  <Input name="parking" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.parking || 100000)} className="h-9 px-2 rounded-lg border-slate-200 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                  <Input name="parking" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.parking || 100000  )} className="h-9 px-2 rounded-lg border-slate-200 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Điện thoại</label>
-                                  <Input name="phone" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.phone || 300000)} className="h-9 px-2 rounded-lg border-slate-200 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                  <Input name="phone" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.phone || 300000  )} className="h-9 px-2 rounded-lg border-slate-200 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">VPP</label>
-                                  <Input name="stationery" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.stationery || 100000)} className="h-9 px-2 rounded-lg border-slate-200 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                  <Input name="stationery" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.stationery || 100000  )} className="h-9 px-2 rounded-lg border-slate-200 text-xs"  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
                                 </div>
                               </div>
                             </div>
@@ -1718,7 +1486,7 @@ const AdminReportsPage = () => {
                                   type="button"
                                   onClick={() => {
                                     setRenewalClassesEntry(prev => [...prev, {
-                                      id: `rc-${Date.now()}`,
+                                      id: `rc-${Date.now(  )}`,
                                       className: `Lớp mới ${prev.length + 1}`,
                                       studentCount: 0,
                                       droppedCount: 0,
@@ -1762,7 +1530,7 @@ const AdminReportsPage = () => {
                                                 };
                                               } else {
                                                 next.push({
-                                                  id: `rc-crm-${s.classId}-${Date.now()}`,
+                                                  id: `rc-crm-${s.classId}-${Date.now(  )}`,
                                                   className: s.className,
                                                   studentCount: s.studentCount,
                                                   droppedCount: 0,
@@ -1790,18 +1558,18 @@ const AdminReportsPage = () => {
                                             <span className="text-slate-500">· {s.studentCount} HS</span>
                                           </div>
                                           <span className="font-bold text-emerald-600">
-                                            +{new Intl.NumberFormat('vi-VN').format(s.tuitionRevenue + s.materialRevenue)} đ
+                                            +{new Intl.NumberFormat('vi-VN').format(s.tuitionRevenue + s.materialRevenue  )} đ
                                           </span>
                                         </div>
-                                      ))}
+                                      )  )}
                                     </div>
                                   </div>
-                                )}
+                                  )}
                                 {renewalClassesEntry.length === 0 && (
                                   <div className="text-center text-[10px] text-slate-400 italic py-4 border border-dashed border-emerald-200 rounded-lg bg-white/40">
                                     Chưa có lớp tái tục — Bấm "Thêm lớp" để bắt đầu
                                   </div>
-                                )}
+                                  )}
                                 {renewalClassesEntry.map((rc, idx) => {
                                   const commission = calcClassCommission(rc);
                                   const baseRate = getBaseRate(rc.studentCount);
@@ -1822,7 +1590,7 @@ const AdminReportsPage = () => {
                                         />
                                         <button
                                           type="button"
-                                          onClick={() => setRenewalClassesEntry(prev => prev.filter((_, i) => i !== idx))}
+                                          onClick={() => setRenewalClassesEntry(prev => prev.filter((_, i) => i !== idx)  )}
                                           className="w-7 h-7 rounded-md bg-rose-50 border border-rose-200 text-rose-500 text-[10px] font-black hover:bg-rose-100 transition-colors"
                                           title="Xóa lớp"
                                         >
@@ -1872,7 +1640,7 @@ const AdminReportsPage = () => {
                                         </label>
                                         <input
                                           type="text"
-                                          value={new Intl.NumberFormat('vi-VN').format(rc.tuitionRevenue)}
+                                          value={new Intl.NumberFormat('vi-VN').format(rc.tuitionRevenue  )}
                                           onChange={(e) => {
                                             const raw = Number(e.target.value.replace(/\D/g, '')) || 0;
                                             setRenewalClassesEntry(prev => prev.map((c, i) => i === idx ? { ...c, tuitionRevenue: raw } : c));
@@ -1897,7 +1665,7 @@ const AdminReportsPage = () => {
                                         </label>
                                         <input
                                           type="text"
-                                          value={new Intl.NumberFormat('vi-VN').format(rc.materialRevenue)}
+                                          value={new Intl.NumberFormat('vi-VN').format(rc.materialRevenue  )}
                                           onChange={(e) => {
                                             const raw = Number(e.target.value.replace(/\D/g, '')) || 0;
                                             setRenewalClassesEntry(prev => prev.map((c, i) => i === idx ? { ...c, materialRevenue: raw } : c));
@@ -1909,10 +1677,10 @@ const AdminReportsPage = () => {
 
                                       <div className="flex items-center justify-between pt-1 border-t border-emerald-100">
                                         <span className="text-[9px] font-black text-slate-500 italic">
-                                          {(baseRate * 100).toFixed(0)}% + {(bonusRate * 100).toFixed(1)}% = <span className="text-emerald-700">{((baseRate + bonusRate) * 100).toFixed(1)}%</span>
+                                          {(baseRate * 100).toFixed(0  )}% + {(bonusRate * 100).toFixed(1  )}% = <span className="text-emerald-700">{((baseRate + bonusRate) * 100).toFixed(1  )}%</span>
                                         </span>
                                         <span className="text-[11px] font-black text-emerald-600">
-                                          {new Intl.NumberFormat('vi-VN').format(commission)}
+                                          {new Intl.NumberFormat('vi-VN').format(commission  )}
                                         </span>
                                       </div>
 
@@ -1920,17 +1688,17 @@ const AdminReportsPage = () => {
                                         <div className="text-[8px] font-black text-rose-600 uppercase tracking-wider bg-rose-50 border border-rose-200 px-2 py-1 rounded">
                                           ⚠ Nghỉ {'>'}4 bạn → Trừ KPI hiệu suất CV
                                         </div>
-                                      )}
+                                        )}
                                     </div>
                                   );
-                                })}
+                                }  )}
                               </div>
 
                               {/* Summary */}
                               <div className="flex items-center justify-between pt-2 border-t border-emerald-200">
                                 <div className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Tổng hoa hồng</div>
                                 <div className="text-sm font-black text-emerald-700">
-                                  {new Intl.NumberFormat('vi-VN').format(calcTotalRenewalCommission(renewalClassesEntry))} đ
+                                  {new Intl.NumberFormat('vi-VN').format(calcTotalRenewalCommission(renewalClassesEntry)  )} đ
                                 </div>
                               </div>
 
@@ -1951,7 +1719,7 @@ const AdminReportsPage = () => {
                               <div className="grid grid-cols-3 gap-2">
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-blue-600 uppercase tracking-tighter ml-1 truncate">Lương HS chuẩn</label>
-                                  <Input name="kpiPool" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.kpiPool || 1500000)} className="h-9 px-2 rounded-lg border-slate-200 text-xs" onChange={(e) => { const raw = e.target.value.replace(/\./g, ''); const formatted = raw ? new Intl.NumberFormat('vi-VN').format(Number(raw)) : ''; e.target.value = formatted; const f=e.target.form; if(f && f.elements.namedItem('manualKpi')){ (f.elements.namedItem('manualKpi') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(Number(raw||0) * Number((f.elements.namedItem('kpiScore') as HTMLInputElement).value || 0) / 100)); } }} />
+                                  <Input name="kpiPool" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.kpiPool || 1500000  )} className="h-9 px-2 rounded-lg border-slate-200 text-xs" onChange={(e) => { const raw = e.target.value.replace(/\./g, ''); const formatted = raw ? new Intl.NumberFormat('vi-VN').format(Number(raw)) : ''; e.target.value = formatted; const f=e.target.form; if(f && f.elements.namedItem('manualKpi')){ (f.elements.namedItem('manualKpi') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Math.round(Number(raw||0) * Number((f.elements.namedItem('kpiScore') as HTMLInputElement).value || 0) / 100)); } }} />
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">% đạt</label>
@@ -1959,7 +1727,7 @@ const AdminReportsPage = () => {
                                 </div>
                                 <div className="flex flex-col gap-1">
                                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-tighter ml-1">Tiền KPI</label>
-                                  <Input name="manualKpi" readOnly type="text" defaultValue={new Intl.NumberFormat("vi-VN").format((selectedStaffForAction.details?.kpiPool || 1500000) * (selectedStaffForAction.details?.kpiScore || 82) / 100)} className="h-9 px-2 rounded-lg border-blue-100 bg-blue-50/80 font-black text-blue-600 text-xs cursor-not-allowed outline-none" tabIndex={-1}  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                  <Input name="manualKpi" readOnly type="text" defaultValue={new Intl.NumberFormat("vi-VN").format((selectedStaffForAction.details?.kpiPool || 1500000) * (selectedStaffForAction.details?.kpiScore || 82) / 100  )} className="h-9 px-2 rounded-lg border-blue-100 bg-blue-50/80 font-black text-blue-600 text-xs cursor-not-allowed outline-none" tabIndex={-1}  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
                                 </div>
                               </div>
                               <div className="text-[8px] font-bold text-blue-600/70 italic p-2 bg-white/50 rounded-lg leading-tight uppercase text-center">
@@ -1974,24 +1742,24 @@ const AdminReportsPage = () => {
                             <div className="space-y-3 bg-rose-50/50 p-4 rounded-xl border border-rose-100/50">
                               <div className="grid grid-cols-[1fr,1.2fr] items-center gap-2">
                                 <label className="text-[8px] font-black text-rose-500 uppercase tracking-tighter ml-1">Phạt vi phạm</label>
-                                <Input name="penalty" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.penalty || 50000)} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw = e.target.value.replace(/\./g, ''); e.target.value = raw ? new Intl.NumberFormat('vi-VN').format(Number(raw)) : ''; const f=e.target.form; if(f && f.elements.namedItem('displayDeduction')){ (f.elements.namedItem('displayDeduction') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Number(raw||0) + Number((f.elements.namedItem('otherDeduction') as HTMLInputElement).value.replace(/\./g,'') || 0) + Number((f.elements.namedItem('socialInsurance') as HTMLInputElement).value.replace(/\./g,'') || 0)); } }} />
+                                <Input name="penalty" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.penalty || 50000  )} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw = e.target.value.replace(/\./g, ''); e.target.value = raw ? new Intl.NumberFormat('vi-VN').format(Number(raw)) : ''; const f=e.target.form; if(f && f.elements.namedItem('displayDeduction')){ (f.elements.namedItem('displayDeduction') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Number(raw||0) + Number((f.elements.namedItem('otherDeduction') as HTMLInputElement).value.replace(/\./g,'') || 0) + Number((f.elements.namedItem('socialInsurance') as HTMLInputElement).value.replace(/\./g,'') || 0)); } }} />
                               </div>
                               <div className="grid grid-cols-[1fr,1.2fr] items-center gap-2">
                                 <label className="text-[8px] font-black text-rose-500 uppercase tracking-tighter ml-1">Khấu trừ khác</label>
-                                <Input name="otherDeduction" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.otherDeduction || 0)} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw = e.target.value.replace(/\./g, ''); e.target.value = raw ? new Intl.NumberFormat('vi-VN').format(Number(raw)) : ''; const f=e.target.form; if(f && f.elements.namedItem('displayDeduction')){ (f.elements.namedItem('displayDeduction') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Number((f.elements.namedItem('penalty') as HTMLInputElement).value.replace(/\./g,'') || 0) + Number(raw||0) + Number((f.elements.namedItem('socialInsurance') as HTMLInputElement).value.replace(/\./g,'') || 0)); } }} />
+                                <Input name="otherDeduction" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.otherDeduction || 0  )} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw = e.target.value.replace(/\./g, ''); e.target.value = raw ? new Intl.NumberFormat('vi-VN').format(Number(raw)) : ''; const f=e.target.form; if(f && f.elements.namedItem('displayDeduction')){ (f.elements.namedItem('displayDeduction') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Number((f.elements.namedItem('penalty') as HTMLInputElement).value.replace(/\./g,'') || 0) + Number(raw||0) + Number((f.elements.namedItem('socialInsurance') as HTMLInputElement).value.replace(/\./g,'') || 0)); } }} />
                               </div>
                               <div className="grid grid-cols-[1fr,1.2fr] items-center gap-2">
                                 <label className="text-[8px] font-black text-rose-500 uppercase tracking-tighter ml-1">BHXH NLĐ</label>
-                                <Input name="socialInsurance" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.socialInsurance || 1150000)} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw = e.target.value.replace(/\./g, ''); e.target.value = raw ? new Intl.NumberFormat('vi-VN').format(Number(raw)) : ''; const f=e.target.form; if(f && f.elements.namedItem('displayDeduction')){ (f.elements.namedItem('displayDeduction') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Number((f.elements.namedItem('penalty') as HTMLInputElement).value.replace(/\./g,'') || 0) + Number((f.elements.namedItem('otherDeduction') as HTMLInputElement).value.replace(/\./g,'') || 0) + Number(raw||0)); } }} />
+                                <Input name="socialInsurance" type="text" defaultValue={new Intl.NumberFormat("vi-VN").format(selectedStaffForAction.details?.socialInsurance || 1150000  )} className="h-9 px-2 rounded-lg border-rose-200 text-rose-600 font-bold text-xs" onChange={(e) => { const raw = e.target.value.replace(/\./g, ''); e.target.value = raw ? new Intl.NumberFormat('vi-VN').format(Number(raw)) : ''; const f=e.target.form; if(f && f.elements.namedItem('displayDeduction')){ (f.elements.namedItem('displayDeduction') as HTMLInputElement).value = new Intl.NumberFormat('vi-VN').format(Number((f.elements.namedItem('penalty') as HTMLInputElement).value.replace(/\./g,'') || 0) + Number((f.elements.namedItem('otherDeduction') as HTMLInputElement).value.replace(/\./g,'') || 0) + Number(raw||0)); } }} />
                               </div>
                               <div className="pt-3 border-t border-rose-100 mt-2 grid grid-cols-[1.2fr,1fr] items-center gap-2">
                                 <label className="text-[8px] font-black text-rose-400 uppercase tracking-tighter ml-1">Tổng khấu trừ</label>
-                                <Input name="displayDeduction" readOnly type="text" defaultValue={new Intl.NumberFormat("vi-VN").format((selectedStaffForAction.details?.penalty || 50000) + (selectedStaffForAction.details?.otherDeduction || 0) + (selectedStaffForAction.details?.socialInsurance || 1150000))} className="h-9 px-2 rounded-lg border-rose-100 bg-rose-50/80 text-rose-600 text-xs font-black cursor-not-allowed outline-none" tabIndex={-1}  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
+                                <Input name="displayDeduction" readOnly type="text" defaultValue={new Intl.NumberFormat("vi-VN").format((selectedStaffForAction.details?.penalty || 50000) + (selectedStaffForAction.details?.otherDeduction || 0) + (selectedStaffForAction.details?.socialInsurance || 1150000)  )} className="h-9 px-2 rounded-lg border-rose-100 bg-rose-50/80 text-rose-600 text-xs font-black cursor-not-allowed outline-none" tabIndex={-1}  onInput={(e) => { const v = e.currentTarget.value.replace(/\D/g, ''); e.currentTarget.value = v ? new Intl.NumberFormat("vi-VN").format(Number(v)) : ''; }}/>
                               </div>
                             </div>
                           </div>
                         </div>
-                      )}
+                        )}
                     </div>
 
                     <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mb-6 flex flex-col gap-1 w-full relative overflow-hidden">
@@ -1999,13 +1767,13 @@ const AdminReportsPage = () => {
                       {selectedStaffForAction.role === "FULL_TIME" && (
                         <div className="flex items-center justify-between text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-1 relative z-10">
                           <span>Hoa hồng tái tục (live)</span>
-                          <span>+{formatVND(calcTotalRenewalCommission(renewalClassesEntry))}</span>
+                          <span>+{formatVND(calcTotalRenewalCommission(renewalClassesEntry)  )}</span>
                         </div>
-                      )}
+                        )}
                       <div className="flex items-baseline gap-3 relative z-10">
                         <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Tổng Lương (đã lưu):</span>
                         <span className="text-xl font-black text-primary">
-                          {new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.net || 0)} <span className="text-sm">VNĐ</span>
+                          {new Intl.NumberFormat('vi-VN').format(selectedStaffForAction.net || 0  )} <span className="text-sm">VNĐ</span>
                         </span>
                       </div>
                       <span className="text-[9px] font-bold text-slate-500 italic relative z-10">
@@ -2017,7 +1785,7 @@ const AdminReportsPage = () => {
                       <Button type="submit" className="flex-1 bg-primary h-12 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-primary/30">
                         Xác nhận & Lưu dữ liệu
                       </Button>
-                      <Button type="button" onClick={() => setIsEntryModalOpen(false)} variant="outline" className="flex-1 h-12 rounded-xl font-black text-xs uppercase tracking-wider border-slate-200">
+                      <Button type="button" onClick={() => setIsEntryModalOpen(false  )} variant="outline" className="flex-1 h-12 rounded-xl font-black text-xs uppercase tracking-wider border-slate-200">
                         Hủy bỏ
                       </Button>
                     </div>
@@ -2025,7 +1793,7 @@ const AdminReportsPage = () => {
                 </div>
               </motion.div>
             </div>
-          )}
+          ) }
         </AnimatePresence>
 
         {/* Detailed Payslip Modal (Odoo ERP Style) */}
@@ -2034,7 +1802,7 @@ const AdminReportsPage = () => {
             <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 overflow-y-auto">
               <motion.div 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={() => setIsPayslipModalOpen(false)}
+                onClick={() => setIsPayslipModalOpen(false  )}
                 className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
               />
               <motion.div 
@@ -2112,8 +1880,8 @@ const AdminReportsPage = () => {
                               <p className="text-[10px] text-slate-400 font-medium italic">Theo lịch dạy cố định</p>
                             </td>
                             <td className="py-5 text-center text-sm font-black text-slate-600">{selectedStaffForAction.details?.mainSessions || 0} ca</td>
-                            <td className="py-5 text-center text-sm font-black text-slate-500">{formatVND(selectedStaffForAction.details?.mainRate || 250000)}</td>
-                            <td className="py-5 text-right text-sm font-black text-slate-800">{formatVND((selectedStaffForAction.details?.mainSessions || 0) * (selectedStaffForAction.details?.mainRate || 250000))}</td>
+                            <td className="py-5 text-center text-sm font-black text-slate-500">{formatVND(selectedStaffForAction.details?.mainRate || 250000  )}</td>
+                            <td className="py-5 text-right text-sm font-black text-slate-800">{formatVND((selectedStaffForAction.details?.mainSessions || 0) * (selectedStaffForAction.details?.mainRate || 250000)  )}</td>
                           </tr>
                           <tr>
                             <td className="py-5">
@@ -2121,8 +1889,8 @@ const AdminReportsPage = () => {
                               <p className="text-[10px] text-slate-400 font-medium italic">Hỗ trợ giảng dạy chuyên sâu</p>
                             </td>
                             <td className="py-5 text-center text-sm font-black text-slate-600">{selectedStaffForAction.details?.intlSessions || 0} ca</td>
-                            <td className="py-5 text-center text-sm font-black text-slate-500">{formatVND(selectedStaffForAction.details?.intlRate || 350000)}</td>
-                            <td className="py-5 text-right text-sm font-black text-slate-800">{formatVND((selectedStaffForAction.details?.intlSessions || 0) * (selectedStaffForAction.details?.intlRate || 350000))}</td>
+                            <td className="py-5 text-center text-sm font-black text-slate-500">{formatVND(selectedStaffForAction.details?.intlRate || 350000  )}</td>
+                            <td className="py-5 text-right text-sm font-black text-slate-800">{formatVND((selectedStaffForAction.details?.intlSessions || 0) * (selectedStaffForAction.details?.intlRate || 350000)  )}</td>
                           </tr>
                           <tr>
                             <td className="py-5">
@@ -2139,8 +1907,8 @@ const AdminReportsPage = () => {
                               <p className="text-[10px] text-slate-400 font-medium italic">Thưởng dựa trên sĩ số thực tế</p>
                             </td>
                             <td className="py-5 text-center text-sm font-black text-slate-600">{selectedStaffForAction.details?.kpiStudents || 0} HS</td>
-                            <td className="py-5 text-center text-sm font-black text-slate-500">{formatVND(15000)}</td>
-                            <td className="py-5 text-right text-sm font-black text-emerald-600">+{formatVND((selectedStaffForAction.details?.kpiStudents || 0) * 15000)}</td>
+                            <td className="py-5 text-center text-sm font-black text-slate-500">{formatVND(15000  )}</td>
+                            <td className="py-5 text-right text-sm font-black text-emerald-600">+{formatVND((selectedStaffForAction.details?.kpiStudents || 0) * 15000  )}</td>
                           </tr>
                           <tr>
                             <td className="py-5">
@@ -2148,7 +1916,7 @@ const AdminReportsPage = () => {
                             </td>
                             <td className="py-5 text-center">---</td>
                             <td className="py-5 text-center">---</td>
-                            <td className="py-5 text-right text-sm font-black text-slate-800">{formatVND(selectedStaffForAction.details?.parking || 100000)}</td>
+                            <td className="py-5 text-right text-sm font-black text-slate-800">{formatVND(selectedStaffForAction.details?.parking || 100000  )}</td>
                           </tr>
                           {selectedStaffForAction.details?.otherSupport > 0 && (
                             <tr>
@@ -2157,9 +1925,9 @@ const AdminReportsPage = () => {
                               </td>
                               <td className="py-5 text-center">---</td>
                               <td className="py-5 text-center">---</td>
-                              <td className="py-5 text-right text-sm font-black text-slate-800">{formatVND(selectedStaffForAction.details?.otherSupport)}</td>
+                              <td className="py-5 text-right text-sm font-black text-slate-800">{formatVND(selectedStaffForAction.details?.otherSupport  )}</td>
                             </tr>
-                          )}
+                            )}
                           {selectedStaffForAction.details?.penalty > 0 && (
                             <tr>
                               <td className="py-5 text-rose-500">
@@ -2167,9 +1935,9 @@ const AdminReportsPage = () => {
                               </td>
                               <td className="py-5 text-center">---</td>
                               <td className="py-5 text-center">---</td>
-                              <td className="py-5 text-right text-sm font-black text-rose-500">-{formatVND(selectedStaffForAction.details?.penalty)}</td>
+                              <td className="py-5 text-right text-sm font-black text-rose-500">-{formatVND(selectedStaffForAction.details?.penalty  )}</td>
                             </tr>
-                          )}
+                            )}
                         </>
                       ) : (
                         <>
@@ -2179,11 +1947,11 @@ const AdminReportsPage = () => {
                               <p className="text-[10px] text-slate-400 font-medium italic">Công thực: {selectedStaffForAction.details?.actDays || 26}/{selectedStaffForAction.details?.stdDays || 26} ngày</p>
                             </td>
                             <td className="py-5 text-center text-sm font-black text-slate-600">
-                                {(((selectedStaffForAction.details?.actDays || 26) / (selectedStaffForAction.details?.stdDays || 26)) * 100).toFixed(0)}%
+                                {(((selectedStaffForAction.details?.actDays || 26) / (selectedStaffForAction.details?.stdDays || 26)) * 100).toFixed(0  )}%
                             </td>
-                            <td className="py-5 text-center text-sm font-black text-slate-500">{formatVND(selectedStaffForAction.details?.baseSalary || selectedStaffForAction.base)}</td>
+                            <td className="py-5 text-center text-sm font-black text-slate-500">{formatVND(selectedStaffForAction.details?.baseSalary || selectedStaffForAction.base  )}</td>
                             <td className="py-5 text-right text-sm font-black text-slate-800">
-                                {formatVND(((selectedStaffForAction.details?.baseSalary || selectedStaffForAction.base || 0) / (selectedStaffForAction.details?.stdDays || 26)) * (selectedStaffForAction.details?.actDays || 26))}
+                                {formatVND(((selectedStaffForAction.details?.baseSalary || selectedStaffForAction.base || 0) / (selectedStaffForAction.details?.stdDays || 26)) * (selectedStaffForAction.details?.actDays || 26)  )}
                             </td>
                           </tr>
                           {selectedStaffForAction.details?.holidayPay > 0 && (
@@ -2195,10 +1963,10 @@ const AdminReportsPage = () => {
                               <td className="py-5 text-center text-sm font-black text-slate-600">---</td>
                               <td className="py-5 text-center text-sm font-black text-slate-500">---</td>
                               <td className="py-5 text-right text-sm font-black text-emerald-600">
-                                  +{formatVND(selectedStaffForAction.details?.holidayPay || 0)}
+                                  +{formatVND(selectedStaffForAction.details?.holidayPay || 0  )}
                               </td>
                             </tr>
-                          )}
+                            )}
                           <tr>
                             <td className="py-5">
                               <p className="text-sm font-bold text-slate-800">Tổng phụ cấp cố định</p>
@@ -2207,7 +1975,7 @@ const AdminReportsPage = () => {
                             <td className="py-5 text-center">---</td>
                             <td className="py-5 text-center">---</td>
                             <td className="py-5 text-right text-sm font-black text-emerald-600">
-                                +{formatVND((selectedStaffForAction.details?.parking || 0) + (selectedStaffForAction.details?.phone || 0) + (selectedStaffForAction.details?.stationery || 0))}
+                                +{formatVND((selectedStaffForAction.details?.parking || 0) + (selectedStaffForAction.details?.phone || 0) + (selectedStaffForAction.details?.stationery || 0)  )}
                             </td>
                           </tr>
                           <tr>
@@ -2233,8 +2001,8 @@ const AdminReportsPage = () => {
                                       else if (kpiScore >= 65) kpiBonus = kpiPool * 0.8;
                                       else kpiBonus = kpiPool * 0.6;
                                    }
-                                   return `+${formatVND(kpiBonus)}`;
-                                })()}
+                                   return `+${formatVND(kpiBonus  )}`;
+                                })() }
                             </td>
                           </tr>
                           {Array.isArray(selectedStaffForAction.details?.renewalClasses) && selectedStaffForAction.details.renewalClasses.length > 0 && (
@@ -2264,23 +2032,23 @@ const AdminReportsPage = () => {
                                       </p>
                                     </td>
                                     <td className="py-3 text-center text-xs font-black text-slate-600">
-                                      {formatVND(rev)}
+                                      {formatVND(rev  )}
                                     </td>
                                     <td className="py-3 text-center text-xs font-black text-slate-500">
-                                      {(totalRate * 100).toFixed(1)}%
+                                      {(totalRate * 100).toFixed(1  )}%
                                     </td>
                                     <td className="py-3 text-right text-sm font-black text-emerald-600">
-                                      +{formatVND(commission)}
+                                      +{formatVND(commission  )}
                                     </td>
                                   </tr>
                                 );
-                              })}
+                             }  )}
                               <tr>
                                 <td className="py-3 text-right" colSpan={3}>
                                   <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest">Tổng hoa hồng tái tục</p>
                                 </td>
                                 <td className="py-3 text-right text-base font-black text-emerald-700 border-t border-emerald-200">
-                                  +{formatVND(calcTotalRenewalCommission(selectedStaffForAction.details.renewalClasses))}
+                                  +{formatVND(calcTotalRenewalCommission(selectedStaffForAction.details.renewalClasses)  )}
                                 </td>
                               </tr>
                               {selectedStaffForAction.details?.kpiPenalized && (
@@ -2291,9 +2059,9 @@ const AdminReportsPage = () => {
                                     </div>
                                   </td>
                                 </tr>
-                              )}
+                                )}
                             </>
-                          )}
+                            )}
                           {(selectedStaffForAction.details?.penalty > 0 || selectedStaffForAction.details?.otherDeduction > 0 || selectedStaffForAction.details?.socialInsurance > 0) && (
                             <tr>
                               <td className="py-5 text-rose-500">
@@ -2303,12 +2071,12 @@ const AdminReportsPage = () => {
                               <td className="py-5 text-center">---</td>
                               <td className="py-5 text-center">---</td>
                               <td className="py-5 text-right text-sm font-black text-rose-500">
-                                -{formatVND((selectedStaffForAction.details?.penalty || 0) + (selectedStaffForAction.details?.otherDeduction || 0) + (selectedStaffForAction.details?.socialInsurance || 0))}
+                                -{formatVND((selectedStaffForAction.details?.penalty || 0) + (selectedStaffForAction.details?.otherDeduction || 0) + (selectedStaffForAction.details?.socialInsurance || 0)  )}
                               </td>
                             </tr>
-                          )}
+                            )}
                         </>
-                      )}
+                        )}
                     </tbody>
                   </table>
                 </div>
@@ -2322,19 +2090,19 @@ const AdminReportsPage = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-2 italic">TỔNG THỰC NHẬN (NET)</p>
-                      <p className="text-4xl font-black text-primary tracking-tighter shadow-primary/5">{formatVND(selectedStaffForAction.net)}</p>
+                      <p className="text-4xl font-black text-primary tracking-tighter shadow-primary/5">{formatVND(selectedStaffForAction.net  )}</p>
                     </div>
                   </div>
 
                   <div className="flex gap-4">
                     <button 
-                      onClick={() => window.print()}
+                      onClick={() => window.print(  )}
                       className="flex-1 bg-slate-900 h-14 rounded-xl text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
                     >
                       <Download className="w-4 h-4" /> In phiếu lương / Xuất PDF
                     </button>
                     <button 
-                      onClick={() => setIsPayslipModalOpen(false)}
+                      onClick={() => setIsPayslipModalOpen(false  )}
                       className="w-1/4 h-14 border-2 border-slate-200 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all text-slate-500"
                     >
                       Đóng
@@ -2343,9 +2111,190 @@ const AdminReportsPage = () => {
                 </div>
               </motion.div>
             </div>
-          )}
+          ) }
         </AnimatePresence>
-      </AnimatePresence>
+
+      {/* ── RECEIPT CREATION MODAL ─────────────────────────────────── */}
+      <Dialog open={isReceiptModalOpen} onOpenChange={setIsReceiptModalOpen}>
+        <DialogContent className="max-w-xl p-0 overflow-hidden rounded-[2rem] border-none shadow-2xl">
+          <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-8 text-white">
+            <h2 className="text-2xl font-black tracking-tight uppercase">Tạo phiếu thu học phí</h2>
+            <p className="text-emerald-100 text-xs font-bold mt-1 opacity-80 tracking-widest">NGHIỆP VỤ TÀI CHÍNH • HỆ THỐNG MENGLISH</p>
+          </div>
+          
+          <div className="p-8 space-y-6 bg-white">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Học viên *</label>
+                <select 
+                  value={receiptForm.studentId}
+                  onChange={(e) => setReceiptForm(p => ({ ...p, studentId: e.target.value })  )}
+                  className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                >
+                  <option value="">Chọn học viên...</option>
+                  {students.map(s => <option key={s.id} value={s.id}>{s.name} ({s.id})</option>  )}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Số tiền (VNĐ) *</label>
+                <Input 
+                  type="number"
+                  placeholder="VD: 3000000"
+                  value={receiptForm.amount || ""}
+                  onChange={(e) => setReceiptForm(p => ({ ...p, amount: Number(e.target.value) })  )}
+                  className="h-11 bg-slate-50 border-slate-200 rounded-xl text-sm font-black text-emerald-600"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phương thức thanh toán</label>
+              <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1.5">
+                <button 
+                  onClick={() => setReceiptForm(p => ({ ...p, method: "transfer" })  )}
+                  className={`flex-1 h-12 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 ${
+                    receiptForm.method === "transfer" ? "bg-white text-primary shadow-md" : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                   Chuyển khoản
+                </button>
+                <button 
+                  onClick={() => setReceiptForm(p => ({ ...p, method: "cash" })  )}
+                  className={`flex-1 h-12 rounded-xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 ${
+                    receiptForm.method === "cash" ? "bg-white text-emerald-600 shadow-md" : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                   Tiền mặt
+                </button>
+              </div>
+            </div>
+
+            {receiptForm.method === "cash" && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="p-5 bg-amber-50 border border-amber-100 rounded-2xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-2">
+                    <FileText className="w-3.5 h-3.5" /> Kiểm soát hóa đơn hệ thống
+                  </span>
+                  <Badge className="bg-amber-100 text-amber-700 border-none font-black">STT: {String(invoiceRange.current).padStart(3, '0'  )}</Badge>
+                </div>
+                <p className="text-[10px] text-amber-600 leading-relaxed font-medium">
+                  Hệ thống tự động cấp số hóa đơn <b>#{String(invoiceRange.current).padStart(3, '0'  )}</b> từ dải <b>{String(invoiceRange.start).padStart(3, '0'  )}–{String(invoiceRange.end).padStart(3, '0'  )}</b>. 
+                  Vui lòng đảm bảo ghi nhận đúng số này lên hóa đơn giấy.
+                </p>
+              </motion.div>
+              ) }
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ghi chú nghiệp vụ</label>
+              <Textarea 
+                placeholder="Nội dung chi tiết..." 
+                value={receiptForm.note}
+                onChange={(e) => setReceiptForm(p => ({ ...p, note: e.target.value })  )}
+                className="bg-slate-50 border-slate-200 rounded-2xl text-xs font-bold"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="p-8 bg-slate-50 border-t border-slate-100 sm:justify-between items-center">
+            <p className="text-[10px] font-black text-slate-400 italic">User: Quản trị viên • {new Date().toLocaleDateString('vi-VN'  )}</p>
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => setIsReceiptModalOpen(false  )} className="text-xs font-black uppercase">Hủy</Button>
+              <Button onClick={handleCreateReceipt} className="bg-emerald-600 hover:bg-emerald-700 text-xs font-black uppercase px-8 h-12 rounded-xl shadow-lg shadow-emerald-200">Xác nhận thu phí</Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── VOID RECEIPT MODAL ─────────────────────────────────────── */}
+      <Dialog open={isVoidModalOpen} onOpenChange={setIsVoidModalOpen}>
+        <DialogContent className="max-w-md rounded-[2rem]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-rose-600 uppercase">Hủy hóa đơn học phí</DialogTitle>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+             <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100">
+                <p className="text-xs font-bold text-rose-800">Bạn đang thực hiện hủy hóa đơn:</p>
+                <p className="text-sm font-black text-rose-600 mt-1 uppercase">{selectedVoidRecord?.id} - {formatVND(selectedVoidRecord?.amount || 0  )}</p>
+             </div>
+             <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lý do hủy hóa đơn *</label>
+                <Textarea 
+                  placeholder="Nhập lý do chi tiết (VD: Phụ huynh chuyển khoản nhầm, sai thông tin...)" 
+                  value={voidReason}
+                  onChange={(e) => setVoidReason(e.target.value  )}
+                  className="bg-slate-50 border-slate-200 rounded-xl text-xs"
+                />
+             </div>
+             <p className="text-[10px] text-slate-400 italic">Hành động này sẽ được lưu vào lịch sử đối soát và yêu cầu cấp quản lý phê duyệt sau khi kết ca.</p>
+          </div>
+          <DialogFooter>
+             <Button variant="ghost" onClick={() => setIsVoidModalOpen(false  )}>Quay lại</Button>
+             <Button onClick={handleVoidReceipt} className="bg-rose-600 hover:bg-rose-700 text-white font-black uppercase text-xs">Xác nhận hủy</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── RECONCILIATION MODAL ───────────────────────────────────── */}
+      <Dialog open={isReconModalOpen} onOpenChange={setIsReconModalOpen}>
+        <DialogContent className="max-w-3xl rounded-[2.5rem] p-10">
+           <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Đối soát tài chính cuối ngày</h2>
+                <p className="text-xs text-slate-400 font-bold tracking-widest mt-1 uppercase">Dữ liệu ngày {new Date().toLocaleDateString('vi-VN'  )}</p>
+              </div>
+              <div className="w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center">
+                 <CalendarCheck className="w-8 h-8 text-slate-400" />
+              </div>
+           </div>
+
+           <div className="grid grid-cols-2 gap-8 mb-8">
+              <div className="space-y-6">
+                 <div className="p-6 bg-emerald-50 rounded-[2rem] border border-emerald-100">
+                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">Tổng doanh thu mặt & Chuyển khoản</p>
+                    <div className="space-y-3">
+                       <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-slate-500">Tiền mặt:</span>
+                          <span className="text-sm font-black text-slate-800">{formatVND(tuitionRecordsFiltered.filter(r => (r as any).paymentMethod === "cash" && !(r as any).voided).reduce((s, r) => s + r.amount, 0)  )}</span>
+                       </div>
+                       <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-slate-500">Chuyển khoản:</span>
+                          <span className="text-sm font-black text-slate-800">{formatVND(tuitionRecordsFiltered.filter(r => (r as any).paymentMethod === "transfer" && !(r as any).voided).reduce((s, r) => s + r.amount, 0)  )}</span>
+                       </div>
+                       <div className="pt-3 border-t border-emerald-200 flex justify-between items-center">
+                          <span className="text-xs font-black text-emerald-700">TỔNG THỰC THU:</span>
+                          <span className="text-xl font-black text-emerald-600">{formatVND(tuitionRecordsFiltered.filter(r => !(r as any).voided).reduce((s, r) => s + r.amount, 0)  )}</span>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="space-y-6">
+                 <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-200">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Quản lý hóa đơn giấy</p>
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="text-center p-3 bg-white rounded-2xl border border-slate-100">
+                          <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Đã dùng</p>
+                          <p className="text-lg font-black text-slate-800">{invoiceRange.current - invoiceRange.start}</p>
+                       </div>
+                       <div className="text-center p-3 bg-white rounded-2xl border border-slate-100">
+                          <p className="text-[10px] font-black text-rose-400 uppercase mb-1">Đã hủy</p>
+                          <p className="text-lg font-black text-rose-600">{tuitionRecords.filter(r => (r as any).voided).length}</p>
+                       </div>
+                       <div className="col-span-2 text-center p-3 bg-white rounded-2xl border border-slate-100">
+                          <p className="text-[10px] font-black text-emerald-400 uppercase mb-1">Số tồn trong dải</p>
+                          <p className="text-lg font-black text-emerald-600">{invoiceRange.end - invoiceRange.current + 1}</p>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+           </div>
+
+           <div className="flex gap-4">
+              <Button className="flex-1 h-14 bg-primary text-white font-black uppercase text-xs rounded-2xl shadow-xl shadow-primary/20">Kết ca & Kết chuyển dữ liệu</Button>
+              <Button variant="outline" className="w-1/3 h-14 rounded-2xl font-black text-xs uppercase" onClick={() => setIsReconModalOpen(false  )}>Đóng</Button>
+           </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

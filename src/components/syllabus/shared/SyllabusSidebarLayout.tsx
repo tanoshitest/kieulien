@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft, BookOpen, ChevronRight, ChevronDown, Gamepad2, ListChecks, Lock, Trophy, Layers, Split, Plus, GitMerge } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronRight, ChevronDown, Gamepad2, ListChecks, Lock, Trophy, Layers, Split, Plus, GitMerge, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Syllabus, ClassSchedule } from "@/data/mockData";
 import { useSyllabusFeatures } from "@/contexts/SyllabusFeaturesContext";
@@ -50,7 +50,7 @@ const SyllabusSidebarLayout: React.FC<Props> = ({
   syllabus, classSchedules, selectedSessionId, onSessionSelect,
   activeNavItem, onNavItemChange, breadcrumb, teacherName, onBack, children,
 }) => {
-  const { getStagesBySyllabus, isSessionLocked } = useSyllabusFeatures();
+  const { getStagesBySyllabus, isSessionLocked, stageStatusMap } = useSyllabusFeatures();
   const sylSchedules = classSchedules.filter(cs => cs.syllabusId === syllabus.id);
   const classId = sylSchedules[0]?.classId ?? "CLS001";
   const stages = getStagesBySyllabus(syllabus.id);
@@ -163,15 +163,35 @@ const SyllabusSidebarLayout: React.FC<Props> = ({
                   const stageLocked = stgSessions.length > 0 && isSessionLocked(classId, syllabus.id, stgSessions[0].id);
                   return (
                     <div key={stg.id} className="mb-1">
-                      <div className="px-3 py-1.5 flex items-center gap-2 bg-muted/30 border-l-2 border-violet-300 mt-1">
-                        <Layers className="w-3 h-3 text-violet-600 flex-shrink-0" />
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-violet-700 flex-1 truncate">
+                      <div className={`px-3 py-1.5 flex items-center gap-2 mt-1 border-l-2 ${
+                        stageLocked === false
+                          ? "bg-violet-50/60 border-violet-300"
+                          : stgSessions.length > 0 && stageStatusMap[`${classId}:${stg.id}`] === "completed-locked"
+                            ? "bg-emerald-50/60 border-emerald-400"
+                            : "bg-muted/20 border-rose-300/60"
+                      }`}>
+                        {stageStatusMap[`${classId}:${stg.id}`] === "completed-locked" ? (
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                        ) : stageLocked ? (
+                          <Lock className="w-3 h-3 text-rose-400 flex-shrink-0" />
+                        ) : (
+                          <Layers className="w-3 h-3 text-violet-600 flex-shrink-0" />
+                        )}
+                        <span className={`text-[10px] font-bold uppercase tracking-wide flex-1 truncate ${
+                          stageStatusMap[`${classId}:${stg.id}`] === "completed-locked"
+                            ? "text-emerald-700"
+                            : stageLocked
+                              ? "text-rose-500"
+                              : "text-violet-700"
+                        }`}>
                           Chặng {sIdx + 1}: {stg.name}
                         </span>
                         <span className="text-[9px] text-muted-foreground">
                           {stageDoneCount}/{stgSessions.length}
                         </span>
-                        {stageLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
+                        {stageStatusMap[`${classId}:${stg.id}`] === "completed-locked" && (
+                          <span className="text-[8px] font-bold text-emerald-600 bg-emerald-100 px-1 rounded">DONE</span>
+                        )}
                       </div>
                       {stgSessions.map((sess, idx) => {
                         const status = getSessionStatus(sess.id, sylSchedules);

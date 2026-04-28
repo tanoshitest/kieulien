@@ -3,10 +3,11 @@ import { motion } from "framer-motion";
 import {
   ClipboardCheck, Clock, BookOpen, Link2, CheckCircle2,
   XCircle, AlertCircle, Star, Send, FileText, ChevronDown, ChevronRight,
-  ClipboardList
+  ClipboardList, ArrowLeft
 } from "lucide-react";
 import StaffReportTabContent from "@/components/syllabus/shared/StaffReportTabContent";
 import ForeignTeacherEvaluationPanel from "@/components/syllabus/shared/ForeignTeacherEvaluationPanel";
+import ClassObservationPanel from "@/components/syllabus/shared/ClassObservationPanel";
 import MaterialsViewer from "@/components/syllabus/shared/MaterialsViewer";
 import SyllabusSidebarLayout, { type NavItem } from "@/components/syllabus/shared/SyllabusSidebarLayout";
 import { GameTabContent, QuizTabContent } from "@/components/syllabus/shared/GameQuizContent";
@@ -32,7 +33,7 @@ const attendanceConfig: Record<AttendanceStatus, { label: string; icon: React.El
 
 const classStudents = students.filter(s => s.classIds.includes("CLS001")).slice(0, 8);
 
-type TATab = "today" | "attendance" | "reports" | "staff_report";
+type TATab = "today" | "attendance" | "reports" | "staff_report" | "observation";
 
 const TASyllabusView: React.FC = () => {
   const [selectedSyllabusId, setSelectedSyllabusId] = useState<string | null>(null);
@@ -113,6 +114,24 @@ const TASyllabusView: React.FC = () => {
   const absentCount = attendance.filter(a => a.status === "absent").length;
   const lateCount = attendance.filter(a => a.status === "late").length;
 
+  const currentSyllabus = selectedSyllabusId ? syllabuses.find(s => s.id === selectedSyllabusId) : null;
+
+  // ====== COURSE DETAIL (TABS) ======
+  const tabs: { id: TATab; label: string; icon: React.ElementType }[] = [
+    { id: "today", label: "Ca học hôm nay", icon: Clock },
+    { id: "attendance", label: "Điểm danh", icon: ClipboardCheck },
+    { id: "staff_report", label: "Báo cáo học vụ", icon: ClipboardList },
+    { id: "observation", label: "📋 Phiếu dự giờ", icon: ClipboardList },
+  ];
+
+  React.useEffect(() => {
+    if (currentSyllabus && !selectedSessionId) {
+      const todaySched = classSchedules.find(cs => cs.date === TODAY && cs.syllabusId === currentSyllabus.id);
+      const initial = todaySched?.syllabusSessionId ?? currentSyllabus.sessions[0]?.id ?? null;
+      setSelectedSessionId(initial);
+    }
+  }, [currentSyllabus, selectedSessionId]);
+
   // ====== COURSE SELECTION SCREEN ======
   if (!selectedSyllabusId) {
     return (
@@ -154,24 +173,18 @@ const TASyllabusView: React.FC = () => {
     );
   }
 
-  const currentSyllabus = syllabuses.find(s => s.id === selectedSyllabusId);
-
-  // ====== COURSE DETAIL (TABS) ======
-  const tabs: { id: TATab; label: string; icon: React.ElementType }[] = [
-    { id: "today", label: "Ca học hôm nay", icon: Clock },
-    { id: "attendance", label: "Điểm danh", icon: ClipboardCheck },
-    { id: "staff_report", label: "Báo cáo học vụ", icon: ClipboardList },
-  ];
-
-  React.useEffect(() => {
-    if (currentSyllabus && !selectedSessionId) {
-      const todaySched = classSchedules.find(cs => cs.date === TODAY && cs.syllabusId === currentSyllabus.id);
-      const initial = todaySched?.syllabusSessionId ?? currentSyllabus.sessions[0]?.id ?? null;
-      setSelectedSessionId(initial);
-    }
-  }, [currentSyllabus, selectedSessionId]);
-
-  if (!currentSyllabus) return null;
+  if (!currentSyllabus || !currentSyllabus.sessions || currentSyllabus.sessions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <BookOpen className="w-12 h-12 text-slate-200 mb-4" />
+        <h3 className="text-lg font-bold text-slate-800">Không có dữ liệu giáo trình</h3>
+        <p className="text-sm text-slate-500 mb-6">Giáo trình này chưa được cấu trúc hoặc không có buổi học nào.</p>
+        <Button onClick={() => setSelectedSyllabusId(null)} variant="outline">
+          <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại danh sách
+        </Button>
+      </div>
+    );
+  }
 
   const selectedSession = currentSyllabus.sessions.find(s => s.id === selectedSessionId) ?? currentSyllabus.sessions[0];
 
@@ -400,7 +413,7 @@ const TASyllabusView: React.FC = () => {
         </motion.div>
       )}
 
-      {/* STAFF REPORT TAB (chỉ TA/Admin) */}
+      {/* STAFF REPORT TAB */}
       {activeTab === "staff_report" && (
         <div className="space-y-4">
           <StaffReportTabContent />
@@ -413,6 +426,18 @@ const TASyllabusView: React.FC = () => {
             />
           )}
         </div>
+      )}
+
+      {/* OBSERVATION TAB */}
+      {activeTab === "observation" && (
+        <ClassObservationPanel
+          teacherId={todaySchedule?.teacherId ?? "USR001"}
+          teacherName={todaySchedule?.teacherName ?? "Ms. Thu Trang"}
+          classId={todaySchedule?.classId ?? "CLS001"}
+          className={todaySchedule?.className ?? "4CLC 2"}
+          classScheduleId={todaySchedule?.id}
+          date={todaySchedule?.date}
+        />
       )}
 
         </>

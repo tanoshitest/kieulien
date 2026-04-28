@@ -36,6 +36,7 @@ import NotFound from "@/pages/NotFound";
 import SurveyDemoPage from "@/pages/SurveyDemoPage";
 import SyllabusPage from "@/pages/SyllabusPage";
 import ForeignTeacherSchedulePage from "@/pages/ForeignTeacherSchedulePage";
+import CenterOperationPage from "@/pages/CenterOperationPage";
 import { useRole } from "@/contexts/RoleContext";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const ProtectedApp = () => {
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/syllabus" element={<SyllabusPage />} />
         <Route path="/foreign-schedule" element={<UnifiedSchedulePage />} />
+        <Route path="/operations" element={<CenterOperationPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>

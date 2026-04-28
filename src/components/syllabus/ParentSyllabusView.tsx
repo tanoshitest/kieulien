@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   BookOpen, Video, Zap, FileText,
-  Upload, Link2, ExternalLink, Award, MessageSquare, Eye, Star, BookMarked
+  Upload, Link2, ExternalLink, Award, MessageSquare, Eye, Star, BookMarked, Trophy, Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +17,11 @@ import {
 } from "@/data/mockData";
 import SyllabusSidebarLayout, { type NavItem } from "@/components/syllabus/shared/SyllabusSidebarLayout";
 import { GameTabContent, QuizTabContent } from "@/components/syllabus/shared/GameQuizContent";
+import { useSyllabusFeatures } from "@/contexts/SyllabusFeaturesContext";
 
 const TODAY = "2026-04-22";
 const MY_STUDENT_ID = "STU011"; // Minh Anh Mina (parent's child)
+const MY_STUDENT_KEY = "STU011"; // key trong studentStars (cùng format)
 
 const hwTypeLabel: Record<HomeworkType, string> = {
   video_speaking: "Video Speaking", quizizz: "Quizizz", writing: "Writing"
@@ -60,9 +62,12 @@ function buildStudentHomeworks(submissions: HomeworkSubmission[]) {
 
 const ParentSyllabusView: React.FC = () => {
   const [submissions, setSubmissions] = useState<HomeworkSubmission[]>(initialSubmissions);
-  const [activeTab, setActiveTab] = useState<"homework" | "reports" | "vocab">("homework");
+  const [activeTab, setActiveTab] = useState<"homework" | "reports" | "vocab" | "stars">("homework");
   const [activeNavItem, setActiveNavItem] = useState<NavItem>("syllabus");
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const { studentStars, starLogs } = useSyllabusFeatures();
+  const myTotalStars = studentStars[MY_STUDENT_KEY] ?? 0;
+  const myStarLogs = starLogs.filter(l => l.studentId === MY_STUDENT_KEY).slice(0, 20);
 
   // Derive parent's syllabus
   const parentSyllabus = useMemo(() => {
@@ -151,11 +156,12 @@ const ParentSyllabusView: React.FC = () => {
       ) : (
         <>
       {/* Tabs */}
-      <div className="flex gap-1 bg-muted/50 rounded-xl p-1 mb-6">
+      <div className="flex gap-1 bg-muted/50 rounded-xl p-1 mb-6 flex-wrap">
         {[
           { id: "vocab", label: "Từ vựng buổi học", icon: BookMarked },
           { id: "homework", label: `Bài tập${pendingHWs.length > 0 ? ` (${pendingHWs.length} chờ)` : ""}`, icon: FileText },
           { id: "reports", label: "Báo cáo lớp", icon: MessageSquare },
+          { id: "stars", label: `⭐ Sao của con (${myTotalStars})`, icon: Star },
         ].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id as typeof activeTab)}
             className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${activeTab === t.id ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
@@ -400,6 +406,81 @@ const ParentSyllabusView: React.FC = () => {
               );
             })
           )}
+        </motion.div>
+      )}
+
+      {/* STAR DASHBOARD TAB */}
+      {activeTab === "stars" && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          {/* Tổng sao */}
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-amber-100 mb-3 shadow-inner">
+              <Star className="w-10 h-10 text-amber-500 fill-amber-400" />
+            </div>
+            <p className="text-4xl font-extrabold text-amber-700">{myTotalStars}</p>
+            <p className="text-sm text-amber-600 mt-1 font-medium">Sao tích lũy</p>
+            {/* Progress bar — mục tiêu 50 sao đổi quà */}
+            <div className="mt-4 max-w-xs mx-auto">
+              <div className="flex justify-between text-xs text-amber-700 mb-1">
+                <span>Tiến độ đổi quà</span>
+                <span>{myTotalStars}/50 sao</span>
+              </div>
+              <div className="h-3 bg-amber-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, (myTotalStars / 50) * 100)}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-amber-600 mt-1">{Math.max(0, 50 - myTotalStars)} sao nữa đổi được phần quà đầu tiên!</p>
+            </div>
+          </div>
+
+          {/* Thống kê nguồn */}
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              { label: "Tự động (BTVN)", source: "auto-homework", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+              { label: "GV thưởng", source: "teacher-tick", color: "bg-blue-100 text-blue-700 border-blue-200" },
+              { label: "Thủ công", source: "manual", color: "bg-purple-100 text-purple-700 border-purple-200" },
+            ] as { label: string; source: typeof myStarLogs[0]["source"]; color: string }[]).map(s => (
+              <div key={s.source} className={`text-center p-3 rounded-xl border ${s.color}`}>
+                <p className="text-xl font-bold">{myStarLogs.filter(l => l.source === s.source).reduce((a, l) => a + l.amount, 0)}</p>
+                <p className="text-[11px] font-medium mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Lịch sử sao */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-border bg-muted/30">
+              <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-500" /> Lịch sử nhận sao
+              </h4>
+            </div>
+            {myStarLogs.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">
+                <Star className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Chưa có sao nào được tích</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {myStarLogs.map((log, i) => (
+                  <motion.div key={log.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}
+                    className="px-4 py-3 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                      <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">{log.reason}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {new Date(log.at).toLocaleString("vi-VN", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} · {log.by}
+                      </p>
+                    </div>
+                    <span className="text-base font-bold text-amber-600 flex-shrink-0">+{log.amount} ⭐</span>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
         </motion.div>
       )}
 

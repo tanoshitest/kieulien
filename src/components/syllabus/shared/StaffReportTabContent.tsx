@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { students } from "@/data/mockData";
 import { useRole } from "@/contexts/RoleContext";
 
-type ReportStatus = "draft" | "pending" | "published";
+type ReportStatus = "draft" | "pending" | "reviewed" | "published";
 
 interface Props {
   classId?: string; // default CLS001
@@ -86,6 +86,12 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001", readOnly =
     toast.success("Đã gửi báo cáo cho Học vụ duyệt");
   };
 
+  const reviewReport = () => {
+    setReportStatus("reviewed");
+    setReportMeta(m => ({ ...m, reviewerName: "Ms. Linh Chi", reviewedAt: new Date().toISOString() }));
+    toast.success("Đã đánh dấu đã xem xét — có thể sửa rồi xuất bản");
+  };
+
   const publishReport = () => {
     setReportStatus("published");
     setReportMeta(m => ({ ...m, reviewerName: "Ms. Linh Chi", reviewedAt: new Date().toISOString() }));
@@ -96,9 +102,10 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001", readOnly =
     && (Date.now() - new Date(reportMeta.submittedAt).getTime()) > 24 * 3600 * 1000;
 
   const statusConfig: Record<ReportStatus, { label: string; color: string; icon: React.ElementType }> = {
-    draft:     { label: "Nháp",          color: "bg-slate-100 text-slate-700",   icon: NotebookPen },
-    pending:   { label: "Chờ Học vụ duyệt", color: "bg-amber-100 text-amber-700", icon: Clock },
-    published: { label: "Đã xuất bản",   color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
+    draft:     { label: "Nháp",              color: "bg-slate-100 text-slate-700",    icon: NotebookPen },
+    pending:   { label: "Chờ Học vụ duyệt", color: "bg-amber-100 text-amber-700",   icon: Clock },
+    reviewed:  { label: "Học vụ đã xem",     color: "bg-blue-100 text-blue-700",     icon: FileCheck2 },
+    published: { label: "Đã xuất bản",         color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
   };
 
   return (
@@ -119,7 +126,7 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001", readOnly =
             {overdue && <Badge className="bg-rose-100 text-rose-700 text-[10px] animate-pulse">⚠ Quá 24h chưa duyệt</Badge>}
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Workflow: TA tạo nháp → gửi Học vụ duyệt → Học vụ xuất bản → Admin xem được
+            Workflow: TA tạo nháp → gửi Học vụ duyệt → Học vụ xem xét & sửa (nếu cần) → Xuất bản → Admin xem được
           </p>
           {reportMeta.submittedAt && (
             <p className="text-[11px] text-muted-foreground mt-1">
@@ -272,7 +279,8 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001", readOnly =
         <div className="sticky bottom-4 bg-card border border-border rounded-xl p-3 shadow-lg flex items-center justify-between gap-3 flex-wrap">
           <p className="text-xs text-muted-foreground">
             {reportStatus === "draft" && "TA: Lưu nháp hoặc gửi cho Học vụ duyệt"}
-            {reportStatus === "pending" && "Đang chờ Học vụ duyệt — Học vụ bấm 'Duyệt & Xuất bản' để hoàn tất"}
+            {reportStatus === "pending" && "Đang chờ Học vụ duyệt"}
+            {reportStatus === "reviewed" && "Học vụ đã xem xét — có thể sửa rồi xuất bản"}
             {reportStatus === "published" && "Báo cáo đã xuất bản"}
           </p>
           <div className="flex gap-2 flex-wrap">
@@ -287,8 +295,18 @@ const StaffReportTabContent: React.FC<Props> = ({ classId = "CLS001", readOnly =
               </>
             )}
             {reportStatus === "pending" && (isAdmin || (!isTA)) && (
+              <>
+                <Button onClick={reviewReport} variant="outline" className="gap-1.5 border-blue-300 text-blue-700">
+                  <FileCheck2 className="w-4 h-4" /> Đánh dấu đã xem xét
+                </Button>
+                <Button onClick={publishReport} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">
+                  <FileCheck2 className="w-4 h-4" /> Duyệt & Xuất bản ngay
+                </Button>
+              </>
+            )}
+            {reportStatus === "reviewed" && (isAdmin || (!isTA)) && (
               <Button onClick={publishReport} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">
-                <FileCheck2 className="w-4 h-4" /> Duyệt & Xuất bản
+                <FileCheck2 className="w-4 h-4" /> Xuất bản
               </Button>
             )}
             {reportStatus === "published" && (

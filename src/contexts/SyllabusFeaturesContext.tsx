@@ -35,6 +35,14 @@ export type StageStatus = "locked" | "unlocked" | "completed-locked";
 // ═══════════════════════════════════════════════════════════════
 export type BigTestStatus = "draft" | "pending" | "approved" | "sent" | "rejected";
 
+export interface ParentReturnChecklist {
+  confirmed: boolean;          // học vụ đã trả bài cho PH
+  confirmedAt?: string;
+  confirmedBy?: string;
+  parentFeedback?: string;     // PH phản hồi sau khi nhận
+  feedbackReceivedAt?: string;
+}
+
 export interface BigTestReport {
   id: string;
   classId: string;
@@ -64,6 +72,10 @@ export interface BigTestReport {
   sentAt?: string;
   sentBy?: string;
   parentReadAt?: string;         // optional
+  // Checklist trả bài PH (học vụ confirm)
+  parentReturn?: ParentReturnChecklist;
+  // Teacher penalty: nếu GV nộp quá hạn
+  teacherPenalty?: { penalized: boolean; penalizedAt?: string; reason?: string };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -163,6 +175,47 @@ export interface ForeignTeacherEvaluation {
   createdAt: string;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// CLASS OBSERVATION — Phếu dự giờ đầy đủ
+// ═══════════════════════════════════════════════════════════════
+export interface ObservationCriterion {
+  id: string;
+  section: "B" | "C";          // Phần B (GV) hay C (Vận hành)
+  group: string;               // "Tác phong" | "Chuyên môn" | ...
+  label: string;               // Mô tả tiêu chí
+  maxScore: number;            // Mặc định 5
+}
+
+export interface ObservationScore {
+  criterionId: string;
+  passed: boolean;             // ĐẠT checkbox
+  score: number;               // 0–5
+  comment?: string;            // Nhận xét (nếu có)
+}
+
+export type ObservationStatus = "draft" | "completed" | "published";
+
+export interface ClassObservation {
+  id: string;
+  teacherId: string;
+  teacherName: string;
+  classId: string;
+  className: string;
+  classScheduleId?: string;
+  date: string;
+  observerId: string;
+  observerName: string;
+  scores: ObservationScore[];
+  totalScore: number;           // Tính tự động
+  sectionBScore: number;        // /60
+  sectionCScore: number;        // /40
+  overallComment: string;
+  status: ObservationStatus;
+  visibleToTeacher: boolean;    // GV chỉ thấy sau khi publish
+  createdAt: string;
+  publishedAt?: string;
+}
+
 // ─────────────────────────────────────────────────────────────
 // CONTEXT
 // ─────────────────────────────────────────────────────────────
@@ -187,6 +240,9 @@ interface FeaturesCtx {
   approveBigTest: (id: string, reviewerName: string, note?: string) => void;
   rejectBigTest: (id: string, reviewerName: string, note: string) => void;
   sendBigTest: (id: string, sentBy: string) => void;
+  confirmParentReturn: (id: string, confirmedBy: string, feedback?: string) => void;
+  penalizeTeacher: (id: string, reason: string) => void;
+  lockStageAfterBigTest: (classId: string, stageId: string, syllabusId: string) => void;
 
   // Teacher notes
   teacherNotes: TeacherNote[];
@@ -208,11 +264,44 @@ interface FeaturesCtx {
   foreignEvaluations: ForeignTeacherEvaluation[];
   foreignEvalCriteria: EvaluationCriterion[];
   upsertForeignEvaluation: (evalu: ForeignTeacherEvaluation) => void;
+
+  // Class Observations (Phếu dự giờ)
+  observations: ClassObservation[];
+  observationCriteria: ObservationCriterion[];
+  upsertObservation: (obs: ClassObservation) => void;
+  publishObservation: (id: string) => void;
+  deleteObservation: (id: string) => void;
 }
 
 const FeaturesContext = createContext<FeaturesCtx | null>(null);
 
 // Default evaluation criteria
+// Tiêu chí phếu dự giờ (20 mục, tổng 100 điểm)
+export const DEFAULT_OBSERVATION_CRITERIA: ObservationCriterion[] = [
+  // ── PHẦN B: Đánh giá Giáo viên (12 × 5 = 60đ) ──────────────────────────────────────
+  { id: "B1",  section: "B", group: "Tác phong",           label: "Giờ giấc (có mặt trước buổi học 15p)",                maxScore: 5 },
+  { id: "B2",  section: "B", group: "Tác phong",           label: "Trang phục (quần áo lịch sự, tóc tai gọn gàng, trang điểm nhẹ)", maxScore: 5 },
+  { id: "B3",  section: "B", group: "Tác phong",           label: "Thái độ (vui tươi, ngôn ngữ phù hợp với học viên)",      maxScore: 5 },
+  { id: "B4",  section: "B", group: "Tác phong",           label: "Di chuyển (linh hoạt trong lớp)",                            maxScore: 5 },
+  { id: "B5",  section: "B", group: "Chuyên môn",          label: "Sử dụng Tiếng Anh trong lớp học (>70%)",              maxScore: 5 },
+  { id: "B6",  section: "B", group: "Chuyên môn",          label: "Phát âm tiếng Anh",                                        maxScore: 5 },
+  { id: "B7",  section: "B", group: "Kỹ thuật giảng dạy", label: "Đảm bảo truyền tải đủ kiến thức của giáo án",              maxScore: 5 },
+  { id: "B8",  section: "B", group: "Kỹ thuật giảng dạy", label: "Đặt câu hỏi thường xuyên, tổ chức hoạt động lớp học",    maxScore: 5 },
+  { id: "B9",  section: "B", group: "Kỹ thuật giảng dạy", label: "Giải thích kiến thức gọn và thỏa đáng",                   maxScore: 5 },
+  { id: "B10", section: "B", group: "Học viên",            label: "Học viên hào hứng, feedback tốt",                        maxScore: 5 },
+  { id: "B11", section: "B", group: "Kết nối",             label: "Tương tác với học viên, tích điểm đổi quà",              maxScore: 5 },
+  { id: "B12", section: "B", group: "Xử lý tình huống",   label: "Xử lý tình huống lớp học",                                maxScore: 5 },
+  // ── PHẦN C: Quy trình Vận hành Lớp học (8 × 5 = 40đ) ────────────────────────────
+  { id: "C1",  section: "C", group: "Vận hành",            label: "Sĩ số lớp học (điểm danh HV tham dự min >85%)",         maxScore: 5 },
+  { id: "C2",  section: "C", group: "Vận hành",            label: "Học viên làm bài tập về nhà",                            maxScore: 5 },
+  { id: "C3",  section: "C", group: "Vận hành",            label: "GV chấm chữa bài tập cho HV",                           maxScore: 5 },
+  { id: "C4",  section: "C", group: "Vận hành",            label: "Bài giảng có đúng syllabus hay không",                   maxScore: 5 },
+  { id: "C5",  section: "C", group: "Vận hành",            label: "GV có chuẩn bị đạo cụ lớp học đầy đủ không",              maxScore: 5 },
+  { id: "C6",  section: "C", group: "Vận hành",            label: "GV có sử dụng công cụ giảng dạy (slide/worksheet/tool...)", maxScore: 5 },
+  { id: "C7",  section: "C", group: "Vận hành",            label: "GV hoàn thành nhận xét lớp học (đầy đủ, đúng hạn)",        maxScore: 5 },
+  { id: "C8",  section: "C", group: "Vận hành",            label: "GV cập nhật tiến trình buổi học và nhận xét audio",     maxScore: 5 },
+];
+
 const DEFAULT_CRITERIA: EvaluationCriterion[] = [
   { id: "C1", label: "Phát âm chuẩn, rõ ràng", maxScore: 10 },
   { id: "C2", label: "Bám sát giáo án", maxScore: 10 },
@@ -396,7 +485,19 @@ export const SyllabusFeaturesProvider: React.FC<{ children: React.ReactNode }> =
   }, []);
 
   const submitBigTest = useCallback((id: string) => {
-    setBigTests(prev => prev.map(b => b.id === id ? { ...b, status: "pending", submittedAt: today() } : b));
+    setBigTests(prev => prev.map(b => {
+      if (b.id !== id) return b;
+      // Kiểm tra quá hạn → auto-flag
+      const now = new Date();
+      const deadline = b.teacherDeadline ? new Date(b.teacherDeadline) : null;
+      const isLate = deadline && now > deadline;
+      return {
+        ...b,
+        status: "pending",
+        submittedAt: today(),
+        teacherPenalty: isLate ? { penalized: true, penalizedAt: today(), reason: "Nộp quá hạn 7 ngày" } : b.teacherPenalty,
+      };
+    }));
   }, []);
 
   const approveBigTest = useCallback((id: string, reviewerName: string, note?: string) => {
@@ -412,6 +513,46 @@ export const SyllabusFeaturesProvider: React.FC<{ children: React.ReactNode }> =
   const sendBigTest = useCallback((id: string, sentBy: string) => {
     setBigTests(prev => prev.map(b => b.id === id ? { ...b, status: "sent", sentAt: today(), sentBy } : b));
   }, []);
+
+  const confirmParentReturn = useCallback((id: string, confirmedBy: string, feedback?: string) => {
+    setBigTests(prev => prev.map(b => b.id === id ? {
+      ...b,
+      parentReturn: {
+        confirmed: true,
+        confirmedAt: today(),
+        confirmedBy,
+        parentFeedback: feedback,
+        feedbackReceivedAt: feedback ? today() : undefined,
+      },
+    } : b));
+  }, []);
+
+  const penalizeTeacher = useCallback((id: string, reason: string) => {
+    setBigTests(prev => prev.map(b => b.id === id ? {
+      ...b,
+      teacherPenalty: { penalized: true, penalizedAt: today(), reason },
+    } : b));
+  }, []);
+
+  // Sau khi Big Test hoàn thành (sent) → lock chặng hiện tại, unlock chặng tiếp theo
+  const lockStageAfterBigTest = useCallback((classId: string, stageId: string, syllabusId: string) => {
+    setStageStatusMap(prev => {
+      const next = { ...prev };
+      // Lock chặng hiện tại
+      next[`${classId}:${stageId}`] = "completed-locked";
+      // Unlock chặng tiếp theo nếu có
+      const sylStages = stages.filter(s => s.syllabusId === syllabusId).sort((a, b) => a.order - b.order);
+      const currentIdx = sylStages.findIndex(s => s.id === stageId);
+      if (currentIdx >= 0 && currentIdx < sylStages.length - 1) {
+        const nextStage = sylStages[currentIdx + 1];
+        const nextKey = `${classId}:${nextStage.id}`;
+        if (next[nextKey] === "locked" || !next[nextKey]) {
+          next[nextKey] = "unlocked";
+        }
+      }
+      return next;
+    });
+  }, [stages]);
 
   // ─── Teacher Notes ─────────────────────────────────────────
   const upsertTeacherNote = useCallback<FeaturesCtx["upsertTeacherNote"]>((note) => {
@@ -492,22 +633,85 @@ export const SyllabusFeaturesProvider: React.FC<{ children: React.ReactNode }> =
     });
   }, []);
 
+  // ─── Class Observations ───────────────────────────────────────────
+  const [observations, setObservations] = useState<ClassObservation[]>([
+    // Mock: 1 phiếu dự giờ mẫu
+    {
+      id: "OBS_001",
+      teacherId: "USR001", teacherName: "Ms. Thu Trang",
+      classId: "CLS001", className: "4CLC 2",
+      classScheduleId: "CS002",
+      date: "2026-04-19",
+      observerId: "USR_OPS", observerName: "Ms. Linh Chi",
+      scores: DEFAULT_OBSERVATION_CRITERIA.map(c => ({
+        criterionId: c.id,
+        passed: true,
+        score: c.id === "B10" ? 4 : c.id === "C2" ? 3 : 5,
+        comment: c.id === "B10" ? "HS có vẻ mệt cuối buổi" : c.id === "C2" ? "1 HS chưa nộp BTVN" : undefined,
+      })),
+      totalScore: 92,
+      sectionBScore: 59,
+      sectionCScore: 33,
+      overallComment: "GV dạy tốt, năng lượng cao. Cần chú ý theo dõi sĩ số BTVN chặt hơn.",
+      status: "published",
+      visibleToTeacher: true,
+      createdAt: "2026-04-19T11:00:00",
+      publishedAt: "2026-04-19T14:00:00",
+    },
+  ]);
+
+  const calcScores = (scores: ObservationScore[]) => {
+    let bScore = 0; let cScore = 0;
+    for (const s of scores) {
+      const crit = DEFAULT_OBSERVATION_CRITERIA.find(c => c.id === s.criterionId);
+      if (!crit) continue;
+      if (crit.section === "B") bScore += s.score;
+      else cScore += s.score;
+    }
+    return { sectionBScore: bScore, sectionCScore: cScore, totalScore: bScore + cScore };
+  };
+
+  const upsertObservation = useCallback<FeaturesCtx["upsertObservation"]>((obs) => {
+    const { sectionBScore, sectionCScore, totalScore } = calcScores(obs.scores);
+    const updated = { ...obs, sectionBScore, sectionCScore, totalScore };
+    setObservations(prev => {
+      const idx = prev.findIndex(o => o.id === obs.id);
+      if (idx === -1) return [updated, ...prev];
+      const next = [...prev]; next[idx] = updated; return next;
+    });
+  }, []);
+
+  const publishObservation = useCallback((id: string) => {
+    setObservations(prev => prev.map(o => o.id === id
+      ? { ...o, status: "published" as ObservationStatus, visibleToTeacher: true, publishedAt: today() }
+      : o
+    ));
+  }, []);
+
+  const deleteObservation = useCallback((id: string) => {
+    setObservations(prev => prev.filter(o => o.id !== id));
+  }, []);
+
   const value = useMemo<FeaturesCtx>(() => ({
     studentStars, starLogs, awardStar,
     stages, configureSyllabusStages, getStagesBySyllabus, stageStatusMap, setStageStatus, isSessionLocked,
     bigTests, upsertBigTest, submitBigTest, approveBigTest, rejectBigTest, sendBigTest,
+    confirmParentReturn, penalizeTeacher, lockStageAfterBigTest,
     teacherNotes, upsertTeacherNote,
     sylEditRequests, submitSylEditRequest, approveSylEdit, rejectSylEdit,
     evaluations, evaluationCriteria: DEFAULT_CRITERIA, upsertEvaluation, publishEvaluation,
     foreignEvaluations, foreignEvalCriteria: FOREIGN_CRITERIA, upsertForeignEvaluation,
+    observations, observationCriteria: DEFAULT_OBSERVATION_CRITERIA, upsertObservation, publishObservation, deleteObservation,
   }), [
     studentStars, starLogs, awardStar,
     stages, configureSyllabusStages, getStagesBySyllabus, stageStatusMap, setStageStatus, isSessionLocked,
     bigTests, upsertBigTest, submitBigTest, approveBigTest, rejectBigTest, sendBigTest,
+    confirmParentReturn, penalizeTeacher, lockStageAfterBigTest,
     teacherNotes, upsertTeacherNote,
     sylEditRequests, submitSylEditRequest, approveSylEdit, rejectSylEdit,
     evaluations, upsertEvaluation, publishEvaluation,
     foreignEvaluations, upsertForeignEvaluation,
+    observations, upsertObservation, publishObservation, deleteObservation,
   ]);
 
   return <FeaturesContext.Provider value={value}>{children}</FeaturesContext.Provider>;

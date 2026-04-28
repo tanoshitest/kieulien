@@ -1172,6 +1172,18 @@ const CRMPage = () => {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Chu kỳ đóng phí</Label>
+              <Select defaultValue="full">
+                <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full" className="font-bold text-xs text-emerald-600">Toàn khóa (Giảm 10%)</SelectItem>
+                  <SelectItem value="quarter" className="font-bold text-xs">Theo kỳ (24 buổi / kỳ)</SelectItem>
+                  <SelectItem value="monthly" className="font-bold text-xs">Hàng tháng (Cố định)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 p-3 rounded-xl border border-emerald-100 bg-emerald-50/30">
                 <label className="flex items-center gap-2 cursor-pointer">

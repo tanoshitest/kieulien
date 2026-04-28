@@ -12,6 +12,7 @@ import ContentSecurityWrapper from "@/components/syllabus/shared/ContentSecurity
 import BigTestPanel from "@/components/syllabus/shared/BigTestPanel";
 import TeacherNotePanel from "@/components/syllabus/shared/TeacherNotePanel";
 import VnToForeignNotePanel from "@/components/syllabus/shared/VnToForeignNotePanel";
+import ClassObservationPanel from "@/components/syllabus/shared/ClassObservationPanel";
 import SyllabusEditRequestPanel from "@/components/syllabus/shared/SyllabusEditRequestPanel";
 import TeacherEvaluationPanel from "@/components/syllabus/shared/TeacherEvaluationPanel";
 import ForeignTeacherEvaluationPanel from "@/components/syllabus/shared/ForeignTeacherEvaluationPanel";
@@ -52,7 +53,13 @@ const readOnlyStatusConfig: Record<HomeworkStatus, { label: string; color: strin
   graded: { label: "Đã chấm", color: "bg-green-100 text-green-700" },
 };
 
-const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelect?: boolean; readOnly?: boolean; foreignMode?: boolean }> = ({ showStaffReport = false, hideCourseSelect = false, readOnly = false, foreignMode = false }) => {
+const TeacherSyllabusView: React.FC<{ 
+  showStaffReport?: boolean; 
+  hideCourseSelect?: boolean; 
+  readOnly?: boolean; 
+  foreignMode?: boolean;
+  syllabus?: Syllabus; // Prop mới để hỗ trợ preview trực tiếp từ Admin
+}> = ({ showStaffReport = false, hideCourseSelect = false, readOnly = false, foreignMode = false, syllabus: propSyllabus }) => {
   const featureCtx = useSyllabusFeatures();
   const { studentStars, awardStar } = featureCtx;
   const [selectedSyllabusId, setSelectedSyllabusId] = useState<string | null>(hideCourseSelect ? (syllabuses[0]?.id ?? null) : null);
@@ -286,7 +293,7 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
     setGradingItem(null);
   };
 
-  const currentSyllabus = syllabuses.find(s => s.id === selectedSyllabusId);
+  const currentSyllabus = propSyllabus || syllabuses.find(s => s.id === selectedSyllabusId);
 
   // Initialize selectedSessionId once syllabus loaded — pick today's or first
   // ⚠️ Hook MUST be called before any conditional return to satisfy Rules of Hooks
@@ -395,8 +402,18 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-muted/50 rounded-xl p-1 mb-6">
-        {tabs.map(t => (
+      {currentSyllabus.sessions.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
+          <BookOpen className="w-16 h-16 text-slate-200 mb-4" />
+          <h3 className="text-lg font-bold text-slate-800">Khung giáo trình trống</h3>
+          <p className="text-sm text-slate-500 max-w-md mx-auto">
+            Bạn vừa tạo giáo trình mới. Hãy chuyển sang chế độ <strong>"Chỉnh sửa"</strong> ở góc trên bên phải để bắt đầu thêm các buổi học đầu tiên.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-1 bg-muted/50 rounded-xl p-1 mb-6 overflow-x-auto">
+            {tabs.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id as typeof activeTab)}
             className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${activeTab === t.id ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <t.icon className="w-4 h-4" />{t.label}
@@ -495,6 +512,20 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
                             <div>
                               <b>Buổi này chưa gán GVNN.</b> GV Việt cần handle CẢ phần này (15-20 phút cuối). Liên hệ học vụ/admin nếu cần xếp GVNN.
                             </div>
+                          </div>
+                        )}
+                        {/* Tài liệu riêng cho GVNN — chỉ hiện khi đang xem tab foreign */}
+                        {processTab === "foreign" && (todaySession.foreignMaterialsLink || todaySchedule?.foreignMaterialsLink) && (
+                          <div className="mb-2">
+                            <p className="text-xs font-semibold text-emerald-700 mb-1.5 flex items-center gap-1.5">
+                              🌍 Tài liệu GV Nước ngoài
+                            </p>
+                            <MaterialsViewer
+                              url={(todaySchedule?.foreignMaterialsLink ?? todaySession.foreignMaterialsLink)!}
+                              title={`GVNN: ${todaySession.title}`}
+                              watermark="GVNN"
+                              compact
+                            />
                           </div>
                         )}
                         <pre className={`text-sm font-sans whitespace-pre-wrap leading-relaxed p-3 rounded-lg border ${
@@ -607,6 +638,7 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
 
       {/* ATTENDANCE TAB */}
       {activeTab === "attendance" && (
+        <ContentSecurityWrapper watermarkText={`${roleLabel} · Ms. Thu Trang`}>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="bg-primary/5 border-b border-border px-5 py-4 flex items-center gap-3 flex-wrap">
@@ -728,6 +760,7 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
             </div>
           </div>
         </motion.div>
+        </ContentSecurityWrapper>
       )}
 
       {/* GRADING TAB */}
@@ -993,16 +1026,25 @@ const TeacherSyllabusView: React.FC<{ showStaffReport?: boolean; hideCourseSelec
         <ClassScheduleManager syllabus={currentSyllabus} />
       )}
 
-      {/* STAFF REPORT TAB (chỉ khi showStaffReport) */}
+      {/* STAFF REPORT TAB */}
       {activeTab === "staff_report" && showStaffReport && (
         <div className="space-y-4">
           <StaffReportTabContent readOnly={readOnly} />
           <TeacherEvaluationPanel teacherId="USR001" teacherName="Ms. Thu Trang" className={todaySchedule?.className} classScheduleId={todaySchedule?.id} />
+          {/* Phếu dự giờ — GV chỉ thấy bản đã công bố */}
+          <ClassObservationPanel
+            teacherId="USR001"
+            teacherName="Ms. Thu Trang"
+            classId={todaySchedule?.classId ?? "CLS001"}
+            className={todaySchedule?.className ?? "4CLC 2"}
+            classScheduleId={todaySchedule?.id}
+          />
         </div>
       )}
-
         </>
       )}
+    </>
+  )}
 
       {/* Grading Dialog */}
       <Dialog open={!!gradingItem} onOpenChange={() => setGradingItem(null)}>

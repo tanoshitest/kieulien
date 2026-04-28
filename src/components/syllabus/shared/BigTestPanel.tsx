@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Trophy, Video, Upload, Send, CheckCircle2, XCircle, AlertTriangle, Clock, FileCheck2 } from "lucide-react";
+import { Trophy, Video, Upload, Send, CheckCircle2, XCircle, AlertTriangle, Clock, FileCheck2, Lock, MessageSquarePlus } from "lucide-react";
 import { toast } from "sonner";
 import { useRole } from "@/contexts/RoleContext";
 import { useSyllabusFeatures, type BigTestReport } from "@/contexts/SyllabusFeaturesContext";
@@ -43,7 +43,13 @@ const statusBadge: Record<BigTestReport["status"], { label: string; cls: string 
 
 const BigTestPanel: React.FC<Props> = ({ syllabusSessionId, classId, className, stageId, stageName, students }) => {
   const { isTeacher, isAdmin, isTA, isParent } = useRole();
-  const { bigTests, upsertBigTest, submitBigTest, approveBigTest, rejectBigTest, sendBigTest } = useSyllabusFeatures();
+  const { bigTests, upsertBigTest, submitBigTest, approveBigTest, rejectBigTest, sendBigTest,
+    confirmParentReturn, penalizeTeacher, lockStageAfterBigTest } = useSyllabusFeatures();
+  // Extract syllabusId from stageId pattern: STG_{syllabusId}_{n}
+  const syllabusId = stageId.replace(/^STG_/, "").replace(/_\d+$/, "");
+
+  const [feedbackDialog, setFeedbackDialog] = React.useState<{ id: string; name: string } | null>(null);
+  const [feedbackText, setFeedbackText] = React.useState("");
 
   const sessionReports = useMemo(
     () => bigTests.filter(b => b.syllabusSessionId === syllabusSessionId && b.classId === classId),
@@ -100,7 +106,9 @@ const BigTestPanel: React.FC<Props> = ({ syllabusSessionId, classId, className, 
 
   const handleSend = (id: string) => {
     sendBigTest(id, isAdmin ? "Admin" : "Ms. Linh Chi");
-    toast.success("Đã gửi báo cáo tới phụ huynh");
+    // Auto-lock stage sau khi gửi PH
+    lockStageAfterBigTest(classId, stageId, syllabusId);
+    toast.success("Đã gửi báo cáo tới phụ huynh · Chặng đã được khóa lại");
   };
 
   const confirmReject = () => {
@@ -117,6 +125,9 @@ const BigTestPanel: React.FC<Props> = ({ syllabusSessionId, classId, className, 
   const pendingCount = sessionReports.filter(b => b.status === "pending").length;
   const approvedNotSent = sessionReports.filter(b => b.status === "approved").length;
   const studentsWithoutReport = students.filter(s => !sessionReports.some(r => r.studentId === s.id));
+  // Báo cáo đã gửi nhưng chưa xác nhận trả bài PH
+  const sentNotConfirmed = sessionReports.filter(b => b.status === "sent" && !b.parentReturn?.confirmed);
+  const overdueTeachers = sessionReports.filter(b => b.status === "draft" && daysUntil(b.teacherDeadline) < 0 && !b.teacherPenalty?.penalized);
 
   // Parent view — chỉ xem báo cáo của con mình sau khi được gửi
   if (isParent) {
@@ -167,15 +178,35 @@ const BigTestPanel: React.FC<Props> = ({ syllabusSessionId, classId, className, 
           <CardTitle className="flex items-center gap-2 text-amber-900">
             <Trophy className="w-5 h-5 text-amber-600" /> Big Test — {stageName}
           </CardTitle>
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs flex-wrap">
             <Badge className="bg-amber-100 text-amber-700 border-amber-300">{sessionReports.length}/{students.length} báo cáo</Badge>
             {pendingCount > 0 && <Badge className="bg-amber-200 text-amber-800">{pendingCount} chờ duyệt</Badge>}
             {approvedNotSent > 0 && <Badge className="bg-blue-100 text-blue-700">{approvedNotSent} sẵn sàng gửi</Badge>}
+            {sentNotConfirmed.length > 0 && (
+              <Badge className="bg-violet-100 text-violet-700 animate-pulse">{sentNotConfirmed.length} chưa xác nhận trả PH</Badge>
+            )}
+            {overdueTeachers.length > 0 && (
+              <Badge className="bg-rose-100 text-rose-700">{overdueTeachers.length} GV quá hạn</Badge>
+            )}
           </div>
         </div>
         <p className="text-xs text-amber-700/80 mt-1">
           Quy trình: GV upload video + nhận xét + chấm điểm 4 kỹ năng → Học vụ duyệt → Gửi phụ huynh. GV có 7 ngày, học vụ có 24h sau duyệt.
         </p>
+        {/* Nút phạt GV quá hạn */}
+        {(isTA || isAdmin) && overdueTeachers.length > 0 && (
+          <div className="mt-2 p-2 bg-rose-50 border border-rose-200 rounded-lg">
+            <p className="text-xs font-semibold text-rose-700 mb-1.5">GV quá hạn nộp ({overdueTeachers.length}):</p>
+            <div className="flex flex-wrap gap-1.5">
+              {overdueTeachers.map(r => (
+                <Button key={r.id} size="sm" variant="outline" className="h-7 text-xs border-rose-300 text-rose-700 hover:bg-rose-50"
+                  onClick={() => { penalizeTeacher(r.id, "Nộp Big Test quá hạn 7 ngày"); toast.warning(`Đã ghi nhận vi phạm cho ${r.teacherName}`); }}>
+                  <AlertTriangle className="w-3 h-3 mr-1" /> Phạt {r.teacherName}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="pt-4 space-y-3">
@@ -250,6 +281,11 @@ const BigTestPanel: React.FC<Props> = ({ syllabusSessionId, classId, className, 
                     <Upload className="w-3 h-3 mr-1" />Sửa / nộp
                   </Button>
                 )}
+                {r.teacherPenalty?.penalized && (
+                  <Badge className="text-[10px] bg-rose-100 text-rose-700 border-rose-300 gap-1">
+                    <AlertTriangle className="w-3 h-3" /> Vi phạm: {r.teacherPenalty.reason}
+                  </Badge>
+                )}
                 {(isTA || isAdmin) && r.status === "pending" && (
                   <>
                     <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700" onClick={() => handleApprove(r.id)}>
@@ -269,6 +305,26 @@ const BigTestPanel: React.FC<Props> = ({ syllabusSessionId, classId, className, 
                   <span className="text-[11px] text-emerald-700 flex items-center gap-1">
                     <FileCheck2 className="w-3 h-3" /> Đã gửi {new Date(r.sentAt).toLocaleString("vi-VN")}
                   </span>
+                )}
+                {/* Checklist xác nhận trả bài PH (chỉ học vụ/admin sau khi sent) */}
+                {(isTA || isAdmin) && r.status === "sent" && (
+                  <div className="w-full mt-1 p-2 rounded-lg border border-violet-200 bg-violet-50/40">
+                    <p className="text-[11px] font-semibold text-violet-800 mb-1.5">✅ Xác nhận trả bài cho PH (trong 24h)</p>
+                    {r.parentReturn?.confirmed ? (
+                      <div className="text-xs text-emerald-700 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Đã trả {new Date(r.parentReturn.confirmedAt!).toLocaleString("vi-VN")} · {r.parentReturn.confirmedBy}
+                        {r.parentReturn.parentFeedback && (
+                          <span className="ml-2 italic text-muted-foreground">PH: "{r.parentReturn.parentFeedback}"</span>
+                        )}
+                      </div>
+                    ) : (
+                      <Button size="sm" className="h-7 text-xs bg-violet-600 hover:bg-violet-700"
+                        onClick={() => { setFeedbackDialog({ id: r.id, name: r.studentName }); setFeedbackText(""); }}>
+                        <MessageSquarePlus className="w-3 h-3 mr-1" />Xác nhận đã trả + Feedback PH
+                      </Button>
+                    )}
+                  </div>
                 )}
                 {r.status === "pending" && r.submittedAt && (
                   <span className="text-[11px] text-muted-foreground flex items-center gap-1">
@@ -329,6 +385,38 @@ const BigTestPanel: React.FC<Props> = ({ syllabusSessionId, classId, className, 
               <Button variant="outline" onClick={saveDraft}>Lưu nháp</Button>
               <Button onClick={submitForReview} className="bg-amber-600 hover:bg-amber-700">
                 <Send className="w-3 h-3 mr-1" />Nộp chờ học vụ duyệt
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Feedback dialog — xác nhận trả bài + ghi phản hồi PH */}
+      {feedbackDialog && (
+        <Dialog open onOpenChange={() => setFeedbackDialog(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <MessageSquarePlus className="w-5 h-5 text-violet-600" />
+                Xác nhận trả bài — {feedbackDialog.name}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <p className="text-xs text-muted-foreground">Học vụ xác nhận đã gửi kết quả Big Test cho phụ huynh qua Zalo/SMS/App.</p>
+              <div>
+                <label className="text-xs font-medium">Phản hồi của phụ huynh (tuỳ chọn)</label>
+                <Textarea rows={3} value={feedbackText} onChange={e => setFeedbackText(e.target.value)}
+                  placeholder="VD: PH cảm ơn, hỏi thêm về lộ trình học tập..." />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setFeedbackDialog(null)}>Huỷ</Button>
+              <Button className="bg-violet-600 hover:bg-violet-700" onClick={() => {
+                confirmParentReturn(feedbackDialog.id, "Ms. Linh Chi", feedbackText.trim() || undefined);
+                toast.success(`Đã xác nhận trả bài cho ${feedbackDialog.name}`);
+                setFeedbackDialog(null);
+              }}>
+                <CheckCircle2 className="w-4 h-4 mr-1.5" />Xác nhận đã trả
               </Button>
             </DialogFooter>
           </DialogContent>

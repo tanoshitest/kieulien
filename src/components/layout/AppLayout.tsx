@@ -12,6 +12,7 @@ import {
   Users2, Clock, BellRing, UserMinus, ShieldAlert, LineChart, LogOut, Mic,
   BookMarked
 } from "lucide-react";
+import CenterOperationPage from "./pages/CenterOperationPage";
 import { notifications, foreignTeachers } from "@/data/mockData";
 import { useClassSchedules } from "@/contexts/ClassScheduleContext";
 import { useForeignNotes } from "@/contexts/ForeignNoteContext";
@@ -45,7 +46,10 @@ const navItems: NavItem[] = [
   { label: "Quản lý hàng hoá", path: "/inventory", icon: Layers, adminOnly: true },
   { label: "Phân công công việc", path: "/tasks", icon: ClipboardList },
   { label: "Ghi chú chấm công", path: "/timekeeping", icon: Fingerprint },
-  { label: "Báo cáo", path: "/admin-reports", icon: BarChart3, adminOnly: true },
+  { label: "Báo cáo học phí", path: "/admin-reports?tab=tuition", icon: CircleDollarSign, adminOnly: true },
+  { label: "Báo cáo chấm công", path: "/admin-reports?tab=attendance", icon: Clock, adminOnly: true },
+  { label: "Báo cáo lương", path: "/admin-reports?tab=payroll", icon: Wallet, adminOnly: true },
+  { label: "Khảo sát", path: "/admin-reports?tab=survey", icon: ClipboardCheck, adminOnly: true },
   { label: "Cấu hình", path: "/settings", icon: Settings, adminOnly: true },
   // Parent Items
   { label: "Thông tin học viên", path: "/parent-portal", icon: GraduationCap, parentOnly: true },
@@ -133,6 +137,21 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </button>
             )}
 
+            {isAdmin && (
+              <button
+                onClick={() => navigate("/operations")}
+                title={isCollapsed ? "Quản lý vận hành" : ""}
+                className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-md font-bold text-sm transition-colors ${
+                  location.pathname.startsWith("/operations")
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                }`}
+              >
+                <Building2 className="w-4 h-4 flex-shrink-0" />
+                {!isCollapsed && <span>Quản lý vận hành</span>}
+              </button>
+            )}
+
             {filteredNav.map((item) => {
               const active = item.path.includes('?') 
                 ? (location.pathname + location.search) === item.path
@@ -146,6 +165,8 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 ? (isAdmin ? "Phân công công việc" : "Công việc của tôi")
                 : item.path === "/schedule"
                 ? (isAdmin || isTA ? "Lịch dạy" : "Lịch dạy của tôi")
+                : item.path.includes("tab=attendance")
+                ? "Báo cáo chấm công"
                 : item.path === "/timekeeping"
                 ? (isAdmin ? "Quản lý chấm công" : "Chấm công của tôi")
                 : item.label;

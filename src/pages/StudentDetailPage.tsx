@@ -1,9 +1,22 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { students, classes, attendanceRecords, mockTuitions, branches } from "@/data/mockData";
-import { ArrowLeft, BookOpen, CalendarCheck, DollarSign, MessageSquare, User, BellRing, Receipt, CheckCircle2, Clock, ClipboardList, FilePlus, Plus, FileText, Printer, CheckCircle, Wallet, Landmark, QrCode, Banknote, Percent, StickyNote } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
+import { 
+  ArrowLeft, BookOpen, CalendarCheck, DollarSign, MessageSquare, 
+  User, BellRing, Receipt, CheckCircle2, Clock, ClipboardList, 
+  FilePlus, Plus, FileText, Printer, CheckCircle, Wallet, 
+  Landmark, QrCode, Banknote, Percent, StickyNote, Repeat, 
+  PauseCircle, MapPinned, ChevronDown, AlertTriangle 
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const formatVND = (n: number) =>
   new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(n) + "đ";
@@ -81,6 +94,23 @@ const StudentDetailPage = () => {
     setReceiptTuition(null);
   };
 
+  // ---- OPERATIONAL ACTIONS STATE ----
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [isReservationOpen, setIsReservationOpen] = useState(false); 
+  const [isBranchTransferOpen, setIsBranchTransferOpen] = useState(false);
+  const [transferForm, setTransferForm] = useState({
+    currentClassId: student?.classIds?.[0] || "",
+    targetClassId: "",
+    remainingSessions: 12,
+    sessionPrice: 250000,
+    totalRefundValue: 3000000,
+  });
+  const [reservationForm, setReservationForm] = useState({
+    sessionsToReserve: 10,
+    reserveValue: 2500000,
+    reason: "",
+  });
+
   if (!student) {
     return (
       <div className="p-6 text-center">
@@ -145,6 +175,26 @@ const StudentDetailPage = () => {
               <span className="smart-button-value">{formatVND(student.paidFee)}</span>
               <span className="smart-button-label flex items-center gap-1"><DollarSign className="w-3 h-3" /> Đã thanh toán</span>
             </div>
+
+            {/* NEW: Operational Actions Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="h-10 px-4 bg-primary text-white rounded-lg text-xs font-black uppercase tracking-wider hover:opacity-90 transition-all shadow-md shadow-primary/20 flex items-center gap-2">
+                  Thao tác nghiệp vụ <ChevronDown className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl">
+                <DropdownMenuItem onClick={() => setIsTransferOpen(true)} className="flex items-center gap-2 py-2.5 cursor-pointer font-bold text-xs">
+                  <Repeat className="w-4 h-4 text-blue-500" /> Chuyển lớp
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsReservationOpen(true)} className="flex items-center gap-2 py-2.5 cursor-pointer font-bold text-xs">
+                  <PauseCircle className="w-4 h-4 text-amber-500" /> Bảo lưu học phí
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsBranchTransferOpen(true)} className="flex items-center gap-2 py-2.5 cursor-pointer font-bold text-xs">
+                  <MapPinned className="w-4 h-4 text-emerald-500" /> Chuyển chi nhánh
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -888,6 +938,201 @@ const StudentDetailPage = () => {
               className="px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-black uppercase hover:bg-emerald-700 flex items-center gap-2 shadow-sm shadow-emerald-600/20"
             >
               <CheckCircle2 className="w-4 h-4" /> Xác nhận & In phiếu
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ============ CLASS TRANSFER DIALOG - Demo UI ============ */}
+      <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Repeat className="w-5 h-5 text-blue-500" />
+              Nghiệp vụ Chuyển lớp
+            </DialogTitle>
+            <DialogDescription>
+              Học sinh: <b>{student.name}</b> · Thực hiện quy đổi số buổi còn lại sang lớp mới.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-2 gap-6 py-4">
+            <div className="space-y-4">
+               <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-500">Lớp hiện tại</label>
+                  <select 
+                    value={transferForm.currentClassId}
+                    onChange={e => setTransferForm({...transferForm, currentClassId: e.target.value})}
+                    className="w-full h-10 px-3 bg-slate-50 border rounded-lg text-sm font-bold"
+                  >
+                    {student.classIds.map(cid => (
+                      <option key={cid} value={cid}>{classes.find(c => c.id === cid)?.name}</option>
+                    ))}
+                  </select>
+               </div>
+               <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-blue-700 font-bold">Số buổi còn lại:</span>
+                    <span className="font-black text-blue-800">12 buổi</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-blue-700 font-bold">Giá trị quy đổi:</span>
+                    <span className="font-black text-blue-800">{formatVND(3000000)}</span>
+                  </div>
+               </div>
+            </div>
+
+            <div className="space-y-4">
+               <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-500">Lớp chuyển đến</label>
+                  <select 
+                    className="w-full h-10 px-3 border rounded-lg text-sm font-bold"
+                  >
+                    <option value="">-- Chọn lớp học mới --</option>
+                    {classes.filter(c => !student.classIds.includes(c.id)).map(c => (
+                      <option key={c.id} value={c.id}>{c.name} ({formatVND(c.price || 280000)}/buổi)</option>
+                    ))}
+                  </select>
+               </div>
+               <div className="p-3 bg-slate-50 border border-dashed rounded-xl space-y-2">
+                  <p className="text-[10px] text-slate-400 italic font-medium">Chọn lớp để tính toán số buổi tương ứng ở lớp mới.</p>
+               </div>
+            </div>
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            <button onClick={() => setIsTransferOpen(false)} className="px-4 py-2 text-xs font-bold uppercase text-slate-500">Hủy</button>
+            <button 
+              onClick={() => {
+                toast.success("Đã thực hiện chuyển lớp thành công!", {
+                  description: `Dữ liệu buổi học và học phí đã được chuyển sang lớp mới.`
+                });
+                setIsTransferOpen(false);
+              }}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg text-xs font-black uppercase shadow-lg shadow-blue-200"
+            >
+              Xác nhận chuyển lớp
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ============ RESERVATION DIALOG - Demo UI ============ */}
+      <Dialog open={isReservationOpen} onOpenChange={setIsReservationOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PauseCircle className="w-5 h-5 text-amber-500" />
+              Nghiệp vụ Bảo lưu
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5 py-4">
+             <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl space-y-3">
+                <div className="flex items-center gap-2 text-amber-700 mb-1">
+                   <AlertTriangle className="w-4 h-4" />
+                   <span className="text-xs font-black uppercase tracking-tight">Thông tin bảo lưu dự kiến</span>
+                </div>
+                <div className="space-y-1.5">
+                   <div className="flex justify-between text-xs">
+                      <span className="font-bold text-slate-600">Số buổi tạm dừng:</span>
+                      <span className="font-black text-slate-800">10 buổi</span>
+                   </div>
+                   <div className="flex justify-between text-xs">
+                      <span className="font-bold text-slate-600">Giá trị học phí đóng băng:</span>
+                      <span className="font-black text-amber-600">{formatVND(2500000)}</span>
+                   </div>
+                </div>
+             </div>
+
+             <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-slate-500">Lý do bảo lưu</label>
+                <textarea 
+                  className="w-full min-h-[80px] p-3 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-amber-500/10 focus:border-amber-500 transition-all"
+                  placeholder="VD: Việc gia đình, đi du lịch, nghỉ ốm..."
+                />
+             </div>
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            <button onClick={() => setIsReservationOpen(false)} className="px-4 py-2 text-xs font-bold uppercase text-slate-500">Hủy</button>
+            <button 
+              onClick={() => {
+                toast.warning(`Đã bảo lưu thành công cho HS ${student.name}`, {
+                  description: "Học sinh đã chuyển sang trạng thái Tạm nghỉ (Bảo lưu)."
+                });
+                setIsReservationOpen(false);
+              }}
+              className="px-6 py-2 bg-amber-500 text-white rounded-lg text-xs font-black uppercase shadow-lg shadow-amber-200"
+            >
+              Xác nhận bảo lưu
+            </button>
+          </DialogFooter>
+        </DialogContent>
+            </Dialog>
+
+      {/* ============ BRANCH TRANSFER DIALOG - Demo UI ============ */}
+      <Dialog open={isBranchTransferOpen} onOpenChange={setIsBranchTransferOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPinned className="w-5 h-5 text-emerald-500" />
+              Nghiệp vụ Chuyển chi nhánh
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                   <label className="text-[10px] font-black uppercase text-slate-400">Chi nhánh hiện tại</label>
+                   <div className="px-3 py-2 bg-slate-50 border rounded-lg text-xs font-bold text-slate-600">
+                      Chi nhánh 01 - Cầu Giấy
+                   </div>
+                </div>
+                <div className="space-y-1.5">
+                   <label className="text-[10px] font-black uppercase text-slate-500">Chi nhánh đích</label>
+                   <select className="w-full h-9 px-2 bg-white border rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500/10">
+                      <option value="">Chọn chi nhánh...</option>
+                      <option value="BR002">Chi nhánh 02 - Đống Đa</option>
+                      <option value="BR003">Chi nhánh 03 - Hà Đông</option>
+                   </select>
+                </div>
+             </div>
+             <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-xl space-y-3">
+                <div className="flex items-center gap-2 text-emerald-700 mb-1">
+                   <Clock className="w-4 h-4" />
+                   <span className="text-xs font-black uppercase tracking-tight">Kế hoạch chuyển đổi</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-1">
+                      <p className="text-[9px] font-bold text-slate-500 uppercase">Ngày bắt đầu dự kiến</p>
+                      <input type="date" className="w-full h-8 px-2 bg-white border rounded-lg text-xs" defaultValue={new Date().toISOString().slice(0, 10)} />
+                   </div>
+                   <div className="space-y-1">
+                      <p className="text-[9px] font-bold text-slate-500 uppercase">Học phí còn dư</p>
+                      <p className="text-xs font-black text-emerald-600">1.250.000đ</p>
+                   </div>
+                </div>
+             </div>
+             <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-slate-500">Ghi chú nghiệp vụ</label>
+                <textarea 
+                  className="w-full min-h-[70px] p-3 border rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
+                  placeholder="Nhập lý do chuyển hoặc các lưu ý đặc biệt..."
+                />
+             </div>
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            <button onClick={() => setIsBranchTransferOpen(false)} className="px-4 py-2 text-xs font-bold uppercase text-slate-500">Hủy</button>
+            <button 
+              onClick={() => {
+                toast.success("Yêu cầu chuyển chi nhánh đã được gửi!");
+                setIsBranchTransferOpen(false);
+              }}
+              className="px-6 py-2 bg-emerald-500 text-white rounded-lg text-xs font-black uppercase shadow-lg shadow-emerald-200"
+            >
+              Xác nhận
             </button>
           </DialogFooter>
         </DialogContent>
