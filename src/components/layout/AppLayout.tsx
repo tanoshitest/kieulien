@@ -83,13 +83,22 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     if (isParent) return item.parentOnly || item.path === "/syllabus";
     if (item.parentOnly) return false;
     if (item.foreignOnly) return false;
+    
+    if (isTA) return [
+      "/users", 
+      "/syllabus", 
+      "/schedule", 
+      "/admin-reports?tab=tuition", 
+      "/inventory", 
+      "/tasks", 
+      "/admin-reports?tab=survey"
+    ].includes(item.path);
+
     if (item.adminOnly && !isAdmin) return false;
     // Admin không cần "Quản lý chấm công" — đã có trong Báo cáo
     if (isAdmin && item.path === "/timekeeping") return false;
     if (item.teacherOnly && !isTeacher) return false;
     if (item.taOnly && !isTA) return false;
-    // TA: chỉ thấy Syllabus + Lịch dạy + Công việc + Lịch GVNN
-    if (isTA) return ["/syllabus", "/tasks", "/schedule", "/timekeeping"].includes(item.path);
     return true;
   });
   const currentPage = navItems.find((n) => n.path === location.pathname);
