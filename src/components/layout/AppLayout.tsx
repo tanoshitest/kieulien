@@ -156,7 +156,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 : item.path === "/timekeeping"
                 ? (isAdmin ? "Quản lý chấm công" : "Chấm công của tôi")
                 : item.label;
-              const isHighlighted = ["/users", "/syllabus", "/schedule", "/admin-reports?tab=tuition", "/settings"].includes(item.path);
+              const isHighlighted = ["/users", "/syllabus", "/schedule", "/admin-reports?tab=tuition", "/inventory", "/settings"].includes(item.path);
               
               return (
                 <button
@@ -165,13 +165,13 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   title={isCollapsed ? label : ""}
                   className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-md text-sm transition-all ${
                     isTrulyActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-black shadow-sm"
+                      ? `bg-sidebar-accent ${isHighlighted ? "text-rose-600" : "text-sidebar-accent-foreground"} font-black shadow-sm`
                       : isHighlighted 
                       ? "text-rose-600 font-black hover:bg-rose-50"
                       : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                   }`}
                 >
-                  <item.icon className={`w-4 h-4 flex-shrink-0 ${isHighlighted && !isTrulyActive ? "text-rose-600" : ""}`} />
+                  <item.icon className={`w-4 h-4 flex-shrink-0 ${isHighlighted ? "text-rose-600" : ""}`} />
                   {!isCollapsed && <span className="flex-1 text-left">{label}</span>}
                 </button>
               );
@@ -245,7 +245,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   : item.path === "/users"
                     ? "Quản lý User"
                   : item.label;
-                  const isHighlighted = ["/users", "/syllabus", "/schedule", "/admin-reports?tab=tuition", "/settings"].includes(item.path);
+                  const isHighlighted = ["/users", "/syllabus", "/schedule", "/admin-reports?tab=tuition", "/inventory", "/settings"].includes(item.path);
 
                   return (
                     <button
@@ -253,13 +253,13 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       onClick={() => { navigate(item.path); setSidebarOpen(false); }}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all ${
                         active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-black"
+                          ? `bg-sidebar-accent ${isHighlighted ? "text-rose-600" : "text-sidebar-accent-foreground"} font-black`
                           : isHighlighted
                           ? "text-rose-600 font-black"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
                     >
-                      <item.icon className={`w-4 h-4 ${isHighlighted && !active ? "text-rose-600" : ""}`} />
+                      <item.icon className={`w-4 h-4 ${isHighlighted ? "text-rose-600" : ""}`} />
                       {label}
                     </button>
                   );
