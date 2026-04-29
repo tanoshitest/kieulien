@@ -712,6 +712,15 @@ const Footer: React.FC = () => (
 /* ────────── Main ────────── */
 
 const LandingPage: React.FC = () => {
+  const { isLoggedIn } = useRole();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (isLoggedIn) {
+      navigate("/dashboard");
+    }
+  }, [isLoggedIn, navigate]);
+
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans">
       <Navbar />

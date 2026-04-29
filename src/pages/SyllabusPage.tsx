@@ -59,7 +59,7 @@ const roleConfig = {
 };
 
 const SyllabusPage: React.FC = () => {
-  const { role, isAdmin, isTeacher, isParent, isTA, isForeignTeacher } = useRole();
+  const { role, isAdmin, isTeacher, isParent, isTA, isForeignTeacher, isOps } = useRole();
 
   const cfg = roleConfig[role] ?? roleConfig.admin;
   const Icon = cfg.icon;

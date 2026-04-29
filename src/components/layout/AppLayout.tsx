@@ -39,7 +39,6 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  // Dashboard removed as per user request
   { label: "Quản lý người dùng", path: "/users", icon: UserCog, adminOnly: true },
   { label: "Syllabus", path: "/syllabus", icon: BookMarked },
   { label: "Lịch dạy", path: "/schedule", icon: Calendar },
@@ -62,17 +61,29 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { role, login, logout, isAdmin, isTeacher, isParent, isTA, isForeignTeacher, isOps } = useRole();
   const { pendingCount } = useClassSchedules();
   const { unreadCount } = useForeignNotes();
-  // GVNN xem lịch của mình → đếm note unread cho FT đầu tiên (mock current user)
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (role && (location.pathname === "/login" || location.pathname === "/")) {
+      navigate("/dashboard");
+    }
+  }, [role, location.pathname, navigate]);
+
   // GV Việt / TA / Admin → đếm tất cả note unread trong system (để biết có note mới chưa GVNN nào đọc)
   const foreignNoteUnread = isForeignTeacher
     ? unreadCount(foreignTeachers[0]?.id)
     : unreadCount();
-  const location = useLocation();
-  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-   const [showNotifications, setShowNotifications] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [crmOpen, setCrmOpen] = useState(true);
+
+  // Alerts for Sidebar
+  const isStaff = isOps || isTA;
+  const totalAlerts = pendingCount + foreignNoteUnread;
+  const isForeign = isForeignTeacher;
+  const alertsCount = isForeignTeacher ? foreignNoteUnread : pendingCount;
 
   const filteredNav = navItems.filter((item) => {
     if (isForeignTeacher) return ["/schedule", "/timekeeping"].includes(item.path);

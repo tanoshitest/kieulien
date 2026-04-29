@@ -2,13 +2,22 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Shield, GraduationCap, Users, Heart, ArrowRight } from "lucide-react";
 import { useRole } from "@/contexts/RoleContext";
+import { useNavigate } from "react-router-dom";
 import type { Role } from "@/data/mockData";
 
 const LoginPage = () => {
-  const { login } = useRole();
+  const { login, isLoggedIn } = useRole();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (isLoggedIn) {
+      navigate("/dashboard");
+    }
+  }, [isLoggedIn, navigate]);
 
   const handleLogin = (role: Role) => {
     login(role);
+    navigate("/dashboard");
   };
 
   return (
