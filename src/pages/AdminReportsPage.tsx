@@ -458,8 +458,8 @@ const AdminReportsPage = () => {
                            <span className="text-[10px] font-black text-slate-400 uppercase">{d.month}</span>
                         </div>
                       ))}
+                   </div>
 
-                   
                    <div className="flex gap-8 mt-6 px-4">
                       <div className="flex items-center gap-2">
                          <div className="w-3 h-3 bg-emerald-500 rounded-sm" />
