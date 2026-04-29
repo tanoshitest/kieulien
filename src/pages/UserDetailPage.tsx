@@ -33,9 +33,10 @@ const UserDetailPage = () => {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case "teacher": return "Giáo viên";
+      case "teacher": return "GV Việt Nam";
+      case "foreign_teacher": return "GV Nước ngoài";
       case "ta": return "Trợ giảng";
-      case "ops": return "Vận hành";
+      case "ops": return "Học vụ";
       case "accounting": return "Kế toán";
       case "admin": return "Admin";
       default: return role;

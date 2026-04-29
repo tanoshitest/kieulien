@@ -32,7 +32,8 @@ interface RoleEntry {
 
 const ROLES: RoleEntry[] = [
   { id: "admin",   label: "Admin",                  desc: "Toàn quyền hệ thống",       Icon: ShieldCheck,   landing: "/dashboard",     color: "text-violet-600" },
-  { id: "ta",      label: "Học vụ",                 desc: "Syllabus & lịch dạy",       Icon: UserCog,       landing: "/syllabus",      color: "text-amber-600"  },
+  { id: "ops",     label: "Học vụ",                 desc: "Quản lý & Vận hành",        Icon: UserCog,       landing: "/syllabus",      color: "text-amber-600"  },
+  { id: "ta",      label: "Trợ giảng",              desc: "Hỗ trợ & Syllabus",         Icon: Sparkles,      landing: "/syllabus",      color: "text-blue-400"   },
   { id: "teacher", label: "Giáo viên Việt Nam",     desc: "Lớp học & chấm bài",        Icon: GraduationCap, landing: "/syllabus",      color: "text-blue-600"   },
   { id: "foreign_teacher", label: "Giáo viên nước ngoài", desc: "Lịch dạy GVNN",       Icon: GraduationCap, landing: "/schedule",      color: "text-emerald-700" },
   { id: "parent",  label: "Phụ huynh",              desc: "Theo dõi con học",          Icon: Users,         landing: "/parent-portal", color: "text-emerald-600"},

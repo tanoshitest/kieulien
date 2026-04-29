@@ -2,7 +2,7 @@
 // MOCK DATA - School Management System
 // ============================================================
 
-export type Role = "admin" | "teacher" | "parent" | "ta" | "foreign_teacher";
+export type Role = "admin" | "teacher" | "parent" | "ta" | "foreign_teacher" | "ops";
 
 // ---- Students ----
 export interface Student {
@@ -486,6 +486,11 @@ export interface FinanceRecord {
   relatedTo: string;
   classId?: string;
   branchId: string;
+  paymentMethod?: "cash" | "transfer";
+  invoiceNum?: string;
+  voided?: boolean;
+  voidReason?: string;
+  voidedAt?: string;
 }
 
 export const financeRecords: FinanceRecord[] = [
@@ -499,6 +504,11 @@ export const financeRecords: FinanceRecord[] = [
   { id: "FIN008", type: "income", category: "Học phí", description: "Học phí A1 - Phạm Đức Khang", amount: 3000000, date: "2025-02-15", status: "overdue", relatedTo: "STU004", classId: "CLS004", branchId: "BR003" },
   { id: "FIN009", type: "expense", category: "Lương GV", description: "Lương T2/2025 - Nguyễn Thị Phượng", amount: 16000000, date: "2025-03-05", status: "paid", relatedTo: "TCH003", branchId: "BR001" },
   { id: "FIN010", type: "expense", category: "Marketing", description: "Facebook Ads T3/2025", amount: 5000000, date: "2025-03-01", status: "paid", relatedTo: "", branchId: "BR003" },
+  
+  // Today's Reconciliation Data (2026-04-29)
+  { id: "INV-011", type: "income", category: "Học phí", description: "Thu học phí: Đăng Khoa Bing", amount: 10000000, date: "2026-04-29", status: "paid", relatedTo: "STU001", classId: "CLS001", branchId: "BR001", paymentMethod: "cash", invoiceNum: "011" },
+  { id: "TRF-982101", type: "income", category: "Học phí", description: "Thu học phí: Bảo Thư Mimi", amount: 15000000, date: "2026-04-29", status: "paid", relatedTo: "STU002", classId: "CLS001", branchId: "BR001", paymentMethod: "transfer" },
+  { id: "TRF-982102", type: "income", category: "Học phí", description: "Thu học phí: Thành Vinh Brian", amount: 11500000, date: "2026-04-29", status: "paid", relatedTo: "STU003", classId: "CLS001", branchId: "BR001", paymentMethod: "transfer" },
 ];
 
 // ---- HR Tasks ----
@@ -783,6 +793,15 @@ export const revenueChartData = [
   { month: "T1", revenue: 48000000, expense: 39000000 },
   { month: "T2", revenue: 58000000, expense: 41000000 },
   { month: "T3", revenue: 76500000, expense: 46000000 },
+];
+
+export const earnedRevenueData = [
+  { month: "JAN", earned: 240, collected: 380 },
+  { month: "FEB", earned: 310, collected: 320 },
+  { month: "MAR", earned: 420, collected: 450 },
+  { month: "APR", earned: 485, collected: 520 },
+  { month: "MAY", earned: 460, collected: 410 },
+  { month: "JUN", earned: 520, collected: 580 }
 ];
 
 export const fillRateData = [

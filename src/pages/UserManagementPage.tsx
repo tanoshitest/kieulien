@@ -71,9 +71,10 @@ const UserManagementPage = () => {
 
   const getRoleLabel = (role: AppUserRole) => {
     switch (role) {
-      case "teacher": return { label: "Giáo viên", color: "bg-blue-100 text-blue-700 border-blue-200" };
+      case "teacher": return { label: "GV Việt Nam", color: "bg-blue-100 text-blue-700 border-blue-200" };
+      case "foreign_teacher": return { label: "GV Nước ngoài", color: "bg-emerald-100 text-emerald-700 border-emerald-200" };
       case "ta": return { label: "Trợ giảng", color: "bg-purple-100 text-purple-700 border-purple-200" };
-      case "ops": return { label: "Vận hành", color: "bg-orange-100 text-orange-700 border-orange-200" };
+      case "ops": return { label: "Học vụ", color: "bg-orange-100 text-orange-700 border-orange-200" };
       case "accounting": return { label: "Kế toán", color: "bg-green-100 text-green-700 border-green-200" };
       case "admin": return { label: "Admin", color: "bg-red-100 text-red-700 border-red-200" };
       default: return { label: role, color: "bg-gray-100 text-gray-700 border-gray-200" };
@@ -145,9 +146,10 @@ const UserManagementPage = () => {
                       value={newRole}
                       onChange={(e) => setNewRole(e.target.value as AppUserRole)}
                     >
-                      <option value="teacher">Giáo viên</option>
+                      <option value="teacher">GV Việt Nam</option>
+                      <option value="foreign_teacher">GV Nước ngoài</option>
                       <option value="ta">Trợ giảng</option>
-                      <option value="ops">Vận hành</option>
+                      <option value="ops">Học vụ</option>
                       <option value="accounting">Kế toán</option>
                     </select>
                   </div>
@@ -203,9 +205,10 @@ const UserManagementPage = () => {
             onChange={(e) => setRoleFilter(e.target.value as any)}
           >
             <option value="all">Tất cả Vai trò</option>
-            <option value="teacher">Giáo viên</option>
+            <option value="teacher">GV Việt Nam</option>
+            <option value="foreign_teacher">GV Nước ngoài</option>
             <option value="ta">Trợ giảng</option>
-            <option value="ops">Vận hành</option>
+            <option value="ops">Học vụ</option>
             <option value="accounting">Kế toán</option>
             <option value="admin">Admin</option>
           </select>

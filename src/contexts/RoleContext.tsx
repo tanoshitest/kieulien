@@ -13,6 +13,7 @@ interface RoleContextType {
   isParent: boolean;
   isTA: boolean;
   isForeignTeacher: boolean;
+  isOps: boolean;
 }
 
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
@@ -25,7 +26,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<Role>(() => {
     try {
       const savedRole = localStorage.getItem("menglish_user_role");
-      if (savedRole === "admin" || savedRole === "teacher" || savedRole === "parent" || savedRole === "ta" || savedRole === "foreign_teacher") {
+      if (savedRole === "admin" || savedRole === "teacher" || savedRole === "parent" || savedRole === "ta" || savedRole === "foreign_teacher" || savedRole === "ops") {
         return savedRole as Role;
       }
     } catch (e) {
@@ -51,7 +52,8 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const toggleRole = useCallback(() => setRole((r) => {
     if (r === "admin") return "teacher";
     if (r === "teacher") return "ta";
-    if (r === "ta") return "parent";
+    if (r === "ta") return "ops";
+    if (r === "ops") return "parent";
     return "admin";
   }), []);
 
@@ -70,6 +72,7 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isParent: role === "parent",
       isTA: role === "ta",
       isForeignTeacher: role === "foreign_teacher",
+      isOps: role === "ops",
     }}>
       {children}
     </RoleContext.Provider>

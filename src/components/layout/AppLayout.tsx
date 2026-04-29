@@ -53,12 +53,8 @@ const navItems: NavItem[] = [
   { label: "Cấu hình", path: "/settings", icon: Settings, adminOnly: true },
   // Parent Items
   { label: "Thông tin học viên", path: "/parent-portal", icon: GraduationCap, parentOnly: true },
-  { label: "Lớp học & Kết quả", path: "/parent-portal?tab=grades", icon: BookOpen, parentOnly: true },
-  { label: "Nộp kết quả phát âm", path: "/parent-portal?tab=pronunciation", icon: Mic, parentOnly: true },
   { label: "Học phí & Lịch sử", path: "/parent-portal?tab=finance", icon: Wallet, parentOnly: true },
-  { label: "Báo cáo học tập", path: "/parent-portal?tab=reports", icon: ClipboardList, parentOnly: true },
   { label: "Khảo sát", path: "/parent-portal?tab=survey", icon: ClipboardCheck, parentOnly: true },
-  { label: "Liên hệ Trung tâm", path: "/parent-portal?tab=contact", icon: MessageCircle, parentOnly: true },
 ];
 
 
@@ -84,14 +80,16 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     if (item.parentOnly) return false;
     if (item.foreignOnly) return false;
     
-    if (isTA) return [
+    if (isTA || isOps) return [
       "/users", 
       "/syllabus", 
       "/schedule", 
       "/admin-reports?tab=tuition", 
+      "/admin-reports?tab=attendance",
       "/inventory", 
       "/tasks", 
-      "/admin-reports?tab=survey"
+      "/admin-reports?tab=survey",
+      "/timekeeping"
     ].includes(item.path);
 
     if (item.adminOnly && !isAdmin) return false;
@@ -197,7 +195,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isAdmin ? "bg-kpi-blue" : isTeacher ? "bg-kpi-green" : isTA ? "bg-violet-500" : isForeignTeacher ? "bg-emerald-500" : "bg-purple-500"}`} />
                 {!isCollapsed && (
                   <>
-                    {isAdmin ? "Admin" : isTeacher ? "Giảng viên" : isTA ? "Học vụ / TA" : isForeignTeacher ? "GV Nước ngoài" : "Phụ huynh"}
+                    {isAdmin ? "Admin" : isTeacher ? "GV Việt Nam" : isTA ? "Trợ giảng" : isForeignTeacher ? "GV Nước ngoài" : isOps ? "Học vụ" : "Phụ huynh"}
                     <ChevronRight className="w-3 h-3 ml-auto opacity-50" />
                   </>
                 )}
@@ -248,9 +246,11 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 {filteredNav.map((item) => {
                   const active = location.pathname === item.path;
                   const label = item.path === "/tasks"
-                    ? (isAdmin ? "Phân công công việc" : "Công việc của tôi")
+                    ? (isAdmin || isOps ? "Phân công công việc" : "Công việc của tôi")
                   : item.path === "/schedule"
-                    ? (isAdmin || isTA ? "Lịch dạy" : "Lịch dạy của tôi")
+                    ? (isAdmin || isOps ? "Lịch dạy" : "Lịch dạy của tôi")
+                  : item.path === "/timekeeping"
+                    ? "Chấm công của tôi"
                   : item.path === "/users"
                     ? "Quản lý User"
                   : item.label;

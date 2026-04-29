@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
 const TimekeepingPage = () => {
-  const { isAdmin } = useRole();
+  const { isAdmin, isOps, isTA } = useRole();
   const [records, setRecords] = useState(timekeepingRecords);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const [reportDate, setReportDate] = useState(new Date(2025, 2, 1)); // March 2025

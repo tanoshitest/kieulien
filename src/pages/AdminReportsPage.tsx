@@ -9,7 +9,8 @@ import {
   TimekeepingRecord,
   branches,
   classes,
-  students
+  students,
+  earnedRevenueData
 } from "@/data/mockData";
 import { 
   DollarSign, Fingerprint, Search, Filter, Download, Calendar, 
@@ -40,7 +41,7 @@ const formatVND = (n: number) =>
   new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(n) + "đ";
 
 const AdminReportsPage = () => {
-  const { isAdmin } = useRole();
+  const { isAdmin, isOps, isTA } = useRole();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get("tab") as "tuition" | "attendance" | "payroll" | "survey") || "tuition";
 
@@ -237,11 +238,11 @@ const AdminReportsPage = () => {
     list.reduce((sum, c) => sum + calcClassCommission(c), 0);
   const hasAnyKpiPenalty = (list: RenewalClass[]) => list.some(c => isKpiPenalized(c.droppedCount));
 
-  if (!isAdmin) {
+  if (!isAdmin && !isOps && !isTA) {
     return (
       <div className="p-10 text-center">
         <h2 className="text-xl font-bold text-destructive underline decoration-2 underline-offset-4 mb-4">KHÔNG CÓ QUYỀN TRUY CẬP</h2>
-        <p className="text-muted-foreground">Trang báo cáo này chỉ dành cho Quản trị viên hệ thống.</p>
+        <p className="text-muted-foreground">Trang báo cáo này chỉ dành cho Quản trị viên và Học vụ.</p>
       </div>
     );
   }
@@ -438,18 +439,11 @@ const AdminReportsPage = () => {
                    </div>
 
                    <div className="flex items-end justify-between h-48 gap-4 px-4 border-b border-slate-100 pb-2">
-                      {[
-                        { month: "Jan", earned: 240, collected: 380 },
-                        { month: "Feb", earned: 310, collected: 320 },
-                        { month: "Mar", earned: 420, collected: 450 },
-                        { month: "Apr", earned: 485, collected: 520 },
-                        { month: "May", earned: 460, collected: 410 },
-                        { month: "Jun", earned: 520, collected: 580 }
-                      ].map((d, i) => (
+                      {earnedRevenueData.map((d, i) => (
                         <div key={i} className="flex-1 flex flex-col items-center gap-2 group cursor-help relative">
                            {/* Tooltip demo */}
                            <div className="absolute -top-12 bg-slate-900 text-white text-[9px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-10 whitespace-nowrap">
-                              Dạy: {formatVND(d.earned * 1000000  )} | Thu: {formatVND(d.collected * 1000000  )}
+                              Dạy: {formatVND(d.earned * 1000000)} | Thu: {formatVND(d.collected * 1000000)}
                            </div>
                            <div className="w-full flex gap-1 justify-center items-end h-full">
                               <div 
@@ -463,8 +457,8 @@ const AdminReportsPage = () => {
                            </div>
                            <span className="text-[10px] font-black text-slate-400 uppercase">{d.month}</span>
                         </div>
-                      )  )}
-                   </div>
+                      ))}
+
                    
                    <div className="flex gap-8 mt-6 px-4">
                       <div className="flex items-center gap-2">
@@ -2254,15 +2248,15 @@ const AdminReportsPage = () => {
                     <div className="space-y-3">
                        <div className="flex justify-between items-center">
                           <span className="text-xs font-bold text-slate-500">Tiền mặt:</span>
-                          <span className="text-sm font-black text-slate-800">{formatVND(tuitionRecordsFiltered.filter(r => (r as any).paymentMethod === "cash" && !(r as any).voided).reduce((s, r) => s + r.amount, 0)  )}</span>
+                          <span className="text-sm font-black text-slate-800">{formatVND(tuitionRecords.filter(r => r.date === "2026-04-29" && r.paymentMethod === "cash" && !r.voided).reduce((s, r) => s + r.amount, 0))}</span>
                        </div>
                        <div className="flex justify-between items-center">
                           <span className="text-xs font-bold text-slate-500">Chuyển khoản:</span>
-                          <span className="text-sm font-black text-slate-800">{formatVND(tuitionRecordsFiltered.filter(r => (r as any).paymentMethod === "transfer" && !(r as any).voided).reduce((s, r) => s + r.amount, 0)  )}</span>
+                          <span className="text-sm font-black text-slate-800">{formatVND(tuitionRecords.filter(r => r.date === "2026-04-29" && r.paymentMethod === "transfer" && !r.voided).reduce((s, r) => s + r.amount, 0))}</span>
                        </div>
                        <div className="pt-3 border-t border-emerald-200 flex justify-between items-center">
                           <span className="text-xs font-black text-emerald-700">TỔNG THỰC THU:</span>
-                          <span className="text-xl font-black text-emerald-600">{formatVND(tuitionRecordsFiltered.filter(r => !(r as any).voided).reduce((s, r) => s + r.amount, 0)  )}</span>
+                          <span className="text-xl font-black text-emerald-600">{formatVND(tuitionRecords.filter(r => r.date === "2026-04-29" && !r.voided).reduce((s, r) => s + r.amount, 0))}</span>
                        </div>
                     </div>
                  </div>
