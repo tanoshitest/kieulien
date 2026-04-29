@@ -81,6 +81,8 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     if (item.foreignOnly) return false;
     
     if (isTA || isOps) return [
+      "/dashboard",
+      "/crm",
       "/users", 
       "/syllabus", 
       "/schedule", 

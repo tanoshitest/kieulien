@@ -29,7 +29,7 @@ function addDays(d: Date, n: number) { const x = new Date(d); x.setDate(x.getDat
 
 export default function ForeignTeacherSchedulePage() {
   const { schedules, updateSchedule } = useClassSchedules();
-  const { isAdmin, isTA, isForeignTeacher } = useRole();
+  const { isAdmin, isTA, isOps, isForeignTeacher } = useRole();
 
   // Tuần hiện tại: bắt đầu = Monday của 2026-04-24
   const [weekStart, setWeekStart] = useState<Date>(() => getMonday(new Date("2026-04-24")));
@@ -460,7 +460,7 @@ export default function ForeignTeacherSchedulePage() {
         </div>
 
         {/* Bảng gán thủ công GVNN cho từng buổi (admin + TA) */}
-        {(isAdmin || isTA) && !preview && (
+        {(isAdmin || isTA || isOps) && !preview && (
           <ManualAssignTable
             schedules={enrichedSchedules}
             allSchedules={schedules}
@@ -485,7 +485,7 @@ export default function ForeignTeacherSchedulePage() {
                       foreignEndTime: undefined,
                       foreignShift: undefined,
                     },
-                { name: isAdmin ? "Admin" : "TA", role: isAdmin ? "admin" : "ta" },
+                { name: isAdmin ? "Admin" : isOps ? "Học vụ" : "TA", role: isAdmin ? "admin" : isOps ? "ops" : "ta" },
                 ft ? `Gán thủ công GVNN ${ft.name}` : "Bỏ gán GVNN"
               );
               toast.success(ft ? `Đã gán ${ft.name}` : "Đã bỏ gán GVNN");

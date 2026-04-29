@@ -50,7 +50,7 @@ const priorityConfig = {
 const stages: Stage[] = ["todo", "in_progress", "done"];
 
 const TasksPage = () => {
-  const { isTeacher, isAdmin } = useRole();
+  const { isTeacher, isAdmin, isOps, isTA } = useRole();
   const [searchQuery, setSearchQuery] = useState("");
   const [taskList, setTaskList] = useState([...initialTasks]);
 
@@ -104,7 +104,7 @@ const TasksPage = () => {
       dueDate: activeTab === 'task' ? newDueDate : useDate,
       stage: "todo",
       type: activeTab,
-      createdBy: isTeacher ? "Sarah Johnson" : "Admin", // Demo logic
+      createdBy: isTeacher ? "Sarah Johnson" : isTA ? "Trần Minh Đức" : isOps ? "Phạm Hồng Nhung" : "Admin", // Demo logic
       ...(activeTab === 'order' ? {
         useDate,
         className: selectedClass,
@@ -159,17 +159,22 @@ const TasksPage = () => {
     const matchesDept = deptFilter === "Tất cả" || t.dept === deptFilter;
     const matchesStatus = statusFilter === "Tất cả" || t.stage === statusFilter;
     
-    if (isTeacher) {
-      // Giảng viên thấy việc được giao cho mình HOẶC việc do mình tạo ra (Order)
-      return (t.assignee === "Sarah Johnson" || t.createdBy === "Sarah Johnson") && 
+    if (isTeacher || isTA) {
+      // Giảng viên & Trợ giảng thấy việc được giao cho mình HOẶC việc do mình tạo ra (Order)
+      const myName = isTeacher ? "Sarah Johnson" : "Trần Minh Đức"; // Demo logic names from mockData
+      return (t.assignee === myName || t.createdBy === myName) && 
              matchesSearch && matchesBranch && matchesDept && matchesStatus;
     }
+    // isOps & isAdmin see all
     return matchesSearch && matchesBranch && matchesDept && matchesStatus;
   });
 
   // Chỉ hiện các phòng ban có trong danh sách việc hiện tại của user
-  const visibleTasksForDept = isTeacher 
-    ? taskList.filter(t => t.assignee === "Sarah Johnson" || t.createdBy === "Sarah Johnson")
+  const visibleTasksForDept = (isTeacher || isTA) 
+    ? taskList.filter(t => {
+        const myName = isTeacher ? "Sarah Johnson" : "Trần Minh Đức";
+        return t.assignee === myName || t.createdBy === myName;
+      })
     : taskList;
   const departments = Array.from(new Set(visibleTasksForDept.map(t => t.dept))).filter(Boolean);
 
@@ -178,13 +183,13 @@ const TasksPage = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm border ${isTeacher ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-primary/10 text-primary border-primary/20'}`}>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm border ${(isTeacher || isTA) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-primary/10 text-primary border-primary/20'}`}>
                <ClipboardList className="w-6 h-6" />
             </div>
-            {isTeacher ? "Công việc của tôi" : "Phân công công việc"}
+            {(isTeacher || isTA) ? "Công việc của tôi" : "Phân công công việc"}
           </h1>
           <p className="text-muted-foreground font-bold mt-2 ml-15">
-            {isTeacher 
+            {(isTeacher || isTA) 
               ? "Quản lý và theo dõi các nhiệm vụ giảng dạy được phân công." 
               : "Quản lý hệ thống nhiệm vụ và tiến độ công việc của toàn bộ nhân viên."}
           </p>
@@ -202,7 +207,7 @@ const TasksPage = () => {
               />
            </div>
 
-           {(isAdmin || isTeacher) && (
+           {(isAdmin || isTeacher || isOps || isTA) && (
              <Dialog open={isOpen} onOpenChange={setIsOpen}>
                <DialogTrigger asChild>
                  <button className="px-5 py-2.5 bg-primary text-primary-foreground text-sm rounded-xl font-black uppercase tracking-widest hover:scale-105 transition-all active:scale-95 shadow-lg shadow-primary/20 flex items-center gap-2">

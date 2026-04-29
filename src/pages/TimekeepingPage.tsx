@@ -421,16 +421,16 @@ const TimekeepingPage = () => {
     <div className="p-4 md:p-6 h-full flex flex-col min-h-0 bg-background">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black">{isAdmin ? "Quản lý Chấm công" : "Chấm công Điện tử"}</h1>
+          <h1 className="text-2xl font-black">{(isAdmin || isOps) ? "Quản lý Chấm công" : "Chấm công Điện tử"}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {isAdmin ? "Báo cáo giờ vào/ra và thống kê chuyên cần của giảng viên." : "Ghi nhận giờ làm việc tự động với hệ thống nhận diện vị trí GPS."}
+            {(isAdmin || isOps) ? "Báo cáo giờ vào/ra và thống kê chuyên cần của giảng viên." : "Ghi nhận giờ làm việc tự động với hệ thống nhận diện vị trí GPS."}
           </p>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
           <AnimatePresence mode="wait">
-            {isAdmin ? renderAdminView() : renderTeacherView()}
+            {(isAdmin || isOps) ? renderAdminView() : renderTeacherView()}
           </AnimatePresence>
       </div>
     </div>

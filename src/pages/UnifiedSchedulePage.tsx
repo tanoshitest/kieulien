@@ -9,14 +9,14 @@ import { Calendar, CalendarClock } from "lucide-react";
 type Tab = "vn" | "foreign";
 
 export default function UnifiedSchedulePage() {
-  const { isAdmin, isTA, isTeacher, isForeignTeacher } = useRole();
+  const { isAdmin, isTA, isOps, isTeacher, isForeignTeacher } = useRole();
   const { unreadCount } = useForeignNotes();
 
   // Quyền xem 2 tab:
-  // - Admin / TA / Teacher (VN) → thấy cả 2 tab
+  // - Admin / TA / Ops / Teacher (VN) → thấy cả 2 tab
   // - Foreign teacher → chỉ tab GVNN
-  const canSeeVn = isAdmin || isTA || isTeacher;
-  const canSeeForeign = isAdmin || isTA || isTeacher || isForeignTeacher;
+  const canSeeVn = isAdmin || isTA || isOps || isTeacher;
+  const canSeeForeign = isAdmin || isTA || isOps || isTeacher || isForeignTeacher;
 
   const defaultTab: Tab = isForeignTeacher ? "foreign" : "vn";
   const [tab, setTab] = useState<Tab>(defaultTab);

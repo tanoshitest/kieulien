@@ -32,6 +32,14 @@ const roleConfig = {
     bg: "bg-violet-50",
     text: "text-violet-700",
   },
+  ops: {
+    label: "Học vụ",
+    sublabel: "Quản lý & Đánh giá lớp học",
+    icon: Users,
+    gradient: "from-amber-500 to-orange-600",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+  },
   parent: {
     label: "Phụ huynh / Học sinh",
     sublabel: "Xem tiến độ & nộp bài tập",
@@ -57,7 +65,7 @@ const SyllabusPage: React.FC = () => {
   const Icon = cfg.icon;
 
   const renderContent = () => {
-    if (isAdmin) return <AdminSyllabusView />;
+    if (isAdmin || isOps) return <AdminSyllabusView />;
     if (isTeacher) return <TeacherSyllabusView />;
     if (isForeignTeacher) return <TeacherSyllabusView foreignMode />;
     if (isTA) return <TASyllabusView />;
