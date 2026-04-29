@@ -50,10 +50,11 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const toggleRole = useCallback(() => setRole((r) => {
-    if (r === "admin") return "teacher";
-    if (r === "teacher") return "ta";
-    if (r === "ta") return "ops";
-    if (r === "ops") return "parent";
+    if (r === "admin") return "ops";
+    if (r === "ops") return "ta";
+    if (r === "ta") return "teacher";
+    if (r === "teacher") return "foreign_teacher";
+    if (r === "foreign_teacher") return "parent";
     return "admin";
   }), []);
 

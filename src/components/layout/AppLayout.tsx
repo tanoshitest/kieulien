@@ -59,7 +59,7 @@ const navItems: NavItem[] = [
 
 
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { role, login, logout, isAdmin, isTeacher, isParent, isTA, isForeignTeacher } = useRole();
+  const { role, login, logout, isAdmin, isTeacher, isParent, isTA, isForeignTeacher, isOps } = useRole();
   const { pendingCount } = useClassSchedules();
   const { unreadCount } = useForeignNotes();
   // GVNN xem lịch của mình → đếm note unread cho FT đầu tiên (mock current user)
@@ -131,7 +131,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5 font-medium">
             {/* CRM Collapsible - NOW ON TOP */}
-            {isAdmin && (
+            {(isAdmin || isOps || isTA) && (
               <button
                 onClick={() => navigate("/crm")}
                 title={isCollapsed ? "CRM tuyển sinh" : ""}
