@@ -5,8 +5,9 @@ import {
   ArrowUpRight, ArrowDownRight, History, 
   Book, ShoppingBag, FileText, AlertCircle,
   MoreVertical, Download, Printer, Settings2, X,
-  Calendar, User, Tag, Layers, Database, ChevronRight
+  Calendar, User, Tag, Layers, Database, ChevronRight, Receipt
 } from "lucide-react";
+import SalesInvoiceModal from "@/components/SalesInvoiceModal";
 
 const formatVND = (n: number) =>
   new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(n) + "đ";
@@ -37,6 +38,7 @@ const InventoryPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [activeModal, setActiveModal] = useState<null | "product" | "import" | "export">(null);
+  const [isSalesInvoiceOpen, setIsSalesInvoiceOpen] = useState(false);
 
   const filteredProducts = mockProducts.filter(p => 
     (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.id.toLowerCase().includes(searchTerm.toLowerCase())) &&
@@ -110,6 +112,12 @@ const InventoryPage = () => {
              className="h-10 px-4 bg-emerald-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 flex items-center gap-2"
           >
             <Plus className="w-3.5 h-3.5" /> Nhập kho
+          </button>
+          <button 
+             onClick={() => setIsSalesInvoiceOpen(true)}
+             className="h-10 px-4 bg-indigo-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2"
+          >
+            <Receipt className="w-3.5 h-3.5" /> Tạo hóa đơn
           </button>
         </div>
       </div>
@@ -347,6 +355,9 @@ const InventoryPage = () => {
           </button>
         </div>
       </Modal>
+
+      {/* Sales Invoice Modal */}
+      <SalesInvoiceModal isOpen={isSalesInvoiceOpen} onClose={() => setIsSalesInvoiceOpen(false)} />
     </div>
   );
 };

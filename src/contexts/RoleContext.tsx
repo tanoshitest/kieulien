@@ -20,7 +20,11 @@ const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
 export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    return localStorage.getItem("menglish_is_logged_in") === "true";
+    try {
+      return localStorage.getItem("menglish_is_logged_in") === "true";
+    } catch (e) {
+      return false;
+    }
   });
 
   const [role, setRole] = useState<Role>(() => {
@@ -36,8 +40,12 @@ export const RoleProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   useEffect(() => {
-    localStorage.setItem("menglish_user_role", role);
-    localStorage.setItem("menglish_is_logged_in", isLoggedIn.toString());
+    try {
+      localStorage.setItem("menglish_user_role", role);
+      localStorage.setItem("menglish_is_logged_in", isLoggedIn.toString());
+    } catch (e) {
+      console.error("Failed to save role to localStorage", e);
+    }
   }, [role, isLoggedIn]);
 
   const login = useCallback((r: Role) => {

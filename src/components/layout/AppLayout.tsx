@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRole } from "@/contexts/RoleContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,7 +13,7 @@ import {
   BookMarked
 } from "lucide-react";
 
-import { notifications, foreignTeachers } from "@/data/mockData";
+import { foreignTeachers } from "@/data/mockData";
 import { useClassSchedules } from "@/contexts/ClassScheduleContext";
 import { useForeignNotes } from "@/contexts/ForeignNoteContext";
 import {

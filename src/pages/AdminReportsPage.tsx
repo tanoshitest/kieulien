@@ -234,9 +234,9 @@ const AdminReportsPage = () => {
     const rate = getBaseRate(c.studentCount) + getRenewalBonus(c.droppedCount);
     return Math.round(rev * rate);
   };
-  const calcTotalRenewalCommission = (list: RenewalClass[]) =>
-    list.reduce((sum, c) => sum + calcClassCommission(c), 0);
-  const hasAnyKpiPenalty = (list: RenewalClass[]) => list.some(c => isKpiPenalized(c.droppedCount));
+  const calcTotalRenewalCommission = (list: RenewalClass[] | undefined) =>
+    (list || []).reduce((sum, c) => sum + calcClassCommission(c), 0);
+  const hasAnyKpiPenalty = (list: RenewalClass[] | undefined) => (list || []).some(c => isKpiPenalized(c.droppedCount));
 
   if (!isAdmin && !isOps && !isTA) {
     return (
