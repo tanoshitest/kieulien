@@ -80,8 +80,10 @@ const ProtectedApp = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+const App = () => {
+  console.log("[App] Rendering App component");
+  return (
+    <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -101,7 +103,8 @@ const App = () => (
         </RoleProvider>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+};
 
 export default App;
