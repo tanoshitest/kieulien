@@ -42,6 +42,7 @@ const navItems: NavItem[] = [
   { label: "Quản lý người dùng", path: "/users", icon: UserCog, adminOnly: true },
   { label: "Syllabus", path: "/syllabus", icon: BookMarked },
   { label: "Lịch dạy", path: "/schedule", icon: Calendar },
+  { label: "Xếp lịch GVNN", path: "/schedule-foreign", icon: CalendarClock },
   { label: "Báo cáo học phí", path: "/admin-reports?tab=tuition", icon: CircleDollarSign, adminOnly: true },
   { label: "Quản lý hàng hoá", path: "/inventory", icon: Layers, adminOnly: true },
   { label: "Phân công công việc", path: "/tasks", icon: ClipboardList },
@@ -86,7 +87,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const alertsCount = isForeignTeacher ? foreignNoteUnread : pendingCount;
 
   const filteredNav = navItems.filter((item) => {
-    if (isForeignTeacher) return ["/schedule", "/timekeeping"].includes(item.path);
+    if (isForeignTeacher) return ["/schedule", "/timekeeping", "/schedule-foreign"].includes(item.path);
     if (isParent) return item.parentOnly || item.path === "/syllabus";
     if (item.parentOnly) return false;
     if (item.foreignOnly) return false;
@@ -97,6 +98,7 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       "/users", 
       "/syllabus", 
       "/schedule", 
+      "/schedule-foreign",
       "/admin-reports?tab=tuition", 
       "/admin-reports?tab=attendance",
       "/inventory", 
@@ -171,12 +173,14 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 ? (isAdmin ? "Phân công công việc" : "Công việc của tôi")
                 : item.path === "/schedule"
                 ? (isAdmin || isTA ? "Lịch dạy" : "Lịch dạy của tôi")
+                : item.path === "/schedule-foreign"
+                ? (isForeignTeacher ? "Lịch dạy của tôi (NN)" : "Xếp lịch GVNN")
                 : item.path.includes("tab=attendance")
                 ? "Báo cáo chấm công"
                 : item.path === "/timekeeping"
                 ? (isAdmin ? "Quản lý chấm công" : "Chấm công của tôi")
                 : item.label;
-              const isHighlighted = ["/users", "/syllabus", "/schedule", "/admin-reports?tab=tuition", "/inventory", "/admin-reports?tab=survey", "/settings"].includes(item.path);
+              const isHighlighted = ["/users", "/syllabus", "/schedule", "/schedule-foreign", "/admin-reports?tab=tuition", "/inventory", "/admin-reports?tab=survey", "/settings"].includes(item.path);
               
               return (
                 <button
@@ -262,12 +266,14 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     ? (isAdmin || isOps ? "Phân công công việc" : "Công việc của tôi")
                   : item.path === "/schedule"
                     ? (isAdmin || isOps ? "Lịch dạy" : "Lịch dạy của tôi")
+                  : item.path === "/schedule-foreign"
+                    ? (isForeignTeacher ? "Lịch dạy của tôi (NN)" : "Xếp lịch GVNN")
                   : item.path === "/timekeeping"
                     ? "Chấm công của tôi"
                   : item.path === "/users"
                     ? "Quản lý User"
                   : item.label;
-                  const isHighlighted = ["/users", "/syllabus", "/schedule", "/admin-reports?tab=tuition", "/inventory", "/admin-reports?tab=survey", "/settings"].includes(item.path);
+                  const isHighlighted = ["/users", "/syllabus", "/schedule", "/schedule-foreign", "/admin-reports?tab=tuition", "/inventory", "/admin-reports?tab=survey", "/settings"].includes(item.path);
 
                   return (
                     <button
